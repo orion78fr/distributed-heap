@@ -1,0 +1,40 @@
+Idées, réflexions, problèmes rencontrés
+
+P1
+1)t_acces_write("a")
+3)t_acces_write("b")
+
+P2
+2)t_acces_write("b")
+4)t_acces_write("a")
+
+interblocage
+
+
+
+
+P1
+1)t_access_write("a")
+2)while(true);
+
+P2
+3)t_access_read("a");
+
+famine
+
+
+
+P1
+1) t_malloc(10*sizeof(int), "compteur");
+4) t_access_write("compteur");
+
+P2
+2) t_free("compteur");
+3) t_malloc(sizeof(int), "compteur");
+
+
+solution : on ne peut free que si on a fait le malloc? oui, mais si il meurt? :P
+
+
+
+async
