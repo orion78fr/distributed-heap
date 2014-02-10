@@ -11,17 +11,21 @@
 #include <netdb.h>
 #include <pthread.h>
 
-#include "constants.h"
-
 #define PORTSERV 5500
 #define ERRORMAXUSER 66
-#define HEAPSIZE
+#define HEAPSIZE 1024
+#define MAX_CLIENTS 20
 
-int connectionsCount;
-struct clientChain clients;
+struct parameters{
+	int port;
+	int maxClients;
+} parameters;
+
+int clientsConnected = 0;
+struct clientChain *clients = NULL;
 
 int clientThread(int sc) {
-    /*** Lire le message ***/
+    /* Lire le message */
     char *buf;
     buf = malloc(sizeof(char)*100);
 
@@ -44,76 +48,73 @@ int clientThread(int sc) {
 }
 
 int main(int argc, char *argv[]){
-    struct sockaddr_in sin;  /* Nom de la socket de connexion */
-    struct sockaddr_in exp;  /* Nom de la socket du client */
-    int sc ;                 /* Socket de connexion */
-    int scom;		      /* Socket de communication */
+    struct sockaddr_in sin;  // Nom de la socket de connexion
+    struct sockaddr_in exp;  // Nom de la socket du client
+    int sock ;               // Socket de connexion
+    int sclient;		     // Socket du client
     int fromlen = sizeof(exp);
     int j;
     int tid[MAXUSER];
-    int reuse = 1;
 
-    connectionsCount = 0;
-    clients.clientId = 0;
-    clients.next = NULL;
+	
+	if(argc < 3){
+		perror("Usage: server [Port] [Max client]");
+		exit(EXIT_FAILURE);
+	}
+	
+	// Lecture des paramètres
+	parameters.port = itoa(argv[1]);
+	parameters.maxClients = itoa(argv[2]);
 
-    /* creation de la socket */
-    if ((sc = socket(AF_INET,SOCK_STREAM,0)) < 0) {
+    // Creation de la socket
+    if ((sock = socket(AF_INET,SOCK_STREAM,0)) < 0) {
         perror("socket");
         exit(EXIT_FAILURE);
     }
 
     memset((void*)&sin, 0, sizeof(sin));
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
-    sin.sin_port = htons(PORTSERV);
+    sin.sin_port = htons(parameters.port);
     sin.sin_family = AF_INET;
 
-    setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)); 
+    // setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
+	// Est-ce nécessaire?
 
 
     /* nommage */
-    if (bind(sc,(struct sockaddr *)&sin,sizeof(sin)) < 0){
+    if(bind(sock,(struct sockaddr *)&sin,sizeof(sin)) < 0){
         perror("bind");
         exit(EXIT_FAILURE);
     }
-    listen(sc, 5);
+	
+    listen(sock, parameters.maxClients);
 
     j = 0;
     for (;;) {
-        /* On accepte la connexion */
-        if ((scom = accept(sc, (struct sockaddr *)&exp, &fromlen))== -1){
+        // On accepte la connexion
+        if((sclient = accept(sock, (struct sockaddr *)&exp, &fromlen))== -1){
             perror("accept");
             exit(EXIT_FAILURE);
         }
 
-        /* Si on est au dessus de max clients, on envoie une erreur et on ferme */
-        if (connectionsCount >= MAX_CLIENTS){
-            write(scom, ERRORMAXUSER, sizeof(int));
-            shutdown(scom, 2);
-            close(scom);
-        } else {
-            struct clientChain newClient;
-            struct clientChain *c;
-            c = &clients;
-            /* Creation d'un thread qui traite la requete */
-            j = (j+1)%MAX_CLIENTS;
-            pthread_create(&tid[j], 0, clientThread, scom);
-            connectionsCount++;
-            /* On ajoute dans la chaine le client */
-            newClient.clientId = tid[j];
-            newClient.next = NULL;
-            while (c.next != NULL) {
-                c = c->next;
-            }
-            c->next = &newClient;
+		// Ajout du client dans la chaîne de socket (ajout au début pour éviter le parcours)
+        struct clientChain *newClient = malloc(sizeof(struct clientChain));
+		newClient->sock = sclient;
+		newClient->next = clients;
+		clients = newClient;
+			
+        // Création d'un thread qui traite la requête
+        j = (j+1)%MAX_CLIENTS;
+        pthread_create(&tid[j], 0, clientThread, sclient);
+        connectionsCount++;
         }
-        sleep(1);
-    }
+    } /* GTU : Et comment on sort de là? */
 
-    /* A refaire */
-    for (i=0; i < MAX_CLIENTS; i++)
+    for (i=0; i < MAX_CLIENTS; i++){
         pthread_join(tid[i], 0);
-
+	}
+	
+	shutdown(sc,2);
     close(sc);
     return EXIT_SUCCESS;
 }

@@ -11,5 +11,6 @@ struct heapData{
 
 struct clientChain{
   int clientId;
+  int sock;
   struct clientChain *next;
 };
