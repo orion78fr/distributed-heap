@@ -10,12 +10,11 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <getopt.h>
 
-/*
 #define PORTSERV 5500
 #define HEAPSIZE 1024
 #define MAX_CLIENTS 20
-*/
 
 struct heapData{
   pthread_mutex_t mutex;
@@ -87,25 +86,65 @@ void *clientThread(void *arg) {
 	return NULL;
 }
 
+/**
+ * Parse les arguments du programme
+ * @param argc Argc du main
+ * @param argv Argv du main
+ * @return 0 si succès, le nombre d'erreur sinon
+ */
+int parse_args(int argc, char *argv[]){
+	int c, option_index, returnValue = 0;
+	
+	static struct option long_options[] =
+    {
+        {"port", required_argument, 0, 'p'},
+        {"nbClient", required_argument, 0, 'n'},
+        {"heapSize", required_argument, 0, 's'},
+        {0, 0, 0, 0}
+    };
+	
+	while((c = getopt_long(argc, argv, "p:n:s:", long_options, &option_index)) != -1){
+		switch(c){
+		  case 0:
+			// Flag option
+			break;
+		  case 'p':
+		    parameters.port = atoi(optarg);
+			break;
+		  case 'n':
+		    parameters.maxClients = atoi(optarg);
+			break;
+		  case 's':
+		    parameters.heapSize = atoi(optarg);
+			break;
+		  case '?':
+		    // Erreur, déjà affiché par getopt
+			returnValue++;
+			break;
+	      default:
+			returnValue++;
+		    abort();
+		}
+	}
+	return returnValue;
+}
+
 int main(int argc, char *argv[]){
     struct sockaddr_in sin; // Nom de la socket de connexion
     int sock; // Socket de connexion
     int sclient; // Socket du client
+	int i;
 
 	parameters.port = PORTSERV;
 	parameters.maxClients = MAX_CLIENTS;
 	parameters.heapSize = HEAPSIZE;
 	
-	if(argc < 4){
-		perror("Usage: server [Port] [Max client] [Heap Size]");
+	// Parsing des arguments
+	// Voir http://www.gnu.org/software/libc/manual/html_node/Getopt.html#Getopt
+	if(parse_args(argc, argv)){
+		perror("Wrong args\n");
 		exit(EXIT_FAILURE);
 	}
-	
-	// Lecture des paramètres
-	// TODO: Mettre des valeurs par défaut et remplir de manière dynamique ie quelque chose genre -p Port -n nbClient -s Size ?
-	parameters.port = atoi(argv[1]);
-	parameters.maxClients = atoi(argv[2]);
-	parameters.heapSize = atoi(argv[3]);
 	
 	printf("Port : %d\n", parameters.port);
 	printf("Max Clients : %d\n", parameters.maxClients);
