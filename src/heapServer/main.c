@@ -1,119 +1,158 @@
-#define _XOPEN_SOURCE 700
+#include "main.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/resource.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <pthread.h>
+int clientsConnected = 0;
+//pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
+struct clientChain *clients = NULL;
+struct parameters parameters;
 
-#include "constants.h"
+void *clientThread(void *arg)
+{
+    int sock = (int) arg;
+    struct message msg;
 
-#define PORTSERV 5500
-#define ERRORMAXUSER 66
-#define HEAPSIZE
-
-int connectionsCount;
-struct clientChain clients;
-
-int clientThread(int sc) {
-    /*** Lire le message ***/
-    char *buf;
-    buf = malloc(sizeof(char)*100);
-
-    /* Ici il faut envoyer la taille du tas à allouer */
-
-    /* if (read(sc,buf, sizeof(buf)) < 0) {
-        perror("read");
-        exit(EXIT_FAILURE);
-    } */
-
-    for (;;){
-        sleep(4);
+    // Envoi de la taille du stack
+    msg.msgType = MSG_HEAP_SIZE;
+    msg.content.asInteger = parameters.heapSize;
+    if (write(sock, (void *) &msg, sizeof(msg)) < 0) {
+	// GTU : Comment traite-t-on les erreurs? On déconnecte le client?
     }
 
-    /* Fermer la connexion */
-    shutdown(sc,2);
-    close(sc);
-    connectionsCount--;
-    pthread_exit(0);    
+    for (;;) {
+	sleep(4);
+    }
+
+    // Fermer la connexion
+    shutdown(sock, 2);
+    close(sock);
+    clientsConnected--;
+    pthread_exit(NULL);
+    return NULL;
 }
 
-int main(int argc, char *argv[]){
-    struct sockaddr_in sin;  /* Nom de la socket de connexion */
-    struct sockaddr_in exp;  /* Nom de la socket du client */
-    int sc ;                 /* Socket de connexion */
-    int scom;		      /* Socket de communication */
-    int fromlen = sizeof(exp);
-    int j;
-    int tid[MAXUSER];
-    int reuse = 1;
+/**
+ * Parse les arguments du programme
+ * @param argc Argc du main
+ * @param argv Argv du main
+ * @return 0 si succès, le nombre d'erreur sinon
+ */
+int parse_args(int argc, char *argv[])
+{
+    int c, option_index, returnValue = 0;
 
-    connectionsCount = 0;
-    clients.clientId = 0;
-    clients.next = NULL;
+    static struct option long_options[] = {
+	{"port", required_argument, 0, 'p'},
+	{"maxClient", required_argument, 0, 'n'},
+	{"heapSize", required_argument, 0, 's'},
+	{0, 0, 0, 0}
+    };
 
-    /* creation de la socket */
-    if ((sc = socket(AF_INET,SOCK_STREAM,0)) < 0) {
-        perror("socket");
-        exit(EXIT_FAILURE);
+    while ((c =
+	    getopt_long(argc, argv, "p:n:s:", long_options,
+			&option_index)) != -1) {
+	switch (c) {
+	case 0:
+	    // Flag option
+	    break;
+	case 'p':
+	    parameters.port = atoi(optarg);
+	    break;
+	case 'n':
+	    parameters.maxClients = atoi(optarg);
+	    break;
+	case 's':
+	    parameters.heapSize = atoi(optarg);
+	    break;
+	case '?':
+	    // Erreur, déjà affiché par getopt
+	    returnValue++;
+	    break;
+	default:
+	    returnValue++;
+	    abort();
+	}
+    }
+    return returnValue;
+}
+
+int main(int argc, char *argv[])
+{
+    struct sockaddr_in sin;	// Nom de la socket de connexion
+    int sock;			// Socket de connexion
+    int sclient;		// Socket du client
+    int i;
+
+    parameters.port = PORTSERV;
+    parameters.maxClients = MAX_CLIENTS;
+    parameters.heapSize = HEAPSIZE;
+
+    // Parsing des arguments
+    // Voir http://www.gnu.org/software/libc/manual/html_node/Getopt.html#Getopt
+    if (parse_args(argc, argv)) {
+	perror("Wrong args\n");
+	exit(EXIT_FAILURE);
     }
 
-    memset((void*)&sin, 0, sizeof(sin));
+    printf("Port : %d\n", parameters.port);
+    printf("Max Clients : %d\n", parameters.maxClients);
+    printf("Heap Size : %d\n", parameters.heapSize);
+
+    // Creation de la socket
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	perror("socket");
+	exit(EXIT_FAILURE);
+    }
+
+    memset((void *) &sin, 0, sizeof(sin));
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
-    sin.sin_port = htons(PORTSERV);
+    sin.sin_port = htons(parameters.port);
     sin.sin_family = AF_INET;
 
-    setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)); 
+    // setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
+    // Est-ce nécessaire?
 
-
-    /* nommage */
-    if (bind(sc,(struct sockaddr *)&sin,sizeof(sin)) < 0){
-        perror("bind");
-        exit(EXIT_FAILURE);
+    // Lien et écoute de la socket
+    if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
+	perror("bind");
+	exit(EXIT_FAILURE);
     }
-    listen(sc, 5);
+    listen(sock, parameters.maxClients);
 
-    j = 0;
     for (;;) {
-        /* On accepte la connexion */
-        if ((scom = accept(sc, (struct sockaddr *)&exp, &fromlen))== -1){
-            perror("accept");
-            exit(EXIT_FAILURE);
-        }
+	struct clientChain *newClient;
 
-        /* Si on est au dessus de max clients, on envoie une erreur et on ferme */
-        if (connectionsCount >= MAX_CLIENTS){
-            write(scom, ERRORMAXUSER, sizeof(int));
-            shutdown(scom, 2);
-            close(scom);
-        } else {
-            struct clientChain newClient;
-            struct clientChain *c;
-            c = &clients;
-            /* Creation d'un thread qui traite la requete */
-            j = (j+1)%MAX_CLIENTS;
-            pthread_create(&tid[j], 0, clientThread, scom);
-            connectionsCount++;
-            /* On ajoute dans la chaine le client */
-            newClient.clientId = tid[j];
-            newClient.next = NULL;
-            while (c.next != NULL) {
-                c = c->next;
-            }
-            c->next = &newClient;
-        }
-        sleep(1);
+	printf("It's ok! I'm waiting!\n");
+
+	// On accepte la connexion
+	if ((sclient = accept(sock, NULL, NULL)) == -1) {
+	    perror("accept");
+	    exit(EXIT_FAILURE);
+	}
+
+	if (clientsConnected > parameters.maxClients) {
+	    struct message msgError;
+	    msgError.msgType = MSG_ERROR;
+	    msgError.content.asInteger = ERROR_SERVER_FULL;
+	    write(sclient, (void *) &msgError, sizeof(msgError));
+	    continue;
+	}
+	// Ajout du client dans la chaîne de socket (ajout au début pour éviter le parcours)
+	newClient = malloc(sizeof(struct clientChain));
+	newClient->sock = sclient;
+	newClient->next = clients;
+	clients = newClient;
+
+	// Création d'un thread pour traiter les requêtes
+	pthread_create((pthread_t *) & (newClient->clientId), NULL,
+		       clientThread, (void *) sclient);
+	clientsConnected++;
+    }				// GTU : Et comment on sort de là?
+
+    while (clients != NULL) {
+	pthread_join((pthread_t) clients->clientId, 0);
+	clients = clients->next;
     }
 
-    /* A refaire */
-    for (i=0; i < MAX_CLIENTS; i++)
-        pthread_join(tid[i], 0);
-
-    close(sc);
+    shutdown(sock, 2);
+    close(sock);
     return EXIT_SUCCESS;
 }
