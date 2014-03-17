@@ -1,7 +1,7 @@
 #include "main.h"
 
 int clientsConnected = 0;
-//pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
+/*pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;*/
 struct clientChain *clients = NULL;
 struct parameters parameters;
 
@@ -10,18 +10,18 @@ void *clientThread(void *arg)
     int sock = (int) arg;
     struct message msg;
 
-    // Envoi de la taille du stack
+    /* Envoi de la taille du stack */
     msg.msgType = MSG_HEAP_SIZE;
     msg.content.asInteger = parameters.heapSize;
     if (write(sock, (void *) &msg, sizeof(msg)) < 0) {
-	// GTU : Comment traite-t-on les erreurs? On déconnecte le client?
+	/* GTU : Comment traite-t-on les erreurs? On déconnecte le client? */
     }
 
     for (;;) {
 	sleep(4);
     }
 
-    // Fermer la connexion
+    /* Fermer la connexion */
     shutdown(sock, 2);
     close(sock);
     clientsConnected--;
@@ -51,7 +51,7 @@ int parse_args(int argc, char *argv[])
 			&option_index)) != -1) {
 	switch (c) {
 	case 0:
-	    // Flag option
+	    /* Flag option */
 	    break;
 	case 'p':
 	    parameters.port = atoi(optarg);
@@ -63,7 +63,7 @@ int parse_args(int argc, char *argv[])
 	    parameters.heapSize = atoi(optarg);
 	    break;
 	case '?':
-	    // Erreur, déjà affiché par getopt
+	    /* Erreur, déjà affiché par getopt */
 	    returnValue++;
 	    break;
 	default:
@@ -76,17 +76,16 @@ int parse_args(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    struct sockaddr_in sin;	// Nom de la socket de connexion
-    int sock;			// Socket de connexion
-    int sclient;		// Socket du client
-    int i;
+    struct sockaddr_in sin;	/* Nom de la socket de connexion */
+    int sock;			/* Socket de connexion */
+    int sclient;		/* Socket du client */
 
     parameters.port = PORTSERV;
     parameters.maxClients = MAX_CLIENTS;
     parameters.heapSize = HEAPSIZE;
 
-    // Parsing des arguments
-    // Voir http://www.gnu.org/software/libc/manual/html_node/Getopt.html#Getopt
+    /* Parsing des arguments 
+       // Voir http://www.gnu.org/software/libc/manual/html_node/Getopt.html#Getopt */
     if (parse_args(argc, argv)) {
 	perror("Wrong args\n");
 	exit(EXIT_FAILURE);
@@ -96,7 +95,7 @@ int main(int argc, char *argv[])
     printf("Max Clients : %d\n", parameters.maxClients);
     printf("Heap Size : %d\n", parameters.heapSize);
 
-    // Creation de la socket
+    /* Creation de la socket */
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 	perror("socket");
 	exit(EXIT_FAILURE);
@@ -107,10 +106,10 @@ int main(int argc, char *argv[])
     sin.sin_port = htons(parameters.port);
     sin.sin_family = AF_INET;
 
-    // setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
-    // Est-ce nécessaire?
+    /* setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
+       // Est-ce nécessaire? */
 
-    // Lien et écoute de la socket
+    /* Lien et écoute de la socket */
     if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
 	perror("bind");
 	exit(EXIT_FAILURE);
@@ -122,7 +121,7 @@ int main(int argc, char *argv[])
 
 	printf("It's ok! I'm waiting!\n");
 
-	// On accepte la connexion
+	/* On accepte la connexion */
 	if ((sclient = accept(sock, NULL, NULL)) == -1) {
 	    perror("accept");
 	    exit(EXIT_FAILURE);
@@ -135,17 +134,17 @@ int main(int argc, char *argv[])
 	    write(sclient, (void *) &msgError, sizeof(msgError));
 	    continue;
 	}
-	// Ajout du client dans la chaîne de socket (ajout au début pour éviter le parcours)
+	/* Ajout du client dans la chaîne de socket (ajout au début pour éviter le parcours) */
 	newClient = malloc(sizeof(struct clientChain));
 	newClient->sock = sclient;
 	newClient->next = clients;
 	clients = newClient;
 
-	// Création d'un thread pour traiter les requêtes
+	/* Création d'un thread pour traiter les requêtes */
 	pthread_create((pthread_t *) & (newClient->clientId), NULL,
 		       clientThread, (void *) sclient);
 	clientsConnected++;
-    }				// GTU : Et comment on sort de là?
+    }				/* GTU : Et comment on sort de là? */
 
     while (clients != NULL) {
 	pthread_join((pthread_t) clients->clientId, 0);

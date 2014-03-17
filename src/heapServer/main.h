@@ -42,7 +42,7 @@ struct parameters {
     int heapSize;
 };
 
-// GTU : 256 char pour un message ça me paraît suffisant non?
+/* GTU : 256 char pour un message ça me paraît suffisant non? */
 #define MESSAGE_SIZE 256
 enum msgTypes {
     MSG_HEAP_SIZE,
