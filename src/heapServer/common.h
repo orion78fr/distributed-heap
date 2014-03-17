@@ -25,5 +25,6 @@
 #include "clients.h"
 #include "messages.h"
 #include "error.h"
+#include "freelist.h"
 
 #endif

@@ -3,6 +3,10 @@
 int clientsConnected = 0;
 struct clientChain *clients = NULL;
 
+/**
+ * Thread du client
+ * @param arg Socket de communication du client
+ */
 void *clientThread(void *arg)
 {
     int sock = (int) arg;

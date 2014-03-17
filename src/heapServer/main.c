@@ -20,6 +20,8 @@ int main(int argc, char *argv[])
     printf("Heap Size : %d\n", parameters.heapSize);
 #endif
 
+    init_data();
+
     /* Creation de la socket */
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 	perror("socket");

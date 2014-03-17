@@ -49,6 +49,9 @@ int parse_args(int argc, char *argv[])
     return returnValue;
 }
 
+/**
+ * Initialise les valeurs par défaut de parameters
+ */
 void set_defaults()
 {
     parameters.port = PORTSERV;
