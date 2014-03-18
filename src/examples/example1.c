@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stlib.h>
+#include <stdlib.h>
 #include "distributedHeap.h"
 
 int main(char *args[])
@@ -11,7 +11,8 @@ int main(char *args[])
 
     if ((error = init_data()) != 0){
         switch(error){
-            case DHEAP_SERVER_FULL:
+            case DHEAP_ERROR_CONNECTION:
+                printf("DHEAP_ERROR_CONNECTION\n");
                 break;
             default:
                 printf("Unhandeled error... number: %d\n", error);
@@ -22,7 +23,7 @@ int main(char *args[])
 
     }
 
-    if ((error = t_read_access("i", &i)) != 0){
+    if ((error = t_access_read("i", &i)) != 0){
 
     }
 
@@ -37,6 +38,8 @@ int main(char *args[])
     if ((error = close_data()) != 0){
 
     }
+    
+    printf("Success!\n");
 
     return EXIT_SUCCESS;
 }
