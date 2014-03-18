@@ -2,7 +2,10 @@
 #define HEAPSERVER_ERROR
 
 enum errorCodes {
-    ERROR_SERVER_FULL
+    ERROR_SERVER_FULL,
+    ERROR_HEAP_FULL,
+    ERROR_VAR_DONT_EXIST,
+    ERROR_NOT_LOCKED
 };
 
 #endif

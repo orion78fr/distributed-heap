@@ -8,6 +8,7 @@ struct freeListChain {
 };
 
 extern struct freeListChain *freeList;
+extern pthread_mutex_t freeListMutex;
 
 int alloc_space(int size);
 

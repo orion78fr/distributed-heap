@@ -1,6 +1,6 @@
 #include "common.h"
 
-struct heapData *hashTable[HASHSIZE];
+struct heapData **hashTable;
 
 /**
  * Recupere la structure heapData correspondant à un nom
@@ -61,6 +61,7 @@ int add_data(char *name, int size)
 	newData->writeAccess = NULL;
 	newData->readWait = NULL;
 	newData->writeWait = NULL;
+	pthread_mutex_init(&(newData->mutex), NULL);
 
 	newData->offset = alloc_space(size);
 
@@ -76,7 +77,8 @@ int add_data(char *name, int size)
 void init_data()
 {
     int i;
-    for (i = 0; i < HASHSIZE; i++) {
+    hashTable = malloc(parameters.hashSize * sizeof(struct heapData *));
+    for (i = 0; i < parameters.hashSize; i++) {
 	hashTable[i] = NULL;
     }
     freeList = malloc(sizeof(struct freeListChain));

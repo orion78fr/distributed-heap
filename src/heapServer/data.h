@@ -1,8 +1,6 @@
 #ifndef HEAPSERVER_DATA
 #define HEAPSERVER_DATA
 
-#define HASHSIZE 256
-
 struct heapData {
     pthread_mutex_t mutex;
     char *name;
@@ -15,7 +13,7 @@ struct heapData {
     struct heapData *next;
 };
 
-extern struct heapData *hashTable[];
+extern struct heapData **hashTable;
 
 struct heapData *get_data(char *name);
 int getHashSum(char *name);

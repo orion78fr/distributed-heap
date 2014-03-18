@@ -7,6 +7,7 @@ struct parameters parameters;
  * @param argc Argc du main
  * @param argv Argv du main
  * @return 0 si succès, le nombre d'erreur sinon
+ * @see http://www.gnu.org/software/libc/manual/html_node/Getopt.html#Getopt
  */
 int parse_args(int argc, char *argv[])
 {
@@ -18,11 +19,12 @@ int parse_args(int argc, char *argv[])
 	{"port", required_argument, 0, 'p'},
 	{"maxClient", required_argument, 0, 'n'},
 	{"heapSize", required_argument, 0, 's'},
+	{"hashSize", required_argument, 0, 'h'},
 	{0, 0, 0, 0}
     };
 
     while ((c =
-	    getopt_long(argc, argv, "p:n:s:", long_options,
+	    getopt_long(argc, argv, "p:n:s:h:", long_options,
 			&option_index)) != -1) {
 	switch (c) {
 	case 0:
@@ -36,6 +38,9 @@ int parse_args(int argc, char *argv[])
 	    break;
 	case 's':
 	    parameters.heapSize = atoi(optarg);
+	    break;
+	case 'h':
+	    parameters.hashSize = atoi(optarg);
 	    break;
 	case '?':
 	    /* Erreur, déjà affiché par getopt */
@@ -57,4 +62,5 @@ void set_defaults()
     parameters.port = PORTSERV;
     parameters.maxClients = MAX_CLIENTS;
     parameters.heapSize = HEAPSIZE;
+    parameters.hashSize = HASHSIZE;
 }

@@ -6,10 +6,7 @@ int main(int argc, char *argv[])
     int sock;			/* Socket de connexion */
     int sclient;		/* Socket du client */
 
-    /* Parsing des arguments 
-     * Voir 
-     * http://www.gnu.org/software/libc/manual/html_node/Getopt.html#Getopt
-     */
+    /* Parsing des arguments */
     if (parse_args(argc, argv)) {
 	perror("Wrong args\n");
 	exit(EXIT_FAILURE);

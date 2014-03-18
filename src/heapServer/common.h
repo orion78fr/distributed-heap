@@ -2,7 +2,8 @@
 #define HEAPSERVER_COMMON
 
 /* GTU : Pour simplifier on va faire les includes de tout les .h dans tout les
- * .c, du moment que ça ne pose pas de conflits */
+ * .c, du moment que ça ne pose pas de conflits (Cela allonge la compilation
+ * mais pas l'exécution) */
 
 #define _XOPEN_SOURCE 700
 
