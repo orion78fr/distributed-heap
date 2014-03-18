@@ -13,10 +13,10 @@ int alloc_space(int size)
     struct freeListChain *tempFreeList;
     struct freeListChain *prevFreeList = NULL;
     int offset = -1;
-    
+
     pthread_mutex_lock(&freeListMutex);
     tempFreeList = freeList;
-    
+
     while (tempFreeList != NULL) {
 	if (tempFreeList->size >= size) {
 	    offset = tempFreeList->startOffset;
@@ -28,10 +28,10 @@ int alloc_space(int size)
 		    /* On est pas au début, on le retire */
 		    prevFreeList->next = tempFreeList->next;
 		} else {
-			/* On est au début et il y a quelque chose après */
-			freeList = tempFreeList->next;
-			/* Même si la freeList se retrouverait vide,
-			 * next contient bien NULL */
+		    /* On est au début et il y a quelque chose après */
+		    freeList = tempFreeList->next;
+		    /* Même si la freeList se retrouverait vide,
+		     * next contient bien NULL */
 		}
 		free(tempFreeList);
 	    }
@@ -56,54 +56,55 @@ void free_space(int offset, int size)
     struct freeListChain *prevFreeList = NULL;
     struct freeListChain *nextFreeList;
     int fusion = 0;
-    
+
     pthread_mutex_lock(&freeListMutex);
-    
+
     nextFreeList = freeList;
-    
+
     /* D'abord rechercher un encadrement de l'offset dans la freeList */
-    while(nextFreeList != NULL && nextFreeList->startOffset < offset){
-        prevFreeList = nextFreeList;
-        nextFreeList = nextFreeList->next;
+    while (nextFreeList != NULL && nextFreeList->startOffset < offset) {
+	prevFreeList = nextFreeList;
+	nextFreeList = nextFreeList->next;
     }
-    
+
     /* On vérifie si on peut fusionner avec la partie d'avant */
-    if((prevFreeList != NULL)
-        && ((prevFreeList->startOffset + prevFreeList->size) == offset)){
-        prevFreeList->size += size;
-        fusion++;
+    if ((prevFreeList != NULL)
+	&& ((prevFreeList->startOffset + prevFreeList->size) == offset)) {
+	prevFreeList->size += size;
+	fusion++;
     }
-    
+
     /* On vérifie si on peut fusionner avec la partie d'après */
-    if((nextFreeList != NULL)
-        && (nextFreeList->startOffset == (offset + size))){
-        if(fusion){
-            /* Si on a fusionné avec la partie d'avant, on doit fusionner
-             * avec celle d'après et la supprimer */
-            prevFreeList->size += nextFreeList->size;
-            prevFreeList->next = nextFreeList->next;
-            free(nextFreeList);
-        } else {
-            /* Sinon, on fusionne seulement avec celle d'après */
-            nextFreeList->startOffset = offset;
-            nextFreeList->size += size;
-        }
-        fusion++;
+    if ((nextFreeList != NULL)
+	&& (nextFreeList->startOffset == (offset + size))) {
+	if (fusion) {
+	    /* Si on a fusionné avec la partie d'avant, on doit fusionner
+	     * avec celle d'après et la supprimer */
+	    prevFreeList->size += nextFreeList->size;
+	    prevFreeList->next = nextFreeList->next;
+	    free(nextFreeList);
+	} else {
+	    /* Sinon, on fusionne seulement avec celle d'après */
+	    nextFreeList->startOffset = offset;
+	    nextFreeList->size += size;
+	}
+	fusion++;
     }
-    
+
     /* Si on ne peut fusionner avec aucun des bouts de freelist, on doit
      * créer un nouveau bout */
-    if(!fusion){
-        struct freeListChain *newFreeList = malloc(sizeof(struct freeListChain));
-        newFreeList->startOffset = offset;
-        newFreeList->size = size;
-        newFreeList->next = nextFreeList;
-        if(prevFreeList != NULL){
-            prevFreeList->next = newFreeList;
-        } else {
-            freeList = newFreeList;
-        }
+    if (!fusion) {
+	struct freeListChain *newFreeList =
+	    malloc(sizeof(struct freeListChain));
+	newFreeList->startOffset = offset;
+	newFreeList->size = size;
+	newFreeList->next = nextFreeList;
+	if (prevFreeList != NULL) {
+	    prevFreeList->next = newFreeList;
+	} else {
+	    freeList = newFreeList;
+	}
     }
-    
+
     pthread_mutex_unlock(&freeListMutex);
 }

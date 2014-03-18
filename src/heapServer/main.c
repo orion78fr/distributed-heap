@@ -59,10 +59,20 @@ int main(int argc, char *argv[])
 #endif
 
 	if (clientsConnected > parameters.maxClients) {
-	    struct message msgError;
-	    msgError.msgType = MSG_ERROR;
-	    msgError.content.asInteger = ERROR_SERVER_FULL;
-	    write(sclient, (void *) &msgError, sizeof(msgError));
+	    int temp;
+	    char *temp2 = "ERROR";
+
+	    temp = MSG_ERROR;
+	    write(sclient, (void *) &temp, sizeof(temp));	/* Msg type */
+	    temp = ERROR_SERVER_FULL;
+	    write(sclient, (void *) &temp, sizeof(temp));	/* Error type */
+	    temp = strlen(temp2);
+	    write(sclient, (void *) &temp, sizeof(temp));	/* Message size */
+	    write(sclient, (void *) &temp2, temp);	/* Message */
+
+	    shutdown(sclient, 2);
+	    close(sclient);
+
 	    continue;
 	}
 	/* Ajout du client dans la chaîne de socket (ajout au début pour
