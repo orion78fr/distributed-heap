@@ -138,6 +138,7 @@ void *clientThread(void *arg)
 
 	if (content != NULL) {
 	    free(content);
+        content = NULL;
 	}
     }
 
