@@ -22,7 +22,7 @@ void *clientThread(void *arg)
     /* Envoi de la taille du stack */
 
     msgType = MSG_HEAP_SIZE;
-    if (write(sock, (void *) &msgType, sizeof(msgType))) {	/* Msg type */
+    if (write(sock, (void *) &msgType, sizeof(msgType)) < 0) {	/* Msg type */
 	goto disconnect;
     }
     if (write(sock, &(parameters.heapSize), sizeof(parameters.heapSize)) <
