@@ -1,42 +1,121 @@
 #include "distributedHeap.h"
 
-struct heapInfo heapInfo;
+/* TODO:
+ * - Gestion du msg type, dans le cas ou le serveur envoie une erreur directement
+ */
+
+struct heapInfo *heapInfo;
 
 int init_data(){
-    struct sockaddr_in servaddr,cliaddr;
+    struct sockaddr_in servaddr;
+    /* struct addrinfo hints, *result; */
+    int msgtype;
 
-    /* TODO: Ajouter la gestion d'erreur et du hostname */
+    heapInfo = malloc(sizeof(struct heapInfo));
 
-    heapInfo.sock = socket(AF_INET,SOCK_STREAM,0);
+    heapInfo->sock = socket(AF_INET,SOCK_STREAM,0);
+    /* TODO: Gestion des hostname en plus des IPs
+     * memset(&hints, 0, sizeof(hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_ADDRCONFIG | AI_CANONNAME;
 
-    bzero(&servaddr,sizeof(servaddr));
+    if (getaddrinfo(DHEAP_SERVER_ADDRESS, &hints, &result) == -1){
+        return DHEAP_ERROR_CONNECTION;
+    } */
+
+    memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr=inet_addr(DHEAP_SERVER_ADDRESS);
     servaddr.sin_port=htons(DHEAP_SERVER_PORT);
 
-    connect(heapInfo.sock, (struct sockaddr *)&servaddr, sizeof(servaddr));
-
-    /* Reception de la taille du tas */			
-    if (read(heapInfo.sock,&(heapInfo.heapSize),sizeof(heapInfo.heapSize)) == -1){
-        /* TODO: ajouter une vérification de la taille du tas */
+    if (connect(heapInfo->sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    return 0;
+    /* Reception du type de message (MSG_HEAP_SIZE) */			
+    if (read(heapInfo->sock, &msgtype, sizeof(int)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    if (msgtype != MSG_HEAP_SIZE){
+        return DHEAP_ERROR_UNEXPECTED_MSG;
+    }
+
+    /* Reception de la taille du tas */			
+    if (read(heapInfo->sock,&(heapInfo->heapSize),sizeof(heapInfo->heapSize)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* TODO: DEBUG */
+    printf("HeapSize: %d\n", heapInfo->heapSize);
+
+    /* allocation du tas dans la mémoire */
+    heapInfo->heapStart = malloc(heapInfo->heapSize);
+    if (heapInfo->heapStart = NULL){
+        return DHEAP_ERROR_HEAP_ALLOC;
+    }
+
+    return DHEAP_SUCCESS;
 }
 
 
 int close_data(){
+    /* Fermeture de la connexion */
+    if (close(heapInfo->sock) == -1){
+        /* TODO: quelle erreur renvoyer? */
+    }
 
+    /* On vide le tas */
+    free(heapInfo->heapStart);
+
+    /* On vide la structure heapInfo */
+    free(heapInfo);
+
+    return DHEAP_SUCCESS;
 }
 
 int t_malloc(int size, char *name){
-    /* envoie de la requete de malloc
-     * si erreur sur le write -> return error
-     */
+    int msgtype;
+    int tmp;
+
+    /* On envoie le type de message (ALLOC) */
+    msgtype = MSG_ALLOC;
+    if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On envoie la longueur du nom à allouer */
+    tmp = strlen(name);
+    if (write(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On envoie le nom */
+    if (write(heapInfo->sock, name, strlen(name)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On envoie la taille qu'on veut allouer */
+    if (write(heapInfo->sock, &size, sizeof(size)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On receptionne l'acquittement ou l'erreur */
+    tmp = 0;
+    if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On verifie s'il y a eu une erreur ou non */
+    /* TODO: default case ? unknown error ? dheap_success ? */
+    switch (tmp){
+        case DHEAP_ERROR_HEAP_FULL:
+            return DHEAP_ERROR_HEAP_FULL;
+    }
 
     /* return success */
-    return 0;
+    return DHEAP_SUCCESS;
 
 }
 

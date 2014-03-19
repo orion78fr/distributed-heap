@@ -13,7 +13,7 @@
 #include <pthread.h>
 #include <getopt.h>
 
-#define DHEAP_SERVER_ADDRESS "localhost"
+#define DHEAP_SERVER_ADDRESS "127.0.1.1"
 #define DHEAP_SERVER_PORT 6969
 
 enum errorCodes {
@@ -24,9 +24,22 @@ enum errorCodes {
     DHEAP_ERROR_NOT_LOCKED,
 
     /* Codes d'erreur propres au client */
-    DHEAP_ERROR_CONNECTION
+    DHEAP_SUCCESS,
+    DHEAP_ERROR_CONNECTION,
+    DHEAP_ERROR_UNEXPECTED_MSG,
+    DHEAP_ERROR_HEAP_ALLOC
 };
 
+enum msgTypes {
+    MSG_HEAP_SIZE,
+    MSG_ALLOC,
+    MSG_ACCESS_READ,
+    MSG_ACCESS_WRITE,
+    MSG_RELEASE,
+    MSG_FREE,
+    MSG_ERROR,
+    MSG_DISCONNECT
+};
 
 int init_data();
 int close_data();
@@ -38,8 +51,8 @@ int t_free(char *name);
 
 struct heapInfo {
     int heapSize;
-    char *heapStart;
+    void *heapStart;
     int sock;
 };
 
-extern struct heapInfo heapInfo;
+extern struct heapInfo *heapInfo;

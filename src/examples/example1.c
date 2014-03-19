@@ -9,7 +9,7 @@ int main(char *args[])
     
     printf("Hello World\n");
 
-    if ((error = init_data()) != 0){
+    if ((error = init_data()) != DHEAP_SUCCESS){
         switch(error){
             case DHEAP_ERROR_CONNECTION:
                 printf("DHEAP_ERROR_CONNECTION\n");
@@ -19,27 +19,30 @@ int main(char *args[])
         }
     }
     
-    if ((error = t_malloc(sizeof(int), "i")) != 0){
+    if ((error = t_malloc(sizeof(int), "i")) != DHEAP_SUCCESS){
 
     }
 
-    if ((error = t_access_read("i", &i)) != 0){
+    if ((error = t_access_read("i", &i)) != DHEAP_SUCCESS){
 
     }
 
-    if ((error = t_release(i)) != 0){
+    if ((error = t_release(i)) != DHEAP_SUCCESS){
 
     }
 
-    if (error = (t_free("i")) != 0){
+    if (error = (t_free("i")) != DHEAP_SUCCESS){
 
     }
 
-    if ((error = close_data()) != 0){
+    /* sleep(15); */
+
+    if ((error = close_data()) != DHEAP_SUCCESS){
 
     }
     
     printf("Success!\n");
+
 
     return EXIT_SUCCESS;
 }
