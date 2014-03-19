@@ -59,7 +59,6 @@ int init_data(){
     return DHEAP_SUCCESS;
 }
 
-
 int close_data(){
     /* Fermeture de la connexion */
     if (close(heapInfo->sock) == -1){
@@ -131,10 +130,75 @@ int t_access_write(char *name, void *p){
 }
 
 int t_release(void *p){
+    int msgtype, tmp;
 
+    /* On vérifie que le pointeur passé est bien dans la zone du tas réparti */
+    if ( p > heapInfo->heapStart || p < (heapInfo->heapStart - heapInfo->heapSize)){
+        return DHEAP_ERROR_BAD_POINTER;
+    }
+
+    /* On envoie le type de message (RELEASE) */
+    msgtype = MSG_RELEASE;
+    if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On envoie le pointeur */
+    if (write(heapInfo->sock, &p, sizeof(p)) == -1){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On receptionne l'acquittement ou l'erreur */
+    tmp = 0;
+    if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On verifie s'il y a eu une erreur ou non */
+    /* TODO: default case ? unknown error ? dheap_success ? */
+    switch (tmp){
+        /* TODO: erreurs à voir. VAR_DOESNT_EXIS */
+    }
+
+    /* return success */
+    return DHEAP_SUCCESS;
 }
 
 int t_free(char *name){
+    int msgtype;
+    int tmp;
+
+    /* On envoie le type de message (FREE) */
+    msgtype = MSG_FREE;
+    if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On envoie la longueur du nom à free */
+    tmp = strlen(name);
+    if (write(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On envoie le nom */
+    if (write(heapInfo->sock, name, strlen(name)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On receptionne l'acquittement ou l'erreur */
+    tmp = 0;
+    if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On verifie s'il y a eu une erreur ou non */
+    /* TODO: default case ? unknown error ? dheap_success ? */
+    switch (tmp){
+        /* TODO: erreurs à voir. VAR_DOESNT_EXIS */
+    }
+
+    /* return success */
+    return DHEAP_SUCCESS;
 
 }
 

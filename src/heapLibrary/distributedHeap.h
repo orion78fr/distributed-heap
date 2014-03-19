@@ -16,20 +16,23 @@
 #define DHEAP_SERVER_ADDRESS "127.0.1.1"
 #define DHEAP_SERVER_PORT 6969
 
+/* TODO: enum partagé avec le serveur */
 enum errorCodes {
     /* Codes d'erreur venant du serveur */
     DHEAP_ERROR_SERVER_FULL,
     DHEAP_ERROR_HEAP_FULL,
-    DHEAP_ERROR_VAR_DONT_EXIST,
+    DHEAP_ERROR_VAR_DOESNT_EXIST, /* TODO: nom à modifier dans le serveur */
     DHEAP_ERROR_NOT_LOCKED,
 
     /* Codes d'erreur propres au client */
     DHEAP_SUCCESS,
     DHEAP_ERROR_CONNECTION,
     DHEAP_ERROR_UNEXPECTED_MSG,
-    DHEAP_ERROR_HEAP_ALLOC
+    DHEAP_ERROR_HEAP_ALLOC,
+    DHEAP_ERROR_BAD_POINTER
 };
 
+/* TODO: enum partagé avec le serveur */
 enum msgTypes {
     MSG_HEAP_SIZE,
     MSG_ALLOC,
