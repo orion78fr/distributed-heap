@@ -52,7 +52,11 @@ enum msgTypes {
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int
  *  à cause des différences des machine (32 bit, 64 bit). On devrait utiliser
- *  des types spécifiques (indiquant le nombre de bits).
+ *  des types spécifiques (indiquant le nombre de bits exact).
+ *
+ * Les réponses doivent aussi contenir le type de message (int) pour permettre
+ *  la gestion des erreurs. Le type vaut celui de la demande si OK, le type
+ *  MSG_ERROR sinon.
  */
 
 #endif
