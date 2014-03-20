@@ -38,7 +38,7 @@ int getHashSum(char *name)
         sum += name[i];
     }
 
-    return sum % HASHSIZE;
+    return sum % parameters.hashSize;
 }
 
 /**
@@ -94,6 +94,37 @@ void init_data()
  */
 int remove_data(char *name)
 {
-    /* TODO */
+    int sum = getHashSum(name);
+    struct heapData *prevData = NULL;
+    struct heapData *data = hashTable[sum];
+    
+    /* L'user qui fait le free doit faire l'équivalent d'une demande en
+     * en écriture avant */
+    
+    while(data != NULL){
+        if(strcmp(data->name, name) == 0){
+            break;
+        } else {
+            prevData = data;
+            data = data->next;
+        }
+    }
+    
+    if(data == NULL){
+        return -1; /* Impossible de trouver une variable ayant ce nom */
+    }
+    
+    free_space(data->offset, data->size);
+    
+    if(prevData == NULL){
+        hashTable[sum] = data->next;
+    } else {
+        prevData->next = data->next;
+    }
+    
+    /* TODO Faire les free des demandes */
+    
+    free(data);
+    
     return 0;
 }
