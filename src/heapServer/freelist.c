@@ -18,28 +18,28 @@ int alloc_space(int size)
     tempFreeList = freeList;
 
     while (tempFreeList != NULL) {
-	if (tempFreeList->size >= size) {
-	    offset = tempFreeList->startOffset;
-	    tempFreeList->startOffset += size;
-	    tempFreeList->size -= size;
-	    if (tempFreeList->size == 0) {
-		/* Ce morceau est vide, on le retire de la liste */
-		if (prevFreeList != NULL) {
-		    /* On est pas au début, on le retire */
-		    prevFreeList->next = tempFreeList->next;
-		} else {
-		    /* On est au début et il y a quelque chose après */
-		    freeList = tempFreeList->next;
-		    /* Même si la freeList se retrouverait vide,
-		     * next contient bien NULL */
-		}
-		free(tempFreeList);
-	    }
-	    break;
-	} else {
-	    prevFreeList = tempFreeList;
-	    tempFreeList = tempFreeList->next;
-	}
+        if (tempFreeList->size >= size) {
+            offset = tempFreeList->startOffset;
+            tempFreeList->startOffset += size;
+            tempFreeList->size -= size;
+            if (tempFreeList->size == 0) {
+                /* Ce morceau est vide, on le retire de la liste */
+                if (prevFreeList != NULL) {
+                    /* On est pas au début, on le retire */
+                    prevFreeList->next = tempFreeList->next;
+                } else {
+                    /* On est au début et il y a quelque chose après */
+                    freeList = tempFreeList->next;
+                    /* Même si la freeList se retrouverait vide,
+                     * next contient bien NULL */
+                }
+                free(tempFreeList);
+            }
+            break;
+        } else {
+            prevFreeList = tempFreeList;
+            tempFreeList = tempFreeList->next;
+        }
     }
     pthread_mutex_unlock(&freeListMutex);
     /* GTU : Si -1, peut être lancer une défragmentation et réessayer */
@@ -63,47 +63,47 @@ void free_space(int offset, int size)
 
     /* D'abord rechercher un encadrement de l'offset dans la freeList */
     while (nextFreeList != NULL && nextFreeList->startOffset < offset) {
-	prevFreeList = nextFreeList;
-	nextFreeList = nextFreeList->next;
+        prevFreeList = nextFreeList;
+        nextFreeList = nextFreeList->next;
     }
 
     /* On vérifie si on peut fusionner avec la partie d'avant */
     if ((prevFreeList != NULL)
-	&& ((prevFreeList->startOffset + prevFreeList->size) == offset)) {
-	prevFreeList->size += size;
-	fusion++;
+        && ((prevFreeList->startOffset + prevFreeList->size) == offset)) {
+        prevFreeList->size += size;
+        fusion++;
     }
 
     /* On vérifie si on peut fusionner avec la partie d'après */
     if ((nextFreeList != NULL)
-	&& (nextFreeList->startOffset == (offset + size))) {
-	if (fusion) {
-	    /* Si on a fusionné avec la partie d'avant, on doit fusionner
-	     * avec celle d'après et la supprimer */
-	    prevFreeList->size += nextFreeList->size;
-	    prevFreeList->next = nextFreeList->next;
-	    free(nextFreeList);
-	} else {
-	    /* Sinon, on fusionne seulement avec celle d'après */
-	    nextFreeList->startOffset = offset;
-	    nextFreeList->size += size;
-	}
-	fusion++;
+        && (nextFreeList->startOffset == (offset + size))) {
+        if (fusion) {
+            /* Si on a fusionné avec la partie d'avant, on doit fusionner
+             * avec celle d'après et la supprimer */
+            prevFreeList->size += nextFreeList->size;
+            prevFreeList->next = nextFreeList->next;
+            free(nextFreeList);
+        } else {
+            /* Sinon, on fusionne seulement avec celle d'après */
+            nextFreeList->startOffset = offset;
+            nextFreeList->size += size;
+        }
+        fusion++;
     }
 
     /* Si on ne peut fusionner avec aucun des bouts de freelist, on doit
      * créer un nouveau bout */
     if (!fusion) {
-	struct freeListChain *newFreeList =
-	    malloc(sizeof(struct freeListChain));
-	newFreeList->startOffset = offset;
-	newFreeList->size = size;
-	newFreeList->next = nextFreeList;
-	if (prevFreeList != NULL) {
-	    prevFreeList->next = newFreeList;
-	} else {
-	    freeList = newFreeList;
-	}
+        struct freeListChain *newFreeList =
+            malloc(sizeof(struct freeListChain));
+        newFreeList->startOffset = offset;
+        newFreeList->size = size;
+        newFreeList->next = nextFreeList;
+        if (prevFreeList != NULL) {
+            prevFreeList->next = newFreeList;
+        } else {
+            freeList = newFreeList;
+        }
     }
 
     pthread_mutex_unlock(&freeListMutex);

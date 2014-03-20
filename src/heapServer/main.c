@@ -2,14 +2,14 @@
 
 int main(int argc, char *argv[])
 {
-    struct sockaddr_in sin;	/* Nom de la socket de connexion */
-    int sock;			/* Socket de connexion */
-    int sclient;		/* Socket du client */
+    struct sockaddr_in sin;     /* Nom de la socket de connexion */
+    int sock;                   /* Socket de connexion */
+    int sclient;                /* Socket du client */
 
     /* Parsing des arguments */
     if (parse_args(argc, argv)) {
-	perror("Wrong args\n");
-	exit(EXIT_FAILURE);
+        perror("Wrong args\n");
+        exit(EXIT_FAILURE);
     }
 #if DEBUG
     printf("Port : %d\n", parameters.port);
@@ -21,8 +21,8 @@ int main(int argc, char *argv[])
 
     /* Creation de la socket */
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-	perror("socket");
-	exit(EXIT_FAILURE);
+        perror("socket");
+        exit(EXIT_FAILURE);
     }
 
     memset((void *) &sin, 0, sizeof(sin));
@@ -35,64 +35,64 @@ int main(int argc, char *argv[])
 
     /* Lien et écoute de la socket */
     if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
-	perror("bind");
-	exit(EXIT_FAILURE);
+        perror("bind");
+        exit(EXIT_FAILURE);
     }
     listen(sock, parameters.maxClients);
 
     for (;;) {
-	struct clientChain *newClient;
+        struct clientChain *newClient;
 
 #if DEBUG
-	printf("It's ok! I'm waiting!\n");
+        printf("It's ok! I'm waiting!\n");
 #endif
 
-	/* On accepte la connexion */
-	if ((sclient = accept(sock, NULL, NULL)) == -1) {
-	    perror("accept");
-	    exit(EXIT_FAILURE);
-	}
+        /* On accepte la connexion */
+        if ((sclient = accept(sock, NULL, NULL)) == -1) {
+            perror("accept");
+            exit(EXIT_FAILURE);
+        }
 #if DEBUG
-	printf("New Client...\n");
-	/* GTU : Ajouter des getname etc... pour le debug (savoir 
-	 * qui se connecte) */
+        printf("New Client...\n");
+        /* GTU : Ajouter des getname etc... pour le debug (savoir 
+         * qui se connecte) */
 #endif
 
-	if (clientsConnected > parameters.maxClients) {
-	    int temp;
-	    char *temp2 = "ERROR";
+        if (clientsConnected > parameters.maxClients) {
+            int temp;
+            char *temp2 = "ERROR";
 
-	    temp = MSG_ERROR;
-	    write(sclient, (void *) &temp, sizeof(temp));	/* Msg type */
-	    temp = ERROR_SERVER_FULL;
-	    write(sclient, (void *) &temp, sizeof(temp));	/* Error type */
-	    temp = strlen(temp2);
-	    write(sclient, (void *) &temp, sizeof(temp));	/* Message size */
-	    write(sclient, (void *) &temp2, temp);	/* Message */
+            temp = MSG_ERROR;
+            write(sclient, (void *) &temp, sizeof(temp));       /* Msg type */
+            temp = ERROR_SERVER_FULL;
+            write(sclient, (void *) &temp, sizeof(temp));       /* Error type */
+            temp = strlen(temp2);
+            write(sclient, (void *) &temp, sizeof(temp));       /* Message size */
+            write(sclient, (void *) &temp2, temp);      /* Message */
 
-	    shutdown(sclient, 2);
-	    close(sclient);
+            shutdown(sclient, 2);
+            close(sclient);
 
-	    continue;
-	}
-	/* Ajout du client dans la chaîne de socket (ajout au début pour
-	 * éviter le parcours) */
-	newClient = malloc(sizeof(struct clientChain));
-	newClient->sock = sclient;
-	newClient->next = clients;
-	clients = newClient;
+            continue;
+        }
+        /* Ajout du client dans la chaîne de socket (ajout au début pour
+         * éviter le parcours) */
+        newClient = malloc(sizeof(struct clientChain));
+        newClient->sock = sclient;
+        newClient->next = clients;
+        clients = newClient;
 
-	/* Création d'un thread pour traiter les requêtes */
-	pthread_create((pthread_t *) & (newClient->clientId), NULL,
-		       clientThread, (void *) sclient);
-	clientsConnected++;
+        /* Création d'un thread pour traiter les requêtes */
+        pthread_create((pthread_t *) & (newClient->clientId), NULL,
+                       clientThread, (void *) sclient);
+        clientsConnected++;
     }
     /* GTU : Et comment on sort de là? Signaux puis envoi d'un END 
      * a tout les clients */
 
     while (clients != NULL) {
-	pthread_join((pthread_t) clients->clientId, 0);
-	clients = clients->next;
+        pthread_join((pthread_t) clients->clientId, 0);
+        clients = clients->next;
     }
 
     shutdown(sock, 2);

@@ -13,11 +13,11 @@ struct heapData *get_data(char *name)
     struct heapData *data = hashTable[sum];
 
     while (data != NULL) {
-	if (strcmp(name, data->name) == 0) {
-	    return data;
-	} else {
-	    data = data->next;
-	}
+        if (strcmp(name, data->name) == 0) {
+            return data;
+        } else {
+            data = data->next;
+        }
     }
 
     return NULL;
@@ -35,7 +35,7 @@ int getHashSum(char *name)
     int i;
 
     for (i = 0; i < size; i++) {
-	sum += name[i];
+        sum += name[i];
     }
 
     return sum % HASHSIZE;
@@ -52,21 +52,21 @@ int add_data(char *name, int size)
     int sum = getHashSum(name);
 
     if (get_data(name) != NULL) {
-	return -1;
+        return -1;
     } else {
-	struct heapData *newData = malloc(sizeof(struct heapData));
-	newData->name = name;
-	newData->size = size;
-	newData->readAccess = NULL;
-	newData->writeAccess = NULL;
-	newData->readWait = NULL;
-	newData->writeWait = NULL;
-	pthread_mutex_init(&(newData->mutex), NULL);
+        struct heapData *newData = malloc(sizeof(struct heapData));
+        newData->name = name;
+        newData->size = size;
+        newData->readAccess = NULL;
+        newData->writeAccess = NULL;
+        newData->readWait = NULL;
+        newData->writeWait = NULL;
+        pthread_mutex_init(&(newData->mutex), NULL);
 
-	newData->offset = alloc_space(size);
+        newData->offset = alloc_space(size);
 
-	newData->next = hashTable[sum];
-	hashTable[sum] = newData;
+        newData->next = hashTable[sum];
+        hashTable[sum] = newData;
     }
     return 0;
 }
@@ -79,7 +79,7 @@ void init_data()
     int i;
     hashTable = malloc(parameters.hashSize * sizeof(struct heapData *));
     for (i = 0; i < parameters.hashSize; i++) {
-	hashTable[i] = NULL;
+        hashTable[i] = NULL;
     }
     freeList = malloc(sizeof(struct freeListChain));
     freeList->startOffset = 0;
