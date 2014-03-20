@@ -22,7 +22,7 @@ void *clientThread(void *arg)
     /* Envoi de la taille du stack */
 
     msgType = MSG_HEAP_SIZE;
-    if (write(sock, (void *) &msgType, sizeof(msgType))) {      /* Msg type */
+    if (write(sock, (void *) &msgType, sizeof(msgType)) < 0) {  /* Msg type */
         goto disconnect;
     }
     if (write(sock, &(parameters.heapSize), sizeof(parameters.heapSize)) <
@@ -125,6 +125,7 @@ void *clientThread(void *arg)
             printf("[Client %d] Désallocation de %s\n", pthread_self(),
                    content);
 #endif
+
             /* TODO Désalloc */
 
             break;
@@ -138,6 +139,7 @@ void *clientThread(void *arg)
 
         if (content != NULL) {
             free(content);
+            content = NULL;
         }
     }
 

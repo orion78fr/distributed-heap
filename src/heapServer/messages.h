@@ -37,8 +37,9 @@ enum msgTypes {
  *                   |                              |    taille (int)
  *                   |                              |    contenu (taille * char)
  * -----------------------------------------------------------------------------
- * MSG_RELEASE       | offset (int)                 |        /
- *     C -> S        |                              |
+ * MSG_RELEASE       | offset (int)                 |        
+ *     C -> S        | taille (int)                 |        /
+ *                   | contenu (taille * char)      |
  * -----------------------------------------------------------------------------
  * MSG_FREE          | taille du nom (int)          |        /
  *     C -> S        | nom (taille * char)          |        
