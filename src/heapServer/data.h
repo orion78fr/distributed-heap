@@ -14,6 +14,7 @@ struct heapData {
 };
 
 extern struct heapData **hashTable;
+extern pthread_mutex_t hashTableMutex;
 
 struct heapData *get_data(char *name);
 int getHashSum(char *name);

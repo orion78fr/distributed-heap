@@ -1,6 +1,7 @@
 #include "common.h"
 
 struct heapData **hashTable;
+pthread_mutex_t hashTableMutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * Recupere la structure heapData correspondant à un nom
@@ -10,17 +11,23 @@ struct heapData **hashTable;
 struct heapData *get_data(char *name)
 {
     int sum = getHashSum(name);
-    struct heapData *data = hashTable[sum];
+    struct heapData *data;
+    
+    pthread_mutex_lock(&hashTableMutex);
+    
+    data = hashTable[sum];
 
     while (data != NULL) {
         if (strcmp(name, data->name) == 0) {
-            return data;
+            break;
         } else {
             data = data->next;
         }
     }
+    
+    pthread_mutex_unlock(&hashTableMutex);
 
-    return NULL;
+    return data;
 }
 
 /**
@@ -49,11 +56,10 @@ int getHashSum(char *name)
  */
 int add_data(char *name, int size)
 {
-    int sum = getHashSum(name);
-
     if (get_data(name) != NULL) {
         return -1;
     } else {
+        int sum = getHashSum(name);
         struct heapData *newData = malloc(sizeof(struct heapData));
         newData->name = name;
         newData->size = size;
@@ -64,9 +70,13 @@ int add_data(char *name, int size)
         pthread_mutex_init(&(newData->mutex), NULL);
 
         newData->offset = alloc_space(size);
+        
+        pthread_mutex_lock(&hashTableMutex);
 
         newData->next = hashTable[sum];
         hashTable[sum] = newData;
+        
+        pthread_mutex_unlock(&hashTableMutex);
     }
     return 0;
 }
