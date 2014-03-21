@@ -79,7 +79,7 @@ int remove_var(void *p){
     return 0;
 }
 
-struct *dheapVar getVarFromPointer(void *p){
+struct dheapVar* getVarFromPointer(void *p){
     int hash;
     struct dheapVar *dv;
 
@@ -94,7 +94,7 @@ struct *dheapVar getVarFromPointer(void *p){
         dv = dv->next;
     }
 
-    if (dv-> != p)
+    if (dv->p != p)
         return NULL;
     else
         return dv;

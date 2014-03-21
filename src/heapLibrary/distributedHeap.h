@@ -77,7 +77,7 @@ int receiveAck();
 void init_hashtable();
 void free_hashtable();
 int add_var(struct dheapVar *dv);
-int getDHTsum(int p);
+int getDHTsum(void *p);
 int remove_var(void *p);
 
 

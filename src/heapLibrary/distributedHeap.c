@@ -57,6 +57,9 @@ int init_data(){
         return DHEAP_ERROR_HEAP_ALLOC;
     }
 
+    /* initialisation de la hashtable */
+    init_hashtable();
+
     return DHEAP_SUCCESS;
 }
 
@@ -71,6 +74,9 @@ int close_data(){
 
     /* On vide la structure heapInfo */
     free(heapInfo);
+
+    /* On supprime la hashtable */
+    free_hashtable();
 
     return DHEAP_SUCCESS;
 }
@@ -145,24 +151,25 @@ int t_access_read(char *name, void **p){
         }
         
         /* Si faux, alors on renvoie le pointeur directement */
-        if (bool == 0){
-            *p = heapInfo->heapStart + offset;
-            return DHEAP_SUCCESS;
-        } else {
+        *p = heapInfo->heapStart + offset;
+
+        /* Si vrai: */
+        if (bool != 0) {
             int tailleContent;
             /* Si vrai, on récupère la taille */
             if (read(heapInfo->sock, &tailleContent, sizeof(tailleContent)) <= 0){
                 return DHEAP_ERROR_CONNECTION;
             }
 
-            /* Puis le contenu */
+            /* Puis le contenu directement dans le pointeur */
             if (read(heapInfo->sock, *p, tailleContent) <= 0){
                 return DHEAP_ERROR_CONNECTION;
             }
-
-            /* On renvoie le pointeur */
-            return DHEAP_SUCCESS;
         }
+
+        /* TODO: ajouter le add_var ici */
+
+        return DHEAP_SUCCESS;
     }
 }
 
@@ -172,7 +179,8 @@ int t_access_write(char *name, void *p){
 }
 
 
-/* TODO: hashtable et compagnie, HAVE FUN ! (pour vicelard) */
+/* TODO: ici utiliser la hashtable pour connaitre la taille et renvoyer le
+ * contenu au serveur */
 int t_release(void *p){
     int msgtype, tmp;
 
