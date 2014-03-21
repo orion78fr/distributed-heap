@@ -23,7 +23,7 @@ int main(char *args[])
 
     }
 
-    if ((error = t_access_read("i", &i)) != DHEAP_SUCCESS){
+    if ((error = t_access_read("i",(void**) &i)) != DHEAP_SUCCESS){
 
     }
 

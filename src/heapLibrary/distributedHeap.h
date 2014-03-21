@@ -15,13 +15,14 @@
 
 #define DHEAP_SERVER_ADDRESS "127.0.1.1"
 #define DHEAP_SERVER_PORT 6969
+#define DHEAP_HASHTABLE_SIZE 256
 
 /* TODO: enum partagé avec le serveur */
 enum errorCodes {
     /* Codes d'erreur venant du serveur */
     DHEAP_ERROR_SERVER_FULL,
     DHEAP_ERROR_HEAP_FULL,
-    DHEAP_ERROR_VAR_DOESNT_EXIST, /* TODO: nom à modifier dans le serveur */
+    DHEAP_ERROR_VAR_DOESNT_EXIST,
     DHEAP_ERROR_NOT_LOCKED,
 
     /* Codes d'erreur propres au client */
@@ -47,10 +48,11 @@ enum msgTypes {
 int init_data();
 int close_data();
 int t_malloc(int size, char *name);
-int t_access_read(char *name, void *p);
+int t_access_read(char *name, void **p);
 int t_access_write(char *name, void *p);
 int t_release(void *p);
 int t_free(char *name);
+int receiveAcq();
 
 struct heapInfo {
     int heapSize;
@@ -58,4 +60,13 @@ struct heapInfo {
     int sock;
 };
 
-extern struct heapInfo *heapInfo;
+struct dheapVar {
+    void *p,
+    int size,
+    enum rw { READ, WRITE };
+    struct dheapVar *next
+};
+
+extern struct dheapVar **dheapHashtable;
+extern struct heapInfo heapInfo;
+extern char *dheapErrorMsg;

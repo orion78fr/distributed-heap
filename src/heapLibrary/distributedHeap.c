@@ -5,6 +5,7 @@
  */
 
 struct heapInfo *heapInfo;
+char *dheapErrorMsg;
 
 int init_data(){
     struct sockaddr_in servaddr;
@@ -16,7 +17,7 @@ int init_data(){
     heapInfo->sock = socket(AF_INET,SOCK_STREAM,0);
     /* TODO: Gestion des hostname en plus des IPs
      * memset(&hints, 0, sizeof(hints));
-    hints.ai_family = PF_UNSPEC;
+    hints.ai_family = PF_UNSPEC; // AF_INET ou AF_INET6 pour ipv4 ou 6
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_ADDRCONFIG | AI_CANONNAME;
 
@@ -75,8 +76,7 @@ int close_data(){
 }
 
 int t_malloc(int size, char *name){
-    int msgtype;
-    int tmp;
+    int msgtype, tmp;
 
     /* On envoie le type de message (ALLOC) */
     msgtype = MSG_ALLOC;
@@ -100,35 +100,77 @@ int t_malloc(int size, char *name){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* On receptionne l'acquittement ou l'erreur */
-    tmp = 0;
-    if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
-        return DHEAP_ERROR_CONNECTION;
-    }
-
-    /* On verifie s'il y a eu une erreur ou non */
-    /* TODO: default case ? unknown error ? dheap_success ? */
-    switch (tmp){
-        case DHEAP_ERROR_HEAP_FULL:
-            return DHEAP_ERROR_HEAP_FULL;
-    }
-
-    /* return success */
-    return DHEAP_SUCCESS;
-
+    return receiveAck();
 }
 
-int t_access_read(char *name, void *p){
+int t_access_read(char *name, void **p){
     /* - envoie de la requete de read
      * - erreur write
      * - allocation dans le tas
      * - retour success */
+
+    int msgtype, tmp;
+
+    /* On envoie le type de message (ALLOC) */
+    msgtype = MSG_ACCESS_READ;
+    if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On envoie la longueur du nom à allouer */
+    tmp = strlen(name);
+    if (write(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On envoie le nom */
+    if (write(heapInfo->sock, name, strlen(name)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+    
+    /* On traite le retour */
+    if ((tmp = receiveAck()) != DHEAP_SUCCESS){
+        return tmp;
+    } else {
+        int offset;
+        char bool;
+        /* On récupère l'offset ou est située la variable */
+        if (read(heapInfo->sock, &offset, sizeof(offset)) <= 0){
+            return DHEAP_ERROR_CONNECTION;
+        }
+
+        /* On récupère le booléen (qui siginifie: modification ou non */
+        if (read(heapInfo->sock, &bool, sizeof(bool)) <= 0){
+            return DHEAP_ERROR_CONNECTION;
+        }
+        
+        /* Si faux, alors on renvoie le pointeur directement */
+        if (bool == 0){
+            *p = heapInfo->heapStart + offset;
+        } else {
+            int tailleContent;
+            /* Si vrai, on récupère la taille */
+            if (read(heapInfo->sock, &tailleContent, sizeof(tailleContent)) <= 0){
+                return DHEAP_ERROR_CONNECTION;
+            }
+
+            /* Puis le contenu */
+            if (read(heapInfo->sock, *p, tailleContent) <= 0){
+                return DHEAP_ERROR_CONNECTION;
+            }
+
+            /* On renvoie le pointeur */
+            return DHEAP_SUCCESS;
+        }
+    }
 }
 
 int t_access_write(char *name, void *p){
 
 }
 
+
+/* TODO: hashtable et compagnie, HAVE FUN ! (pour vicelard) */
 int t_release(void *p){
     int msgtype, tmp;
 
@@ -144,29 +186,15 @@ int t_release(void *p){
     }
 
     /* On envoie le pointeur */
-    if (write(heapInfo->sock, &p, sizeof(p)) == -1){
+    if (write(heapInfo->sock, p, sizeof(p)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* On receptionne l'acquittement ou l'erreur */
-    tmp = 0;
-    if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
-        return DHEAP_ERROR_CONNECTION;
-    }
-
-    /* On verifie s'il y a eu une erreur ou non */
-    /* TODO: default case ? unknown error ? dheap_success ? */
-    switch (tmp){
-        /* TODO: erreurs à voir. VAR_DOESNT_EXIS */
-    }
-
-    /* return success */
-    return DHEAP_SUCCESS;
+    return receiveAck();
 }
 
 int t_free(char *name){
-    int msgtype;
-    int tmp;
+    int msgtype, tmp;
 
     /* On envoie le type de message (FREE) */
     msgtype = MSG_FREE;
@@ -185,22 +213,54 @@ int t_free(char *name){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* On receptionne l'acquittement ou l'erreur */
-    tmp = 0;
+    return receiveAck();
+}
+
+int receiveAck(){
+    /* On receptionne le type du message de réponse */
+    int tmp = 0;
     if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On verifie s'il y a eu une erreur ou non */
-    /* TODO: default case ? unknown error ? dheap_success ? */
-    switch (tmp){
-        /* TODO: erreurs à voir. VAR_DOESNT_EXIS */
+    /* TODO: && msgtype == MSG_RELEASE ?? */
+    if (tmp == MSG_ERROR){
+        tmp = 0;
+        int tailleError;
+
+        /* On récupère le code d'erreur */
+        if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+            return DHEAP_ERROR_CONNECTION;
+        }
+
+        /* On récupère la taille du message d'erreur */
+        if (read(heapInfo->sock, &tailleError, sizeof(tailleError)) <= 0){
+            return DHEAP_ERROR_CONNECTION;
+        }
+
+        /* Si la taille est supérieur à 0 on récupère le message */
+        if (tailleError > 0){
+            if (dheapErrorMsg != NULL){
+                free(dheapErrorMsg);
+            }
+            dheapErrorMsg = malloc(sizeof(char)*tailleError);
+            if (read(heapInfo->sock, dheapErrorMsg, tailleError) <=0 ){
+                return DHEAP_ERROR_CONNECTION;
+            }
+        } else if (tailleError < 0){
+            /* TODO: erreur à traiter */
+        }
+
+        /* On retourne le code d'erreur */
+        return tmp;
+        
+    } else {
+        /* return success */
+        return DHEAP_SUCCESS;
     }
-
-    /* return success */
-    return DHEAP_SUCCESS;
-
 }
+
 
 
 void data_thread(){
