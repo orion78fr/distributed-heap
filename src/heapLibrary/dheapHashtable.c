@@ -22,4 +22,81 @@ void free_hashtable(){
         }
     }
     free(dheapHashtable);
-} 
+}
+
+int getDHTsum(void *p){
+    int q = (int)p;
+    return abs(q)%DHEAP_HASHTABLE_SIZE;
+}
+
+int add_var(struct dheapVar *dv){
+    int hash;
+
+    hash = getDHTsum(dv->p);
+
+    if (dheapHashtable[hash] == NULL){
+        dheapHashtable[hash] = dv;
+    } else {
+        struct dheapVar *dvtmp;
+        dvtmp = dheapHashtable[hash];
+        while (dvtmp->next != NULL){
+            dvtmp = dvtmp->next;
+        }
+        dvtmp->next = dv;
+    }
+
+    return 0;
+}
+
+int remove_var(void *p){
+    int hash;
+    struct dheapVar *dvtmp, *dvtmpprev;
+
+    hash = getDHTsum(p);
+    
+    dvtmp = dheapHashtable[hash];
+    if (dvtmp == NULL)
+        return -1;
+
+    while (dvtmp->p != p && dvtmp->next != NULL){
+        dvtmpprev = dvtmp;
+        dvtmp = dvtmp->next;
+    }
+
+    if (dvtmp->p != p)
+        return -1;
+
+    if (dvtmp == dheapHashtable[hash]){
+        dheapHashtable[hash] = NULL;
+    } else {
+        if (dvtmp->next != NULL)
+            dvtmpprev->next = dvtmp->next;
+        else
+            dvtmpprev->next = NULL;
+    }
+    free(dvtmp);
+    
+    return 0;
+}
+
+struct *dheapVar getVarFromPointer(void *p){
+    int hash;
+    struct dheapVar *dv;
+
+    hash = getDHTsum(p);
+
+    dv = dheapHashtable[hash];
+
+    if (dv == NULL)
+        return NULL;
+
+    while (dv->p != p && dv->next != NULL){
+        dv = dv->next;
+    }
+
+    if (dv-> != p)
+        return NULL;
+    else
+        return dv;
+
+}

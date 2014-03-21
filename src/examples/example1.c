@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "distributedHeap.h"
 
-int main(char *args[])
+int main(int argc, char *args[])
 {
     int *i;
     int error;
@@ -31,7 +31,7 @@ int main(char *args[])
 
     }
 
-    if (error = (t_free("i")) != DHEAP_SUCCESS){
+    if ((error = t_free("i")) != DHEAP_SUCCESS){
 
     }
 

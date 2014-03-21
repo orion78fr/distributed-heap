@@ -53,7 +53,7 @@ int init_data(){
 
     /* allocation du tas dans la mémoire */
     heapInfo->heapStart = malloc(heapInfo->heapSize);
-    if (heapInfo->heapStart = NULL){
+    if (heapInfo->heapStart == NULL){
         return DHEAP_ERROR_HEAP_ALLOC;
     }
 
@@ -147,6 +147,7 @@ int t_access_read(char *name, void **p){
         /* Si faux, alors on renvoie le pointeur directement */
         if (bool == 0){
             *p = heapInfo->heapStart + offset;
+            return DHEAP_SUCCESS;
         } else {
             int tailleContent;
             /* Si vrai, on récupère la taille */
@@ -167,6 +168,7 @@ int t_access_read(char *name, void **p){
 
 int t_access_write(char *name, void *p){
 
+    return 0;
 }
 
 

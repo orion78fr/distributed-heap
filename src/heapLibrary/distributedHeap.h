@@ -12,10 +12,30 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <getopt.h>
+#include <arpa/inet.h>
+
 
 #define DHEAP_SERVER_ADDRESS "127.0.1.1"
 #define DHEAP_SERVER_PORT 6969
 #define DHEAP_HASHTABLE_SIZE 256
+
+struct heapInfo {
+    int heapSize;
+    void *heapStart;
+    int sock;
+};
+
+struct dheapVar {
+    void *p;
+    int size;
+    enum rw { DHEAPVAR_READ, DHEAPVAR_WRITE } rw;
+    struct dheapVar *next;
+};
+
+extern struct dheapVar **dheapHashtable;
+extern struct heapInfo *heapInfo;
+extern char *dheapErrorMsg;
+
 
 /* TODO: enum partagé avec le serveur */
 enum errorCodes {
@@ -52,21 +72,12 @@ int t_access_read(char *name, void **p);
 int t_access_write(char *name, void *p);
 int t_release(void *p);
 int t_free(char *name);
-int receiveAcq();
+int receiveAck();
 
-struct heapInfo {
-    int heapSize;
-    void *heapStart;
-    int sock;
-};
+void init_hashtable();
+void free_hashtable();
+int add_var(struct dheapVar *dv);
+int getDHTsum(int p);
+int remove_var(void *p);
 
-struct dheapVar {
-    void *p,
-    int size,
-    enum rw { READ, WRITE };
-    struct dheapVar *next
-};
 
-extern struct dheapVar **dheapHashtable;
-extern struct heapInfo heapInfo;
-extern char *dheapErrorMsg;
