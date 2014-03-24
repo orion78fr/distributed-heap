@@ -1,9 +1,17 @@
-#include "distributedHeap.h"
+#include "dheapHashtable.h"
+
+/* TODO: Headers POSIX à mettre dans un common */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
 
 /* Hashtable:
  * cette hashtable permet de garder en mémoire la taille et la
  * localisation des différentes variables auxquelles on a acces
  */
+
 
 struct dheapVar **dheapHashtable;
 
