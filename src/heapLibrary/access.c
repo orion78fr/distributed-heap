@@ -1,11 +1,6 @@
 #include "distributedHeap.h"
 
 int t_access_read(char *name, void **p){
-    /* - envoie de la requete de read
-     * - erreur write
-     * - allocation dans le tas
-     * - retour success */
-
     int msgtype, tmp;
 
     /* On envoie le type de message (ALLOC) */
@@ -25,40 +20,48 @@ int t_access_read(char *name, void **p){
         return DHEAP_ERROR_CONNECTION;
     }
     
-    /* On traite le retour */
+    /* On traite le retour en cas d'erreur */
     if ((tmp = receiveAck()) != DHEAP_SUCCESS){
         return tmp;
     } else {
-        int offset;
+        /* On traite le retour en cas de success */
+        int offset, tailleContent;
         char bool;
+        struct dheapVar *dv;
         /* On récupère l'offset ou est située la variable */
         if (read(heapInfo->sock, &offset, sizeof(offset)) <= 0){
             return DHEAP_ERROR_CONNECTION;
         }
 
-        /* On récupère le booléen (qui siginifie: modification ou non */
+        /* On récupère la taille */
+        if (read(heapInfo->sock, &tailleContent, sizeof(tailleContent)) <= 0){
+            return DHEAP_ERROR_CONNECTION;
+        }
+
+        /* On récupère le booléen (qui siginifie: modification ou non) */
         if (read(heapInfo->sock, &bool, sizeof(bool)) <= 0){
             return DHEAP_ERROR_CONNECTION;
         }
-        
+
         /* Si faux, alors on renvoie le pointeur directement */
         *p = heapInfo->heapStart + offset;
 
         /* Si vrai: */
         if (bool != 0) {
-            int tailleContent;
-            /* Si vrai, on récupère la taille */
-            if (read(heapInfo->sock, &tailleContent, sizeof(tailleContent)) <= 0){
-                return DHEAP_ERROR_CONNECTION;
-            }
-
-            /* Puis le contenu directement dans le pointeur */
+            /* On récupère le contenu directement dans le pointeur */
             if (read(heapInfo->sock, *p, tailleContent) <= 0){
                 return DHEAP_ERROR_CONNECTION;
             }
         }
 
-        /* TODO: ajouter le add_var ici */
+        /* On ajoute la variable dans la hashtable */
+        dv = malloc(sizeof(struct dheapVar));
+        dv->p = p;
+        dv->taille = tailleContent;
+        dv->rw = DHEAPVAR_READ;
+        /* TODO: initialiser dv->next à NULL? */
+        /* TODO: gerer l'erreur possible sur la hashtable ? */
+        add_var(dv);
 
         return DHEAP_SUCCESS;
     }
@@ -91,5 +94,10 @@ int t_release(void *p){
         return DHEAP_ERROR_CONNECTION;
     }
 
+    /* On envoie la taille */
+
+    /* On envoie le contenu */
+
+    /* On s'occupe de l'acquittement ou de l'erreur */
     return receiveAck();
 }

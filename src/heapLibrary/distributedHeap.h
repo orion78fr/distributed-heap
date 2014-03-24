@@ -44,6 +44,7 @@ enum errorCodes {
     DHEAP_ERROR_HEAP_FULL,
     DHEAP_ERROR_VAR_DOESNT_EXIST,
     DHEAP_ERROR_NOT_LOCKED,
+    ERROR_UNKNOWN_ERROR,
 
     /* Codes d'erreur propres au client */
     DHEAP_SUCCESS,
