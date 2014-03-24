@@ -264,3 +264,87 @@ void acquire_write_sleep(struct heapData *data,
         prevMe->next = me->next;
     }
 }
+
+int release_read_lock(char *name)
+{
+    struct heapData *data = get_data(name);
+    struct clientChainRead *me, *prevMe;
+    pthread_t myPid;
+
+    if (data == NULL) {
+        return -1;
+    }
+
+    pthread_mutex_lock(&(data->mutex));
+
+    /* On se retire de la liste */
+    if ((prevMe = data->readAccess) == NULL) {
+        return -2;
+    }
+    myPid = pthread_self();
+    if (prevMe->clientId == myPid) {
+        data->readAccess = prevMe->next;
+        free(prevMe);
+    } else {
+        while (prevMe->next != NULL && prevMe->next->clientId != myPid) {
+            prevMe = prevMe->next;
+        }
+        if ((me = prevMe->next) == NULL) {
+            return -2;
+        }
+        prevMe->next = me->next;
+        free(me);
+    }
+
+    /* Réveil du/des suivant(s) */
+    if (data->readAccess == NULL) {
+        struct clientChainWrite *nextAccess;
+        if ((nextAccess = data->writeWait) != NULL) {
+            /* La première demande se trouve à la fin */
+            while (nextAccess->next != NULL) {
+                nextAccess = nextAccess->next;
+            }
+            pthread_cond_signal(&(nextAccess->cond));
+        }
+    }
+
+    pthread_mutex_unlock(&(data->mutex));
+
+    return 0;
+}
+
+int release_write_lock(char *name)
+{
+    struct heapData *data = get_data(name);
+
+    if (data == NULL) {
+        return -1;
+    }
+
+    pthread_mutex_lock(&(data->mutex));
+
+    if (data->writeAccess == NULL
+        || data->writeAccess->clientId != pthread_self()) {
+        return -2;
+    }
+    free(data->writeAccess);
+    data->writeAccess = NULL;
+
+    /* Réveil des suivants */
+    if (data->readWait != NULL) {
+        pthread_cond_broadcast(&(data->readCond));
+    } else {
+        struct clientChainWrite *nextAccess;
+        if ((nextAccess = data->writeWait) != NULL) {
+            /* La première demande se trouve à la fin */
+            while (nextAccess->next != NULL) {
+                nextAccess = nextAccess->next;
+            }
+            pthread_cond_signal(&(nextAccess->cond));
+        }
+    }
+
+    pthread_mutex_unlock(&(data->mutex));
+
+    return 0;
+}
