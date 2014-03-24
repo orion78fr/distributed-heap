@@ -215,5 +215,52 @@ void acquire_read_sleep(struct heapData *data, struct clientChainRead *me)
 
 int acquire_write_lock(char *name)
 {
+    struct heapData *data = get_data(name);
+    struct clientChainWrite *me;
 
+    if (data == NULL) {
+        return -1;
+    }
+
+    pthread_mutex_lock(&(data->mutex));
+
+    me = malloc(sizeof(struct clientChainWrite));
+    me->clientId = pthread_self();
+    pthread_cond_init(&(me->cond), NULL);
+
+    if (data->readAccess != NULL || data->writeAccess != NULL) {
+        /* Si quelqu'un est en accès */
+        acquire_write_sleep(data, me);
+    } else {
+        if (data->readWait != NULL || data->writeWait != NULL) {
+            /* Si quelqu'un attend déjà */
+            acquire_write_sleep(data, me);
+        }
+    }
+
+    me->next = NULL;
+    data->writeAccess = me;
+
+    pthread_mutex_unlock(&(data->mutex));
+
+    return 0;
+}
+
+void acquire_write_sleep(struct heapData *data,
+                         struct clientChainWrite *me)
+{
+    struct clientChainWrite *prevMe;
+    me->next = data->writeWait;
+    data->writeWait = me;
+
+    pthread_cond_wait(&(me->cond), &(data->mutex));
+
+    if ((prevMe = data->writeWait) == me) {
+        data->writeWait = me->next;
+    } else {
+        while (prevMe != NULL && prevMe->next != me) {
+            prevMe = prevMe->next;
+        }
+        prevMe->next = me->next;
+    }
 }

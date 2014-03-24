@@ -15,7 +15,7 @@ int alloc_space(int size)
     int offset = -1;
 
     pthread_mutex_lock(&freeListMutex);
-    
+
     tempFreeList = freeList;
 
     while (tempFreeList != NULL) {
@@ -42,11 +42,11 @@ int alloc_space(int size)
             tempFreeList = tempFreeList->next;
         }
     }
-    
+
     pthread_mutex_unlock(&freeListMutex);
-    
+
     /* GTU : Si -1, peut être lancer une défragmentation et réessayer */
-    
+
     return offset;
 }
 
