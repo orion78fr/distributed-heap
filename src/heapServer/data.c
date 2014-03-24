@@ -2,6 +2,7 @@
 
 struct heapData **hashTable;
 pthread_mutex_t hashTableMutex = PTHREAD_MUTEX_INITIALIZER;
+void *theHeap;
 
 /**
  * Recupere la structure heapData correspondant à un nom
@@ -12,9 +13,9 @@ struct heapData *get_data(char *name)
 {
     int sum = getHashSum(name);
     struct heapData *data;
-    
+
     pthread_mutex_lock(&hashTableMutex);
-    
+
     data = hashTable[sum];
 
     while (data != NULL) {
@@ -24,7 +25,7 @@ struct heapData *get_data(char *name)
             data = data->next;
         }
     }
-    
+
     pthread_mutex_unlock(&hashTableMutex);
 
     return data;
@@ -68,14 +69,15 @@ int add_data(char *name, int size)
         newData->readWait = NULL;
         newData->writeWait = NULL;
         pthread_mutex_init(&(newData->mutex), NULL);
+        pthread_cond_init(&(newData->readCond), NULL);
 
         newData->offset = alloc_space(size);
-        
+
         pthread_mutex_lock(&hashTableMutex);
 
         newData->next = hashTable[sum];
         hashTable[sum] = newData;
-        
+
         pthread_mutex_unlock(&hashTableMutex);
     }
     return 0;
@@ -91,10 +93,13 @@ void init_data()
     for (i = 0; i < parameters.hashSize; i++) {
         hashTable[i] = NULL;
     }
+
     freeList = malloc(sizeof(struct freeListChain));
     freeList->startOffset = 0;
     freeList->size = parameters.heapSize;
     freeList->next = NULL;
+
+    theHeap = malloc(parameters.heapSize);
 }
 
 /**
@@ -106,35 +111,109 @@ int remove_data(char *name)
 {
     int sum = getHashSum(name);
     struct heapData *prevData = NULL;
-    struct heapData *data = hashTable[sum];
-    
+    struct heapData *data;
+
+    pthread_mutex_lock(&hashTableMutex);
+
+    data = hashTable[sum];
+
     /* L'user qui fait le free doit faire l'équivalent d'une demande en
      * en écriture avant */
-    
-    while(data != NULL){
-        if(strcmp(data->name, name) == 0){
+
+    while (data != NULL) {
+        if (strcmp(data->name, name) == 0) {
             break;
         } else {
             prevData = data;
             data = data->next;
         }
     }
-    
-    if(data == NULL){
-        return -1; /* Impossible de trouver une variable ayant ce nom */
+
+    if (data == NULL) {
+        return -1;              /* Impossible de trouver une variable ayant ce nom */
     }
-    
+
     free_space(data->offset, data->size);
-    
-    if(prevData == NULL){
+
+    if (prevData == NULL) {
         hashTable[sum] = data->next;
     } else {
         prevData->next = data->next;
     }
-    
+
     /* TODO Faire les free des demandes */
-    
+
+    pthread_mutex_unlock(&hashTableMutex);
+
     free(data);
-    
+
     return 0;
+}
+
+int acquire_read_lock(char *name)
+{
+    struct heapData *data = get_data(name);
+    struct clientChainRead *me;
+
+    if (data == NULL) {
+        return -1;
+    }
+
+    pthread_mutex_lock(&(data->mutex));
+
+    me = malloc(sizeof(struct clientChainRead));
+    me->clientId = pthread_self();
+
+    if (data->readAccess != NULL) {
+        /* On est en mode read... */
+        if (data->writeWait == NULL) {
+            /* ...et personne n'attend l'écriture */
+        } else {
+            acquire_read_sleep(data, me);
+        }
+    } else if (data->writeAccess != NULL) {
+        /* On est en mode write */
+        acquire_read_sleep(data, me);
+    } else {
+        /* Le data n'est pas actif... */
+        if (data->readWait != NULL || data->writeWait != NULL) {
+            /* ...mais il y a deja des personnes en attente */
+            acquire_read_sleep(data, me);
+        } else {
+            /* ...et il y a personne */
+        }
+    }
+
+    /* On se met dans la liste de read */
+    me->next = data->readAccess;
+    data->readAccess = me;
+
+    pthread_mutex_unlock(&(data->mutex));
+
+    return 0;
+}
+
+void acquire_read_sleep(struct heapData *data, struct clientChainRead *me)
+{
+    struct clientChainRead *prevMe;
+    me->next = data->readWait;
+    data->readWait = me;
+    /* On attend */
+    pthread_cond_wait(&(data->readCond), &(data->mutex));
+    /* On se retire de la liste d'attente et on se met en read */
+    if ((prevMe = data->readWait) == me) {
+        data->readWait = me->next;
+    } else {
+        while (prevMe != NULL && prevMe->next != me) {
+            /* prevMe ne devrait pas être NULL de toute façon, peut-être
+             * retirer le test */
+            prevMe = prevMe->next;
+        }
+        prevMe->next = me->next;
+    }
+}
+
+int acquire_write_lock(char *name)
+{
+
 }

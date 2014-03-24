@@ -29,7 +29,7 @@ enum msgTypes {
  *     C -> S        | nom (taille * char)          | booléen (char)
  *                   |                              | si booléen vrai
  *                   |                              |    taille (int)
- *                   |                              |    contenu (taille * char)       
+ *                   |                              |    contenu (taille * char)
  * -----------------------------------------------------------------------------
  * MSG_ACCESS_WRITE  | taille du nom (int)          | offset (int)
  *     C -> S        | nom (taille * char)          | booléen (char)
@@ -54,6 +54,7 @@ enum msgTypes {
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int
  *  à cause des différences des machine (32 bit, 64 bit). On devrait utiliser
  *  des types spécifiques (indiquant le nombre de bits exact).
+ *  Voir : http://www.nongnu.org/avr-libc/user-manual/group__avr__stdint.html
  *
  * Les réponses doivent aussi contenir le type de message (int) pour permettre
  *  la gestion des erreurs. Le type vaut celui de la demande si OK, le type
