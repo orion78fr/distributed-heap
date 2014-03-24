@@ -2,7 +2,7 @@
 
 /* TODO: factoriser write & read */
 
-int t_access_common(int msgtype, char *name, void **p){
+int t_access_common(int msgtype, char *name, void *p){
     int tmp;
 
     /* On envoie le msgtype */
@@ -56,10 +56,10 @@ int t_access_common(int msgtype, char *name, void **p){
         }
 
         /* On ajoute la variable dans la hashtable */
-        /* TODO: initialiser dv->next à NULL? */
         dv = malloc(sizeof(struct dheapVar));
         dv->p = p;
         dv->size = tailleContent;
+        dv->next = NULL;
         if (msgtype == MSG_ACCESS_READ)
             dv->rw = DHEAPVAR_READ;
         else if (msgtype == MSG_ACCESS_WRITE)
@@ -73,13 +73,13 @@ int t_access_common(int msgtype, char *name, void **p){
     }
 }
 
-int t_access_read(char *name, void **p){
+int t_access_read(char *name, void *p){
     int msgtype;
     msgtype = MSG_ACCESS_READ;
     return t_access_common(msgtype, name, p);
 }
 
-int t_access_write(char *name, void **p){
+int t_access_write(char *name, void *p){
     int msgtype;
     msgtype = MSG_ACCESS_WRITE;
     return t_access_common(msgtype, name, p);

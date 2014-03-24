@@ -62,8 +62,9 @@ enum msgTypes {
 int init_data();
 int close_data();
 int t_malloc(int size, char *name);
-int t_access_read(char *name, void **p);
-int t_access_write(char *name, void **p);
+int t_access_read(char *name, void *p);
+int t_access_write(char *name, void *p);
+int t_access_common(int msgtype, char *name, void *p);
 int t_release(void *p);
 int t_free(char *name);
 int receiveAck();
