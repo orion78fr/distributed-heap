@@ -2,11 +2,10 @@
 
 /* TODO: factoriser write & read */
 
-int t_access_read(char *name, void **p){
-    int msgtype, tmp;
+int t_access_common(int msgtype, char *name, void **p){
+    int tmp;
 
-    /* On envoie le type de message (READ) */
-    msgtype = MSG_ACCESS_READ;
+    /* On envoie le msgtype */
     if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
@@ -57,11 +56,16 @@ int t_access_read(char *name, void **p){
         }
 
         /* On ajoute la variable dans la hashtable */
+        /* TODO: initialiser dv->next à NULL? */
         dv = malloc(sizeof(struct dheapVar));
         dv->p = p;
         dv->size = tailleContent;
-        dv->rw = DHEAPVAR_READ;
-        /* TODO: initialiser dv->next à NULL? */
+        if (msgtype == MSG_ACCESS_READ)
+            dv->rw = DHEAPVAR_READ;
+        else if (msgtype == MSG_ACCESS_WRITE)
+            dv->rw = DHEAPVAR_WRITE;
+        else
+            return ERROR_UNKNOWN_ERROR; /* TODO: erreur à changer */
         /* TODO: gerer l'erreur possible sur la hashtable ? */
         add_var(dv);
 
@@ -69,75 +73,17 @@ int t_access_read(char *name, void **p){
     }
 }
 
-int t_access_write(char *name, void *p){
-    int msgtype, tmp;
+int t_access_read(char *name, void **p){
+    int msgtype;
+    msgtype = MSG_ACCESS_READ;
+    return t_access_common(msgtype, name, p);
+}
 
-    /* On envoie le type de message (WRITE) */
+int t_access_write(char *name, void **p){
+    int msgtype;
     msgtype = MSG_ACCESS_WRITE;
-    if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
-        return DHEAP_ERROR_CONNECTION;
-    }
-
-    /* On envoie la longueur du nom qu'on veut en écriture */
-    tmp = strlen(name);
-    if (write(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
-        return DHEAP_ERROR_CONNECTION;
-    }
-
-    /* On envoie le nom */
-    if (write(heapInfo->sock, name, strlen(name)) <= 0){
-        return DHEAP_ERROR_CONNECTION;
-    }
-    
-    /* On traite le retour en cas d'erreur */
-    if ((tmp = receiveAck()) != DHEAP_SUCCESS){
-        return tmp;
-    } else {
-        /* On traite le retour en cas de success */
-        int offset, tailleContent;
-        char bool;
-        struct dheapVar *dv;
-        /* On récupère l'offset ou est située la variable */
-        if (read(heapInfo->sock, &offset, sizeof(offset)) <= 0){
-            return DHEAP_ERROR_CONNECTION;
-        }
-
-        /* On récupère la taille */
-        if (read(heapInfo->sock, &tailleContent, sizeof(tailleContent)) <= 0){
-            return DHEAP_ERROR_CONNECTION;
-        }
-
-        /* On récupère le booléen (qui siginifie: modification ou non) */
-        if (read(heapInfo->sock, &bool, sizeof(bool)) <= 0){
-            return DHEAP_ERROR_CONNECTION;
-        }
-
-        /* Si faux, alors on renvoie le pointeur directement */
-        p = heapInfo->heapStart + offset;
-
-        /* Si vrai: */
-        if (bool != 0) {
-            /* On récupère le contenu directement dans le pointeur */
-            if (read(heapInfo->sock, p, tailleContent) <= 0){
-                return DHEAP_ERROR_CONNECTION;
-            }
-        }
-
-        /* On ajoute la variable dans la hashtable */
-        dv = malloc(sizeof(struct dheapVar));
-        dv->p = p;
-        dv->size = tailleContent;
-        dv->rw = DHEAPVAR_WRITE;
-        /* TODO: initialiser dv->next à NULL? */
-        /* TODO: gerer l'erreur possible sur la hashtable ? */
-        add_var(dv);
-
-        return DHEAP_SUCCESS;
-    }
-
-    return 0;
+    return t_access_common(msgtype, name, p);
 }
-
 
 int t_release(void *p){
     int msgtype;
