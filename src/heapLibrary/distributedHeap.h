@@ -80,5 +80,6 @@ void free_hashtable();
 int add_var(struct dheapVar *dv);
 int getDHTsum(void *p);
 int remove_var(void *p);
+struct dheapVar* getVarFromPointer(void *p);
 
 

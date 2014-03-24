@@ -1,5 +1,10 @@
 #include "distributedHeap.h"
 
+/* Hashtable:
+ * cette hashtable permet de garder en mémoire la taille et la
+ * localisation des différentes variables auxquelles on a acces
+ */
+
 struct dheapVar **dheapHashtable;
 
 void init_hashtable(){
