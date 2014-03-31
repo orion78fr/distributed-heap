@@ -34,22 +34,22 @@ void *clientThread(void *arg)
 
     /* Boucle principale */
     for (;;) {
-        if (read(sock, (void *) &msgType, sizeof(msgType)) < 0) {       /* Msg type */
+        if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
             goto disconnect;
         }
 
         /* Switch pour les différents types de messages */
         switch (msgType) {
         case MSG_ALLOC: /* Allocation d'une variable */
-            if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Name size */
+            if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Name size */
                 goto disconnect;
             }
             content = malloc(temp * sizeof(char) + 1);
             ((char *) content)[temp] = '\0';
-            if (read(sock, content, temp) < 0) {        /* Name */
+            if (read(sock, content, temp) <= 0) {        /* Name */
                 goto disconnect;
             }
-            if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Var size */
+            if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Var size */
                 goto disconnect;
             }
 #if DEBUG
@@ -62,18 +62,18 @@ void *clientThread(void *arg)
                 goto disconnect;
             } else {
                 /* OK */
-                if(send_data(sock, MSG_ALLOC, 0)<0){
+                if(send_data(sock, MSG_ALLOC, 0)<=0){
                     goto disconnect;
                 }
             }
             break;
         case MSG_ACCESS_READ:   /* Demande d'accès en lecture */
-            if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Name size */
+            if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Name size */
                 goto disconnect;
             }
             content = malloc(temp * sizeof(char) + 1);
             ((char *) content)[temp] = '\0';
-            if (read(sock, content, temp) < 0) {        /* Name */
+            if (read(sock, content, temp) <= 0) {        /* Name */
                 goto disconnect;
             }
 #if DEBUG
@@ -107,12 +107,12 @@ void *clientThread(void *arg)
             }
             break;
         case MSG_ACCESS_WRITE:  /* Demande d'accès en écriture */
-            if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Name size */
+            if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Name size */
                 goto disconnect;
             }
             content = malloc(temp * sizeof(char) + 1);
             ((char *) content)[temp] = '\0';
-            if (read(sock, content, temp) < 0) {        /* Name */
+            if (read(sock, content, temp) <= 0) {        /* Name */
                 goto disconnect;
             }
 #if DEBUG
@@ -148,7 +148,7 @@ void *clientThread(void *arg)
             break;
 
         case MSG_RELEASE:       /* Relachement de la variable */
-            if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Offset */
+            if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Offset */
                 goto disconnect;
             } else {
                 struct tempCorrespondance *prevData = NULL, *data = corresp;
@@ -161,10 +161,10 @@ void *clientThread(void *arg)
                    data->name);
 #endif
                 content = malloc(sizeof(int));
-                if (read(sock, content, sizeof(int)) < 0) {        /* Taille */
+                if (read(sock, content, sizeof(int)) <= 0) {        /* Taille */
                     goto disconnect;
                 }
-                if (read(sock, theHeap+temp, *(int*)content) < 0) {        /* Contenu */
+                if (read(sock, theHeap+temp, *(int*)content) <= 0) {        /* Contenu */
                     goto disconnect;
                 }
                 if(data->write){
@@ -184,12 +184,12 @@ void *clientThread(void *arg)
             break;
 
         case MSG_FREE:          /* Désallocation d'une variable */
-            if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Name size */
+            if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Name size */
                 goto disconnect;
             }
             content = malloc(temp * sizeof(char) + 1);
             ((char *) content)[temp] = '\0';
-            if (read(sock, content, temp) < 0) {        /* Name */
+            if (read(sock, content, temp) <= 0) {        /* Name */
                 goto disconnect;
             }
 #if DEBUG
