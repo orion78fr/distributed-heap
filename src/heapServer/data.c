@@ -77,6 +77,8 @@ int add_data(char *name, int size)
 
         newData->next = hashTable[sum];
         hashTable[sum] = newData;
+        
+        memset(theHeap + newData->offset, 0, size);
 
         pthread_mutex_unlock(&hashTableMutex);
     }

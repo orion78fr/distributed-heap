@@ -20,7 +20,8 @@ void *clientThread(void *arg)
 #endif
 
     /* Envoi de la taille du stack */
-	if(send_data(sock, MSG_HEAP_SIZE, 1, (DS){sizeof(int), &(parameters.heapSize)})<0){
+	if(send_data(sock, MSG_HEAP_SIZE, 1, 
+                    (DS){sizeof(int), &(parameters.heapSize)})<0){
 		goto disconnect;
 	}
 
@@ -32,8 +33,6 @@ void *clientThread(void *arg)
 
         /* Switch pour les différents types de messages */
         switch (msgType) {
-        case MSG_HEAP_SIZE:     /* Clients should not send that */
-            goto disconnect;
         case MSG_ALLOC: /* Allocation d'une variable */
             if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Name size */
                 goto disconnect;
@@ -52,11 +51,15 @@ void *clientThread(void *arg)
 #endif
 
             if (add_data(content, temp) != 0) {
-                /* TODO Traitement erreur */
+                /* ERREUR */
+                goto disconnect;
+            } else {
+                /* OK */
+                if(send_data(sock, MSG_ALLOC, 0)<0){
+                    goto disconnect;
+                }
             }
-
             break;
-
         case MSG_ACCESS_READ:   /* Demande d'accès en lecture */
             if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Name size */
                 goto disconnect;
@@ -70,9 +73,22 @@ void *clientThread(void *arg)
             printf("[Client %d] Demande d'accès en lecture de %s\n",
                    pthread_self(), content);
 #endif
-
-            /* TODO Demande d'accès */
-
+            
+            if(acquire_read_lock(content) != 0) {
+                /* ERREUR */
+                goto disconnect;
+            } else {
+                struct heapData *data = get_data(content);
+                int offset = data->offset;
+                int size = data->size;
+                /* OK */
+                if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3, 
+                                (DS){sizeof(int), &offset},
+                                (DS){sizeof(int), &size},
+                                (DS){size, theHeap + data->offset})<0){
+                    goto disconnect;
+                }
+            }
             break;
         case MSG_ACCESS_WRITE:  /* Demande d'accès en écriture */
             if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Name size */
@@ -88,7 +104,21 @@ void *clientThread(void *arg)
                    pthread_self(), content);
 #endif
 
-            /* TODO Demande d'accès */
+            if(acquire_write_lock(content) != 0) {
+                /* ERREUR */
+                goto disconnect;
+            } else {
+                struct heapData *data = get_data(content);
+                int offset = data->offset;
+                int size = data->size;
+                /* OK */
+                if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3, 
+                                (DS){sizeof(int), &offset},
+                                (DS){sizeof(int), &size},
+                                (DS){size, theHeap + data->offset})<0){
+                    goto disconnect;
+                }
+            }
 
             break;
 
@@ -119,13 +149,21 @@ void *clientThread(void *arg)
                    content);
 #endif
 
-            /* TODO Désalloc */
+            if(remove_data(content) != 0){
+                /* ERREUR */
+                goto disconnect;
+            } else {
+                /* OK */
+                if(send_data(sock, MSG_FREE, 0)<0){
+                    goto disconnect;
+                }
+            }
 
             break;
+            
+        case MSG_HEAP_SIZE:     /* Clients should not send that */
         case MSG_ERROR: /* Message d'erreur */
-            goto disconnect;    /* Pour l'instant, aucun traitement d'erreur */
         case MSG_DISCONNECT:    /* Message de déconnection */
-            goto disconnect;
         default:                /* Unknown message code, version problem? */
             goto disconnect;
         }
