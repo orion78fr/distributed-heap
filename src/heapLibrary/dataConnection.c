@@ -19,6 +19,7 @@ int init_data(){
 #endif 
     
     heapInfo = malloc(sizeof(struct heapInfo));
+    dheapErrorMsg = NULL;
 
     heapInfo->sock = socket(AF_INET,SOCK_STREAM,0);
     /* TODO: Gestion des hostname en plus des IPs
@@ -92,6 +93,10 @@ int close_data(){
 
     /* On supprime la hashtable */
     free_hashtable();
+
+    /* On vide le message d'erreur */
+    if (dheapErrorMsg != NULL)
+        free(dheapErrorMsg);
 
     return DHEAP_SUCCESS;
 }
