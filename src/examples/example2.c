@@ -58,7 +58,7 @@ int main(int argc, char *args[])
             sleep(randn);
 
             /* On essaye de récupérer l'acces en écriture */
-            if ((error = t_access_write("i", (void*) i)) != DHEAP_SUCCESS){
+            if ((error = t_access_write("i", (void**) &i)) != DHEAP_SUCCESS){
                 printf("ERROR T_ACCESS_WRITE: %d\n", error);
                 switch (error){
                     /* Si la variable n'existe pas, on fait le malloc */
@@ -102,7 +102,7 @@ int main(int argc, char *args[])
             sleep(randn);
 
             /* On récupère l'access en lecture */
-            if ((error = t_access_read("i", (void*) i)) != DHEAP_SUCCESS){
+            if ((error = t_access_read("i", (void**) &i)) != DHEAP_SUCCESS){
                 /* Ici peut etre que la variable n'existe pas encore */
                 printf("ERROR T_ACCESS_READ: %d\n", error);
                 count--;
