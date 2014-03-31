@@ -34,7 +34,7 @@ int t_malloc(int size, char *name){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    return receiveAck();
+    return receiveAck(MSG_ALLOC);
 }
 
 /**
@@ -66,5 +66,5 @@ int t_free(char *name){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    return receiveAck();
+    return receiveAck(MSG_FREE);
 }

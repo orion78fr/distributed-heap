@@ -29,12 +29,11 @@ int t_access_common(int msgtype, char *name, void *p){
     }
     
     /* On traite le retour en cas d'erreur */
-    if ((tmp = receiveAck()) != DHEAP_SUCCESS){
+    if ((tmp = receiveAckPointer(&msgtype)) != DHEAP_SUCCESS){
         return tmp;
     } else {
         /* On traite le retour en cas de success */
         int offset, tailleContent;
-        char bool;
         struct dheapVar *dv;
         /* On récupère l'offset ou est située la variable */
         if (read(heapInfo->sock, &offset, sizeof(offset)) <= 0){
@@ -46,16 +45,11 @@ int t_access_common(int msgtype, char *name, void *p){
             return DHEAP_ERROR_CONNECTION;
         }
 
-        /* On récupère le booléen (qui siginifie: modification ou non) */
-        if (read(heapInfo->sock, &bool, sizeof(bool)) <= 0){
-            return DHEAP_ERROR_CONNECTION;
-        }
-
-        /* Si faux, alors on renvoie le pointeur directement */
+        /* On place le pointeur au bon endroit */
         p = heapInfo->heapStart + offset;
 
         /* Si vrai: */
-        if (bool != 0) {
+        if (msgtype == MSG_ACCESS_READ_MODIFIED || msgtype == MSG_ACCESS_WRITE_MODIFIED) {
             /* On récupère le contenu directement dans le pointeur */
             if (read(heapInfo->sock, p, tailleContent) <= 0){
                 return DHEAP_ERROR_CONNECTION;
@@ -67,9 +61,9 @@ int t_access_common(int msgtype, char *name, void *p){
         dv->p = p;
         dv->size = tailleContent;
         dv->next = NULL;
-        if (msgtype == MSG_ACCESS_READ)
+        if (msgtype == MSG_ACCESS_READ || MSG_ACCESS_READ_MODIFIED)
             dv->rw = DHEAPVAR_READ;
-        else if (msgtype == MSG_ACCESS_WRITE)
+        else if (msgtype == MSG_ACCESS_WRITE || MSG_ACCESS_WRITE_MODIFIED)
             dv->rw = DHEAPVAR_WRITE;
         else
             return ERROR_UNKNOWN_ERROR; /* TODO: erreur à changer */
@@ -159,5 +153,5 @@ int t_release(void *p){
     remove_var(p);
 
     /* On s'occupe de l'acquittement ou de l'erreur */
-    return receiveAck();
+    return receiveAck(MSG_RELEASE);
 }

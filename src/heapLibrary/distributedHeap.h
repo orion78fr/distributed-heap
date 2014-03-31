@@ -52,7 +52,9 @@ enum msgTypes {
     MSG_HEAP_SIZE,
     MSG_ALLOC,
     MSG_ACCESS_READ,
+    MSG_ACCESS_READ_MODIFIED,
     MSG_ACCESS_WRITE,
+    MSG_ACCESS_WRITE_MODIFIED,
     MSG_RELEASE,
     MSG_FREE,
     MSG_ERROR,
@@ -67,4 +69,5 @@ int t_access_write(char *name, void *p);
 int t_access_common(int msgtype, char *name, void *p);
 int t_release(void *p);
 int t_free(char *name);
-int receiveAck();
+int receiveAck(int msgtype);
+int receiveAckPointer(int *msgtypeP);

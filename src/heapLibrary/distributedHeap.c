@@ -5,13 +5,21 @@
  * permettant de traiter les erreurs et les acquittements
  * @return enum errorCodes
  */
-int receiveAck(){
+int receiveAck(int msgtype){
+    return receiveAckPointer(&msgtype);
+}
+
+int receiveAckPointer(int *msgtypeP){
+    int msgtype;
+    int tmp = 0;
+
 #if DEBUG
     printf("Appel receiveAck()\n");
 #endif 
 
+    msgtype = *msgtypeP;
+
     /* On receptionne le type du message de réponse */
-    int tmp = 0;
     if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
@@ -47,10 +55,21 @@ int receiveAck(){
 
         /* On retourne le code d'erreur */
         return tmp;
-        
     } else {
-        /* return success */
-        return DHEAP_SUCCESS;
+        if (tmp != msgtype){
+            if (msgtype == MSG_ACCESS_READ && tmp == MSG_ACCESS_READ_MODIFIED){
+                *msgtypeP = MSG_ACCESS_READ_MODIFIED;
+                return DHEAP_SUCCESS;
+            } else if (msgtype == MSG_ACCESS_WRITE && tmp == MSG_ACCESS_WRITE_MODIFIED){
+                *msgtypeP = MSG_ACCESS_WRITE_MODIFIED;
+                return DHEAP_SUCCESS;
+            } else {
+                return DHEAP_ERROR_UNEXPECTED_MSG;
+            }
+        } else {
+            /* return success */
+            return DHEAP_SUCCESS;
+        }
     }
 }
 
