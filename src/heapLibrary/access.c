@@ -1,7 +1,10 @@
 #include "distributedHeap.h"
 
-/* TODO: factoriser write & read */
-
+/**
+ * Partie commune à t_access_read et t_access_write
+ * @param type du message, nom de la variable, pointeur pour la récupérer
+ * @return enum errorCodes
+ */
 int t_access_common(int msgtype, char *name, void *p){
     int tmp;
 
@@ -73,18 +76,33 @@ int t_access_common(int msgtype, char *name, void *p){
     }
 }
 
+/**
+ * Demander l'accès en lecture sur une variable
+ * @param nom de la variable, pointeur pour la récupérer
+ * @return enum errorCodes
+ */
 int t_access_read(char *name, void *p){
     int msgtype;
     msgtype = MSG_ACCESS_READ;
     return t_access_common(msgtype, name, p);
 }
 
+/**
+ * Demander l'accès en écriture sur une variable
+ * @param nom de la variable, pointeur pour la récupérer
+ * @return enum errorCodes
+ */
 int t_access_write(char *name, void *p){
     int msgtype;
     msgtype = MSG_ACCESS_WRITE;
     return t_access_common(msgtype, name, p);
 }
 
+/**
+ * Rendre l'accès d'une variable
+ * @param pointeur de la variable qu'on a obtenu lors de la demande d'accès
+ * @return enum errorCodes
+ */
 int t_release(void *p){
     int msgtype;
     struct dheapVar *dv;

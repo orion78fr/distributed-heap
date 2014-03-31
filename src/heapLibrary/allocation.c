@@ -1,5 +1,10 @@
 #include "distributedHeap.h"
 
+/**
+ * Alloue de la mémoire pour un nom de variable donné dans le tas
+ * @param taille à allouer (en octet), nom de la variable
+ * @return enum errorCodes
+ */
 int t_malloc(int size, char *name){
     int msgtype, tmp;
 
@@ -28,6 +33,11 @@ int t_malloc(int size, char *name){
     return receiveAck();
 }
 
+/**
+ * Libérer l'espace mémoire lié à une variable du tas
+ * @param nom de la variable
+ * @return enum errorCodes
+ */
 int t_free(char *name){
     int msgtype, tmp;
 

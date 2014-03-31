@@ -1,4 +1,9 @@
-#define DHEAP_HASHTABLE_SIZE 256
+/* pour la taille de la hashtable on choisit un nombre premier,
+ * en effet les allocations étant souvent des nombres pairs on
+ * veut quand même garder une uniformité dans la répartition des
+ * variables dans la hashtable étant donné que celles-ci sont
+ * liés à des pointeurs */
+#define DHEAP_HASHTABLE_SIZE 257
 
 struct dheapVar {
     void *p;

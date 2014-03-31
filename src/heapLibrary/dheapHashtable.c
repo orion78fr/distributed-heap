@@ -15,6 +15,9 @@
 
 struct dheapVar **dheapHashtable;
 
+/**
+ * Initialisation de la hashtable
+ */
 void init_hashtable(){
     int i;
     dheapHashtable = malloc(DHEAP_HASHTABLE_SIZE * sizeof(struct dheapVar *));
@@ -23,6 +26,9 @@ void init_hashtable(){
     }
 }
 
+/**
+ * Libère les données liées à la hashtable
+ */
 void free_hashtable(){
     int i;
     for (i = 0; i < DHEAP_HASHTABLE_SIZE; i++){
@@ -37,11 +43,21 @@ void free_hashtable(){
     free(dheapHashtable);
 }
 
+/**
+ * Génère un hash lié à un pointeur donné
+ * @param pointeur à hasher
+ * @return hash
+ */
 int getDHTsum(void *p){
     int q = (int)p;
     return abs(q)%DHEAP_HASHTABLE_SIZE;
 }
 
+/**
+ * Ajoute une variable de type dheapVar dans la hashtable
+ * @param struct dheapVar à ajouter
+ * @return 0 si succès
+ */
 int add_var(struct dheapVar *dv){
     int hash;
 
@@ -61,6 +77,11 @@ int add_var(struct dheapVar *dv){
     return 0;
 }
 
+/**
+ * Retire une variable dheapVar lié à un pointeur donné de la hashtable
+ * @param pointeur d'une donnée du tas dont on veut supprimer la dheapVar
+ * @return 0 si succès, -1 si une erreur est survenue
+ */
 int remove_var(void *p){
     int hash;
     struct dheapVar *dvtmp, *dvtmpprev;
@@ -92,6 +113,11 @@ int remove_var(void *p){
     return 0;
 }
 
+/**
+ * Recherche une variable dheapVar à partir d'un pointeur d'une donnée du tas
+ * @param pointeur d'une donnée du tas
+ * @return struct dheapVar correspondant au pointeur, NULL sinon
+ */
 struct dheapVar* getVarFromPointer(void *p){
     int hash;
     struct dheapVar *dv;

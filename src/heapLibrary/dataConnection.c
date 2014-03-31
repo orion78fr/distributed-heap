@@ -3,6 +3,12 @@
 struct heapInfo *heapInfo;
 char *dheapErrorMsg;
 
+/**
+ * Initialise la connexion avec le serveur central
+ * Alloue l'espace pour le tas local
+ * Initialisation de la hashtable stockant les accès en cours
+ * @return enum errorCodes
+ */
 int init_data(){
     struct sockaddr_in servaddr;
     /* struct addrinfo hints, *result; */
@@ -59,6 +65,10 @@ int init_data(){
     return DHEAP_SUCCESS;
 }
 
+/**
+ * Ferme la connexion et libère toute les données liées au tas
+ * @return enum errorCodes
+ */
 int close_data(){
     /* Fermeture de la connexion */
     if (close(heapInfo->sock) == -1){

@@ -1,5 +1,10 @@
 #include "distributedHeap.h"
 
+/**
+ * Partie commune des fonctions de communication avec le serveur
+ * permettant de traiter les erreurs et les acquittements
+ * @return enum errorCodes
+ */
 int receiveAck(){
     /* On receptionne le type du message de réponse */
     int tmp = 0;
