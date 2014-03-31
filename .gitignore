@@ -46,3 +46,9 @@ Thumbs.db
 *.app
 *.hex
 *.swp
+
+# A Olivier #
+#############
+mex.sh
+makelib.sh
+ex1
