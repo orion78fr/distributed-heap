@@ -13,6 +13,10 @@ int send_data(int sock, int msgType, int nb, ...){
     int i;
     DS snd = {0,NULL};
     
+    if(write(sock, &msgType, sizeof(msgType)) <= 0){
+        return -1;
+    }
+    
     va_start(ap, nb);
     
     for(i=0;i<nb;i++){
