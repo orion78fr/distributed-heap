@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
     printf("Port : %d\n", parameters.port);
     printf("Max Clients : %d\n", parameters.maxClients);
     printf("Heap Size : %d\n", parameters.heapSize);
+    printf("Hash Size : %d\n", parameters.hashSize);
 #endif
 
     init_data();

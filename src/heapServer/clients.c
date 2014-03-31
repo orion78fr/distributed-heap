@@ -21,6 +21,7 @@ void *clientThread(void *arg)
     void *content = NULL;
     int msgType;
     int temp;
+    int erreur;
 
 #if DEBUG
     printf("[Client %d] Connexion\n", pthread_self());
@@ -59,10 +60,17 @@ void *clientThread(void *arg)
 
             if (add_data(content, temp) != 0) {
                 /* ERREUR */
-                goto disconnect;
+                int errType=ERROR_VAR_NAME_EXIST;
+                int messageSize=0;
+                if(send_data(sock, MSG_ERROR, 2, 
+                                (DS){sizeof(int), &errType},
+                                (DS){sizeof(int), &messageSize})<0){
+                    goto disconnect;
+                }
             } else {
                 /* OK */
-                if(send_data(sock, MSG_ALLOC, 0)<=0){
+                content = NULL;
+                if(send_data(sock, MSG_ALLOC, 0)<0){
                     goto disconnect;
                 }
             }
@@ -83,7 +91,13 @@ void *clientThread(void *arg)
             
             if(acquire_read_lock(content) != 0) {
                 /* ERREUR */
-                goto disconnect;
+                int errType=ERROR_VAR_DOESNT_EXIST;
+                int messageSize=0;
+                if(send_data(sock, MSG_ERROR, 2, 
+                                (DS){sizeof(int), &errType},
+                                (DS){sizeof(int), &messageSize})<0){
+                    goto disconnect;
+                }
             } else {
                 struct heapData *data = get_data(content);
                 int offset = data->offset;
@@ -122,7 +136,13 @@ void *clientThread(void *arg)
 
             if(acquire_write_lock(content) != 0) {
                 /* ERREUR */
-                goto disconnect;
+                int errType=ERROR_VAR_DOESNT_EXIST;
+                int messageSize=0;
+                if(send_data(sock, MSG_ERROR, 2, 
+                                (DS){sizeof(int), &errType},
+                                (DS){sizeof(int), &messageSize})<0){
+                    goto disconnect;
+                }
             } else {
                 struct heapData *data = get_data(content);
                 int offset = data->offset;
@@ -172,13 +192,16 @@ void *clientThread(void *arg)
                 } else {
                     release_read_lock(data->name);
                 }
-                if(prevData = NULL){
+                if(prevData == NULL){
                     corresp = data->next;
                 } else {
                     prevData->next = data->next;
                 }
                 free(data->name);
                 free(data);
+                if(send_data(sock, MSG_RELEASE, 0)<0){
+                    goto disconnect;
+                }
             }
             
             break;
