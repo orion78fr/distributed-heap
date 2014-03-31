@@ -5,49 +5,52 @@ enum msgTypes {
     MSG_HEAP_SIZE,
     MSG_ALLOC,
     MSG_ACCESS_READ,
+	MSG_ACCESS_READ_MODIFIED,
     MSG_ACCESS_WRITE,
+	MSG_ACCESS_WRITE_MODIFIED,
     MSG_RELEASE,
     MSG_FREE,
     MSG_ERROR,
     MSG_DISCONNECT
 };
 
+int send_data(int sock, int msgType, int nb, void **datas, int *tailles);
+void *recv_data(int sock, int taille);
+
 /*
  * Chaque échange commence par le type de message (int)
  * Puis, (super tableau en ASCII-art)
  *
- *      type         |           envoi              |         réponse
- * -----------------------------------------------------------------------------
+ *      type         |            envoi             |         réponse
+ * ----------------------------------------------------------------------------
  * MSG_HEAP_SIZE     | taille du tas (int)          |        /
  *     S -> C        |                              |
- * -----------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
  * MSG_ALLOC         | taille du nom (int)          |
  *     C -> S        | nom (taille * char)          |        /
  *                   | taille de la variable (int)  |
- * -----------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
  * MSG_ACCESS_READ   | taille du nom (int)          | offset (int)
- *     C -> S        | nom (taille * char)          | booléen (char)
- *                   |                              | si booléen vrai
- *                   |                              |    taille (int)
- *                   |                              |    contenu (taille * char)
- * -----------------------------------------------------------------------------
+ *     C -> S        | nom (taille * char)          | taille (int)
+ *                   |                              | si modif (READ_MODIFIED)
+ *                   |                              |   contenu (taille * char)
+ * ----------------------------------------------------------------------------
  * MSG_ACCESS_WRITE  | taille du nom (int)          | offset (int)
- *     C -> S        | nom (taille * char)          | booléen (char)
- *                   |                              | si booléen vrai
- *                   |                              |    taille (int)
- *                   |                              |    contenu (taille * char)
- * -----------------------------------------------------------------------------
+ *     C -> S        | nom (taille * char)          | taille (int)
+ *                   |                              | si modif (WRITE_MODIFIED)
+ *                   |                              |   contenu (taille * char)
+ * ----------------------------------------------------------------------------
  * MSG_RELEASE       | offset (int)                 |        
  *     C -> S        | taille (int)                 |        /
  *                   | contenu (taille * char)      |
- * -----------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
  * MSG_FREE          | taille du nom (int)          |        /
  *     C -> S        | nom (taille * char)          |        
- * -----------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
  * MSG_ERROR         | type d'erreur (int)          |
  *     S <-> C       | taille du message (int)      |        /
  *                   | message (taille * char)      |
- * -----------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
  * MSG_DISCONNECT    |         /                    |        /
  *     S <-> C       |                              |
  *
