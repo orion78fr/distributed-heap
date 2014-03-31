@@ -1,0 +1,43 @@
+#include "common.h"
+
+/**
+ * Envoie sur la socket sock les données passées en argument
+ * @param sock Socket de communication
+ * @param msgType Le type de message (voir messages.h)
+ * @param nb Nombre de données à envoyer
+ * @param ... les structures dataSend à envoyer
+ * @return 0 si succès
+ */
+int send_data(int sock, int msgType, int nb, ...){
+    va_list ap;
+    int i;
+    DS snd = {0,NULL};
+    
+    va_start(ap, nb);
+    
+    for(i=0;i<nb;i++){
+        snd = va_arg(ap, DS);
+        if(write(sock, snd.data, snd.taille) <= 0){
+            return -1;
+        }
+    }
+    
+    va_end(ap);
+    
+    return 0;
+}
+
+/**
+ * Reçoit un message sur la socket
+ * @param sock Socket de communication
+ * @param taille Taille de la donnée à reçevoir
+ * @return Pointeur sur la donnée lue, NULL sinon
+ */
+void *recv_data(int sock, int taille){
+	void *data = malloc(taille);
+	if(read(sock, data, taille) <= 0){
+		free(data);
+		return NULL;
+	}
+	return data;
+}
