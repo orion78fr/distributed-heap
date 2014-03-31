@@ -150,6 +150,7 @@ int remove_data(char *name)
     return 0;
 }
 
+/* TODO faire les pthread_equal (== n'est pas bon) */
 int acquire_read_lock(char *name)
 {
     struct heapData *data = get_data(name);

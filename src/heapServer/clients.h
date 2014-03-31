@@ -2,7 +2,7 @@
 #define HEAPSERVER_CLIENTS
 
 struct clientChain {
-    int clientId;
+    pthread_t clientId;
     int sock;
     struct clientChain *next;
 };

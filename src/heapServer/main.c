@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
      * a tout les clients */
 
     while (clients != NULL) {
-        pthread_join((pthread_t) clients->clientId, 0);
+        pthread_join(clients->clientId, 0);
         clients = clients->next;
     }
 

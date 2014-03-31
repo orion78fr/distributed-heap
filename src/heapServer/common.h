@@ -19,6 +19,7 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <getopt.h>
+#include <stdarg.h>
 
 /* Headers perso */
 #include "data.h"

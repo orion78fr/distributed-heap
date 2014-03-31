@@ -14,24 +14,15 @@ void *clientThread(void *arg)
     void *content = NULL;
     int msgType;
     int temp;
-	
-	void **datas;
-	int *tailles;
 
 #if DEBUG
     printf("[Client %d] Connexion\n", pthread_self());
 #endif
 
     /* Envoi de la taille du stack */
-	datas = malloc(sizeof(void *));
-	tailles = malloc(sizeof(int));
-	datas[0] = &(parameters.heapSize);
-	tailles[0] = sizeof(int);
-	if(send_data(sock, MSG_HEAP_SIZE, 1, datas, tailles)<0){
+	if(send_data(sock, MSG_HEAP_SIZE, 1, (DS){sizeof(int), &(parameters.heapSize)})<0){
 		goto disconnect;
 	}
-	free(datas);
-	free(tailles);
 
     /* Boucle principale */
     for (;;) {

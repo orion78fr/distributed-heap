@@ -14,7 +14,13 @@ enum msgTypes {
     MSG_DISCONNECT
 };
 
-int send_data(int sock, int msgType, int nb, void **datas, int *tailles);
+typedef struct dataSend{
+    int taille;
+    void *data;
+} DS;
+
+
+int send_data(int sock, int msgType, int nb, ...);
 void *recv_data(int sock, int taille);
 
 /*

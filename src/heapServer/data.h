@@ -2,12 +2,12 @@
 #define HEAPSERVER_DATA
 
 struct clientChainRead {
-    int clientId;
+    pthread_t clientId;
     struct clientChainRead *next;
 };
 
 struct clientChainWrite {
-    int clientId;
+    pthread_t clientId;
     struct clientChainWrite *next;
     pthread_cond_t cond;
 };
