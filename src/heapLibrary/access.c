@@ -5,7 +5,7 @@
  * @param type du message, nom de la variable, pointeur pour la récupérer
  * @return enum errorCodes
  */
-int t_access_common(int msgtype, char *name, void *p){
+int t_access_common(int msgtype, char *name, void **p){
     int tmp;
 
 #if DEBUG
@@ -46,19 +46,19 @@ int t_access_common(int msgtype, char *name, void *p){
         }
 
         /* On place le pointeur au bon endroit */
-        p = heapInfo->heapStart + offset;
+        *p = heapInfo->heapStart + offset;
 
         /* Si vrai: */
         if (msgtype == MSG_ACCESS_READ_MODIFIED || msgtype == MSG_ACCESS_WRITE_MODIFIED) {
             /* On récupère le contenu directement dans le pointeur */
-            if (read(heapInfo->sock, p, tailleContent) <= 0){
+            if (read(heapInfo->sock, *p, tailleContent) <= 0){
                 return DHEAP_ERROR_CONNECTION;
             }
         }
 
         /* On ajoute la variable dans la hashtable */
         dv = malloc(sizeof(struct dheapVar));
-        dv->p = p;
+        dv->p = *p;
         dv->size = tailleContent;
         dv->next = NULL;
         if (msgtype == MSG_ACCESS_READ || MSG_ACCESS_READ_MODIFIED)
@@ -79,7 +79,7 @@ int t_access_common(int msgtype, char *name, void *p){
  * @param nom de la variable, pointeur pour la récupérer
  * @return enum errorCodes
  */
-int t_access_read(char *name, void *p){
+int t_access_read(char *name, void **p){
     int msgtype;
 #if DEBUG
     printf("Appel t_access_read(%s)\n", name);
@@ -93,7 +93,7 @@ int t_access_read(char *name, void *p){
  * @param nom de la variable, pointeur pour la récupérer
  * @return enum errorCodes
  */
-int t_access_write(char *name, void *p){
+int t_access_write(char *name, void **p){
     int msgtype;
 #if DEBUG
     printf("Appel t_access_write(%s)\n", name);
@@ -109,6 +109,7 @@ int t_access_write(char *name, void *p){
  */
 int t_release(void *p){
     int msgtype;
+    int offset = 0;
     struct dheapVar *dv;
 
     /* TODO: affichage du pointeur dans le debug */
@@ -133,8 +134,9 @@ int t_release(void *p){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* On envoie le pointeur */
-    if (write(heapInfo->sock, p, sizeof(p)) == -1){
+    /* On envoie l'offset */
+    offset = (int)p - (int)(heapInfo->heapStart);
+    if (write(heapInfo->sock, &offset, sizeof(offset)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 

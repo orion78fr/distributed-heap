@@ -35,8 +35,8 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
 
-    printf("t_access_write('i', (void*) i))\n");
-    if ((error = t_access_write("i",(void*) i)) != DHEAP_SUCCESS){
+    printf("t_access_write('i', (void**) &i))\n");
+    if ((error = t_access_write("i",(void**) &i)) != DHEAP_SUCCESS){
         printf("Unhandeled error... number: %d\n", error);
         return EXIT_FAILURE;
     }
@@ -54,7 +54,7 @@ int main(int argc, char *args[])
     sleep(4);
 
     printf("t_access(read('i', (void*) j))\n");
-    if ((error = t_access_read("i",(void*) j)) != DHEAP_SUCCESS){
+    if ((error = t_access_read("i",(void**) &j)) != DHEAP_SUCCESS){
         printf("Unhandeled error... number: %d\n", error);
         return EXIT_FAILURE;
     }
