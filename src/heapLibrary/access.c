@@ -8,6 +8,10 @@
 int t_access_common(int msgtype, char *name, void *p){
     int tmp;
 
+#if DEBUG
+    printf("Appel t_access_common(%d, %s, p)\n", msgtype, name);
+#endif
+
     /* On envoie le msgtype */
     if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
         return DHEAP_ERROR_CONNECTION;
@@ -83,6 +87,9 @@ int t_access_common(int msgtype, char *name, void *p){
  */
 int t_access_read(char *name, void *p){
     int msgtype;
+#if DEBUG
+    printf("Appel t_access_read(%s)\n", name);
+#endif 
     msgtype = MSG_ACCESS_READ;
     return t_access_common(msgtype, name, p);
 }
@@ -94,6 +101,9 @@ int t_access_read(char *name, void *p){
  */
 int t_access_write(char *name, void *p){
     int msgtype;
+#if DEBUG
+    printf("Appel t_access_write(%s)\n", name);
+#endif 
     msgtype = MSG_ACCESS_WRITE;
     return t_access_common(msgtype, name, p);
 }
@@ -106,6 +116,11 @@ int t_access_write(char *name, void *p){
 int t_release(void *p){
     int msgtype;
     struct dheapVar *dv;
+
+    /* TODO: affichage du pointeur dans le debug */
+#if DEBUG
+    printf("Appel t_release()\n");
+#endif 
 
     /* On vérifie que le pointeur passé est bien dans la zone du tas réparti */
     if ( p > heapInfo->heapStart || p < (heapInfo->heapStart - heapInfo->heapSize)){

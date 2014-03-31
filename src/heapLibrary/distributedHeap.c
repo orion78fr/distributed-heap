@@ -6,6 +6,10 @@
  * @return enum errorCodes
  */
 int receiveAck(){
+#if DEBUG
+    printf("Appel receiveAck()\n");
+#endif 
+
     /* On receptionne le type du message de réponse */
     int tmp = 0;
     if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){

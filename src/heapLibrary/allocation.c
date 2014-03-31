@@ -8,6 +8,10 @@
 int t_malloc(int size, char *name){
     int msgtype, tmp;
 
+#if DEBUG
+    printf("Appel t_malloc(%d, %s)\n", size, name);
+#endif 
+
     /* On envoie le type de message (ALLOC) */
     msgtype = MSG_ALLOC;
     if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
@@ -40,6 +44,10 @@ int t_malloc(int size, char *name){
  */
 int t_free(char *name){
     int msgtype, tmp;
+
+#if DEBUG
+    printf("Appel t_free(%s)\n", name);
+#endif 
 
     /* On envoie le type de message (FREE) */
     msgtype = MSG_FREE;

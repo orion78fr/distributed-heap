@@ -14,6 +14,10 @@ int init_data(){
     /* struct addrinfo hints, *result; */
     int msgtype;
 
+#if DEBUG
+    printf("Appel init_data()\n");
+#endif 
+    
     heapInfo = malloc(sizeof(struct heapInfo));
 
     heapInfo->sock = socket(AF_INET,SOCK_STREAM,0);
@@ -50,8 +54,9 @@ int init_data(){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* TODO: DEBUG */
+#if DEBUG
     printf("HeapSize: %d\n", heapInfo->heapSize);
+#endif 
 
     /* allocation du tas dans la mémoire */
     heapInfo->heapStart = malloc(heapInfo->heapSize);
@@ -70,6 +75,10 @@ int init_data(){
  * @return enum errorCodes
  */
 int close_data(){
+#if DEBUG
+    printf("Appel close_data()\n");
+#endif 
+
     /* Fermeture de la connexion */
     if (close(heapInfo->sock) == -1){
         /* TODO: quelle erreur renvoyer? */
