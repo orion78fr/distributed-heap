@@ -3,6 +3,13 @@
 int clientsConnected = 0;
 struct clientChain *clients = NULL;
 
+struct tempCorrespondance{
+    int offset;
+    char *name;
+    int write;
+    struct tempCorrespondance *next;
+} *corresp = NULL;
+
 /**
  * Thread du client
  * @param arg Socket de communication du client
@@ -81,6 +88,15 @@ void *clientThread(void *arg)
                 struct heapData *data = get_data(content);
                 int offset = data->offset;
                 int size = data->size;
+                
+                struct tempCorrespondance *newData = malloc(sizeof(struct tempCorrespondance));
+                newData->offset = offset;
+                newData->name = content;
+                content = NULL;
+                newData->next = corresp;
+                newData->write = 0;
+                corresp = newData;
+                
                 /* OK */
                 if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3, 
                                 (DS){sizeof(int), &offset},
@@ -111,6 +127,15 @@ void *clientThread(void *arg)
                 struct heapData *data = get_data(content);
                 int offset = data->offset;
                 int size = data->size;
+                
+                struct tempCorrespondance *newData = malloc(sizeof(struct tempCorrespondance));
+                newData->offset = offset;
+                newData->name = content;
+                content = NULL;
+                newData->next = corresp;
+                newData->write = 1;
+                corresp = newData;
+                
                 /* OK */
                 if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3, 
                                 (DS){sizeof(int), &offset},
@@ -123,16 +148,39 @@ void *clientThread(void *arg)
             break;
 
         case MSG_RELEASE:       /* Relachement de la variable */
-            if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Name size */
+            if (read(sock, (void *) &temp, sizeof(temp)) < 0) { /* Offset */
                 goto disconnect;
-            }
+            } else {
+                struct tempCorrespondance *prevData = NULL, *data = corresp;
+                while(data->offset != temp){
+                    prevData = data;
+                    data = data->next;
+                }
 #if DEBUG
-            printf("[Client %d] Libération de %d\n", pthread_self(),
-                   temp);
+                printf("[Client %d] Libération de %s\n", pthread_self(),
+                   data->name);
 #endif
-
-            /* TODO Libération */
-
+                content = malloc(sizeof(int));
+                if (read(sock, content, sizeof(int)) < 0) {        /* Taille */
+                    goto disconnect;
+                }
+                if (read(sock, theHeap+temp, *(int*)content) < 0) {        /* Contenu */
+                    goto disconnect;
+                }
+                if(data->write){
+                    release_write_lock(data->name);
+                } else {
+                    release_read_lock(data->name);
+                }
+                if(prevData = NULL){
+                    corresp = data->next;
+                } else {
+                    prevData->next = data->next;
+                }
+                free(data->name);
+                free(data);
+            }
+            
             break;
 
         case MSG_FREE:          /* Désallocation d'une variable */
