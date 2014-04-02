@@ -48,6 +48,11 @@ int t_access_common(int msgtype, char *name, void **p){
         /* On place le pointeur au bon endroit */
         *p = heapInfo->heapStart + offset;
 
+        /* On dévérouille l'accès à cette zone de la mémoire */
+        if (mprotect(p, tailleContent, PROT_READ | PROT_WRITE) == -1){
+            /* TODO: erreur à gérer */
+        }
+
         /* Si vrai: */
         if (msgtype == MSG_ACCESS_READ_MODIFIED || msgtype == MSG_ACCESS_WRITE_MODIFIED) {
             /* On récupère le contenu directement dans le pointeur */
@@ -148,6 +153,11 @@ int t_release(void *p){
     /* On envoie le contenu */
     if (write(heapInfo->sock, p, dv->size) == -1){
         return DHEAP_ERROR_CONNECTION;
+    }
+
+    /* On revérouille l'accès à la zone mémoire de la variable */
+    if (mprotect(p, dv->size, PROT_NONE) == -1){
+        /* TODO: erreur à gérer */
     }
 
     /* On supprime la variable de la hashtable */
