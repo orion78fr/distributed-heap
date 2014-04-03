@@ -41,6 +41,7 @@ void free_hashtable(){
         }
     }
     free(dheapHashtable);
+    dheapHashtable = NULL;
 }
 
 /**

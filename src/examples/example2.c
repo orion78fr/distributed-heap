@@ -39,7 +39,7 @@ int main(int argc, char *args[])
 
     /* Initialisation de la connexion au tas reparti */
     printf("init_data()\n");
-    if ((error = init_data()) != DHEAP_SUCCESS){
+    if ((error = init_data("127.0.1.1", 6969)) != DHEAP_SUCCESS){
         switch(error){
             case DHEAP_ERROR_CONNECTION:
                 printf("DHEAP_ERROR_CONNECTION\n");

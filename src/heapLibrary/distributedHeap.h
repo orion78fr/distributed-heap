@@ -17,16 +17,19 @@
 #include "dheapHashtable.h"
 
 
-#define DHEAP_SERVER_ADDRESS "127.0.1.1"
-#define DHEAP_SERVER_PORT 6969
-
 struct heapInfo {
     int heapSize;
     void *heapStart;
     int sock;
 };
 
+struct lastdHeapConnection {
+    char *ip;
+    int port;
+};
+
 extern struct heapInfo *heapInfo;
+extern struct lastdHeapConnection *lastdHeapConnection;
 extern char *dheapErrorMsg;
 
 
@@ -44,7 +47,9 @@ enum errorCodes {
     DHEAP_ERROR_CONNECTION,
     DHEAP_ERROR_UNEXPECTED_MSG,
     DHEAP_ERROR_HEAP_ALLOC,
-    DHEAP_ERROR_BAD_POINTER
+    DHEAP_ERROR_BAD_POINTER,
+    DHEAP_BAD_SERVER_ADDRESS,
+    DHEAP_BAD_SERVER_PORT
 };
 
 /* TODO: enum partagé avec le serveur */
@@ -61,7 +66,8 @@ enum msgTypes {
     MSG_DISCONNECT
 };
 
-int init_data();
+int init_data(char *ip, int port);
+int reinit_data();
 int close_data();
 int t_malloc(int size, char *name);
 int t_access_read(char *name, void **p);

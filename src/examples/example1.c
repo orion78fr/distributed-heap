@@ -17,7 +17,7 @@ int main(int argc, char *args[])
     printf("Welcome in example number 1\n");
 
     printf("init_data()\n");
-    if ((error = init_data()) != DHEAP_SUCCESS){
+    if ((error = init_data("127.0.1.1", 6969)) != DHEAP_SUCCESS){
         switch(error){
             case DHEAP_ERROR_CONNECTION:
                 printf("DHEAP_ERROR_CONNECTION\n");
@@ -50,8 +50,8 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
 
-    printf("sleep(4)");
-    sleep(4);
+    printf("//sleep(4)");
+    /* sleep(4); */
 
     printf("t_access(read('i', (void*) j))\n");
     if ((error = t_access_read("i",(void**) &j)) != DHEAP_SUCCESS){
