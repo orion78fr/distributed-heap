@@ -16,11 +16,7 @@ int init_data(){
 
 #if DEBUG
     printf("Appel init_data()\n");
-#endif
-
-    /* On appel close_data en premier au cas ou on reexecute init_data()
-     * après une déconnexion */
-    close_data();
+#endif 
     
     heapInfo = malloc(sizeof(struct heapInfo));
     dheapErrorMsg = NULL;
@@ -69,13 +65,6 @@ int init_data(){
         return DHEAP_ERROR_HEAP_ALLOC;
     }
 
-    /* On vérouille l'accès à la zone mémoire */
-    if (mprotect(heapInfo->heapStart, heapInfo->heapSize, PROT_NONE) == -1){
-        /* TODO: erreur à renvoyer */
-    }
-
-    /* TODO: vérouiller l'emplacement de la zone de heapInfo (read only) */
-
     /* initialisation de la hashtable */
     init_hashtable();
 
@@ -91,30 +80,23 @@ int close_data(){
     printf("Appel close_data()\n");
 #endif 
 
-    if (heapInfo != NULL){
-        /* Fermeture de la connexion */
-        if (close(heapInfo->sock) == -1){
-            /* TODO: quelle erreur renvoyer? */
-        }
-
-        /* On dévérouille l'accès à la zone mémoire */
-        if (mprotect(heapInfo->heapStart, heapInfo->heapSize, PROT_READ | PROT_WRITE) == -1){
-            /* TODO: erreur à gérer */
-        }
-
-        /* On vide le tas */
-        free(heapInfo->heapStart);
-
-        /* On vide la structure heapInfo */
-        free(heapInfo);
-
-        /* On supprime la hashtable */
-        free_hashtable();
-
-        /* On vide le message d'erreur */
-        if (dheapErrorMsg != NULL)
-            free(dheapErrorMsg);
+    /* Fermeture de la connexion */
+    if (close(heapInfo->sock) == -1){
+        /* TODO: quelle erreur renvoyer? */
     }
+
+    /* On vide le tas */
+    free(heapInfo->heapStart);
+
+    /* On vide la structure heapInfo */
+    free(heapInfo);
+
+    /* On supprime la hashtable */
+    free_hashtable();
+
+    /* On vide le message d'erreur */
+    if (dheapErrorMsg != NULL)
+        free(dheapErrorMsg);
 
     return DHEAP_SUCCESS;
 }

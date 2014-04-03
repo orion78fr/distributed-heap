@@ -13,7 +13,6 @@
 #include <pthread.h>
 #include <getopt.h>
 #include <arpa/inet.h>
-#include <sys/mman.h>
 
 #include "dheapHashtable.h"
 
