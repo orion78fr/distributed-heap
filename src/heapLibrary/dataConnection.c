@@ -16,7 +16,11 @@ int init_data(){
 
 #if DEBUG
     printf("Appel init_data()\n");
-#endif 
+#endif
+
+    /* Appel du close_data() au cas ou on aurait été déconnecté
+     * et que l'on relance la connexion */
+    close_data();
     
     heapInfo = malloc(sizeof(struct heapInfo));
     dheapErrorMsg = NULL;
@@ -76,6 +80,13 @@ int init_data(){
  * @return enum errorCodes
  */
 int close_data(){
+    if (heapInfo == NULL){
+#if DEBUG
+    printf("Appel close_data() mais heapInfo NULL\n");
+#endif 
+        return DHEAP_SUCCESS;
+    }
+
 #if DEBUG
     printf("Appel close_data()\n");
 #endif 
