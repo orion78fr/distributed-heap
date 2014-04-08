@@ -26,36 +26,37 @@ void *recv_data(int sock, int taille);
 /*
  * Chaque échange commence par le type de message (int)
  * Puis, (super tableau en ASCII-art)
+ * MSG TYPE -> int8
  *
  *      type         |            envoi             |         réponse
  * ----------------------------------------------------------------------------
- * MSG_HEAP_SIZE     | taille du tas (int)          |        /
+ * MSG_HEAP_SIZE     | taille du tas (int64)        |        /
  *     S -> C        |                              |
  * ----------------------------------------------------------------------------
- * MSG_ALLOC         | taille du nom (int)          |
- *     C -> S        | nom (taille * char)          |        /
- *                   | taille de la variable (int)  |
+ * MSG_ALLOC         | taille du nom (int8)         |
+ *     C -> S        | nom (taille * char8)         |        /
+ *                   | taille de la variable (int64)|
  * ----------------------------------------------------------------------------
- * MSG_ACCESS_READ   | taille du nom (int)          | offset (int)
- *     C -> S        | nom (taille * char)          | taille (int)
+ * MSG_ACCESS_READ   | taille du nom (int8)         | offset (int64)
+ *     C -> S        | nom (taille * char8)         | taille (int64)
  *                   |                              | si modif (READ_MODIFIED)
- *                   |                              |   contenu (taille * char)
+ *                   |                              |   contenu (taille * char8)
  * ----------------------------------------------------------------------------
- * MSG_ACCESS_WRITE  | taille du nom (int)          | offset (int)
- *     C -> S        | nom (taille * char)          | taille (int)
+ * MSG_ACCESS_WRITE  | taille du nom (int8)         | offset (int64)
+ *     C -> S        | nom (taille * char8)         | taille (int64)
  *                   |                              | si modif (WRITE_MODIFIED)
- *                   |                              |   contenu (taille * char)
+ *                   |                              |   contenu (taille * char8)
  * ----------------------------------------------------------------------------
- * MSG_RELEASE       | offset (int)                 |        
- *     C -> S        | taille (int)                 |        /
- *                   | contenu (taille * char)      |
+ * MSG_RELEASE       | offset (int64)               |        
+ *     C -> S        | taille (int64)               |        /
+ *                   | contenu (taille * char8)     |
  * ----------------------------------------------------------------------------
- * MSG_FREE          | taille du nom (int)          |        /
- *     C -> S        | nom (taille * char)          |        
+ * MSG_FREE          | taille du nom (int8)         |        /
+ *     C -> S        | nom (taille * char8)         |        
  * ----------------------------------------------------------------------------
- * MSG_ERROR         | type d'erreur (int)          |
- *     S <-> C       | taille du message (int)      |        /
- *                   | message (taille * char)      |
+ * MSG_ERROR         | type d'erreur (int8)         |
+ *     S <-> C       | taille du message (int8)     |        /
+ *                   | message (taille * char8)     |
  * ----------------------------------------------------------------------------
  * MSG_DISCONNECT    |         /                    |        /
  *     S <-> C       |                              |
