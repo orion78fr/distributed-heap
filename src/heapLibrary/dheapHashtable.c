@@ -50,7 +50,7 @@ void free_hashtable(){
  * @return hash
  */
 int getDHTsum(void *p){
-    int q = (int)p;
+    int q = (intptr_t)p;
     return abs(q)%DHEAP_HASHTABLE_SIZE;
 }
 

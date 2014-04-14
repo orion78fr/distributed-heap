@@ -1,5 +1,6 @@
 #define _XOPEN_SOURCE 700
 
+
 /* TODO: Headers POSIX à mettre dans un common */
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,12 +14,13 @@
 #include <pthread.h>
 #include <getopt.h>
 #include <arpa/inet.h>
+#include <inttypes.h>
 
 #include "dheapHashtable.h"
 
 
 struct heapInfo {
-    int heapSize;
+    uint64_t heapSize;
     void *heapStart;
     int sock;
 };
@@ -69,11 +71,11 @@ enum msgTypes {
 int init_data(char *ip, int port);
 int reinit_data();
 int close_data();
-int t_malloc(int size, char *name);
+int t_malloc(uint64_t size, char *name);
 int t_access_read(char *name, void **p);
 int t_access_write(char *name, void **p);
-int t_access_common(int msgtype, char *name, void **p);
+int t_access_common(uint8_t msgtype, char *name, void **p);
 int t_release(void *p);
 int t_free(char *name);
-int receiveAck(int msgtype);
-int receiveAckPointer(int *msgtypeP);
+int receiveAck(uint8_t msgtype);
+int receiveAckPointer(uint8_t *msgtypeP);

@@ -5,13 +5,13 @@
  * permettant de traiter les erreurs et les acquittements
  * @return enum errorCodes
  */
-int receiveAck(int msgtype){
+int receiveAck(uint8_t msgtype){
     return receiveAckPointer(&msgtype);
 }
 
-int receiveAckPointer(int *msgtypeP){
-    int msgtype;
-    int tmp = 0;
+int receiveAckPointer(uint8_t *msgtypeP){
+    uint8_t msgtype;
+    uint8_t msgtypeReponse = 0;
 
 #if DEBUG
     printf("Appel receiveAck()\n");
@@ -20,18 +20,18 @@ int receiveAckPointer(int *msgtypeP){
     msgtype = *msgtypeP;
 
     /* On receptionne le type du message de réponse */
-    if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+    if (read(heapInfo->sock, &msgtypeReponse, sizeof(msgtypeReponse)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On verifie s'il y a eu une erreur ou non */
     /* TODO: && msgtype == MSG_RELEASE ?? */
-    if (tmp == MSG_ERROR){
-        tmp = 0;
-        int tailleError;
+    if (msgtypeReponse == MSG_ERROR){
+        msgtypeReponse = 0;
+        uint8_t tailleError;
 
         /* On récupère le code d'erreur */
-        if (read(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+        if (read(heapInfo->sock, &msgtypeReponse, sizeof(msgtypeReponse)) <= 0){
             return DHEAP_ERROR_CONNECTION;
         }
 
@@ -54,13 +54,13 @@ int receiveAckPointer(int *msgtypeP){
         }
 
         /* On retourne le code d'erreur */
-        return tmp;
+        return msgtypeReponse;
     } else {
-        if (tmp != msgtype){
-            if (msgtype == MSG_ACCESS_READ && tmp == MSG_ACCESS_READ_MODIFIED){
+        if (msgtypeReponse != msgtype){
+            if (msgtype == MSG_ACCESS_READ && msgtypeReponse == MSG_ACCESS_READ_MODIFIED){
                 *msgtypeP = MSG_ACCESS_READ_MODIFIED;
                 return DHEAP_SUCCESS;
-            } else if (msgtype == MSG_ACCESS_WRITE && tmp == MSG_ACCESS_WRITE_MODIFIED){
+            } else if (msgtype == MSG_ACCESS_WRITE && msgtypeReponse == MSG_ACCESS_WRITE_MODIFIED){
                 *msgtypeP = MSG_ACCESS_WRITE_MODIFIED;
                 return DHEAP_SUCCESS;
             } else {

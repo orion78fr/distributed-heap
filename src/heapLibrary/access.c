@@ -5,8 +5,8 @@
  * @param type du message, nom de la variable, pointeur pour la récupérer
  * @return enum errorCodes
  */
-int t_access_common(int msgtype, char *name, void **p){
-    int tmp;
+int t_access_common(uint8_t msgtype, char *name, void **p){
+    uint8_t namelen, retack;
 
 #if DEBUG
     printf("Appel t_access_common(%d, %s, p)\n", msgtype, name);
@@ -18,22 +18,22 @@ int t_access_common(int msgtype, char *name, void **p){
     }
 
     /* On envoie la longueur du nom qu'on veut lire */
-    tmp = strlen(name);
-    if (write(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+    namelen = strlen(name);
+    if (write(heapInfo->sock, &namelen, sizeof(namelen)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On envoie le nom */
-    if (write(heapInfo->sock, name, strlen(name)) <= 0){
+    if (write(heapInfo->sock, name, namelen) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
     
     /* On traite le retour en cas d'erreur */
-    if ((tmp = receiveAckPointer(&msgtype)) != DHEAP_SUCCESS){
-        return tmp;
+    if ((retack = receiveAckPointer(&msgtype)) != DHEAP_SUCCESS){
+        return retack;
     } else {
         /* On traite le retour en cas de success */
-        int offset, tailleContent;
+        uint64_t offset, tailleContent;
         struct dheapVar *dv;
         /* On récupère l'offset ou est située la variable */
         if (read(heapInfo->sock, &offset, sizeof(offset)) <= 0){
@@ -80,7 +80,7 @@ int t_access_common(int msgtype, char *name, void **p){
  * @return enum errorCodes
  */
 int t_access_read(char *name, void **p){
-    int msgtype;
+    uint8_t msgtype;
 #if DEBUG
     printf("Appel t_access_read(%s)\n", name);
 #endif 
@@ -94,7 +94,7 @@ int t_access_read(char *name, void **p){
  * @return enum errorCodes
  */
 int t_access_write(char *name, void **p){
-    int msgtype;
+    uint8_t msgtype;
 #if DEBUG
     printf("Appel t_access_write(%s)\n", name);
 #endif 
@@ -108,8 +108,8 @@ int t_access_write(char *name, void **p){
  * @return enum errorCodes
  */
 int t_release(void *p){
-    int msgtype;
-    int offset = 0;
+    uint8_t msgtype;
+    uint64_t offset = 0;
     struct dheapVar *dv;
 
     /* TODO: affichage du pointeur dans le debug */
@@ -135,7 +135,7 @@ int t_release(void *p){
     }
 
     /* On envoie l'offset */
-    offset = (int)p - (int)(heapInfo->heapStart);
+    offset = (uint64_t)p - (uint64_t)(heapInfo->heapStart);
     if (write(heapInfo->sock, &offset, sizeof(offset)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }

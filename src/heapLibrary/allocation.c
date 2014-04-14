@@ -5,11 +5,11 @@
  * @param taille à allouer (en octet), nom de la variable
  * @return enum errorCodes
  */
-int t_malloc(int size, char *name){
-    int msgtype, tmp;
+int t_malloc(uint64_t size, char *name){
+    uint8_t msgtype, namelen;
 
 #if DEBUG
-    printf("Appel t_malloc(%d, %s)\n", size, name);
+    printf("Appel t_malloc(%" PRIu64 ", %s)\n", size, name);
 #endif 
 
     /* On envoie le type de message (ALLOC) */
@@ -19,13 +19,13 @@ int t_malloc(int size, char *name){
     }
 
     /* On envoie la longueur du nom à allouer */
-    tmp = strlen(name);
-    if (write(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+    namelen = strlen(name);
+    if (write(heapInfo->sock, &namelen, sizeof(namelen)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On envoie le nom */
-    if (write(heapInfo->sock, name, strlen(name)) <= 0){
+    if (write(heapInfo->sock, name, namelen) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 
@@ -43,7 +43,7 @@ int t_malloc(int size, char *name){
  * @return enum errorCodes
  */
 int t_free(char *name){
-    int msgtype, tmp;
+    uint8_t msgtype, namelen;
 
 #if DEBUG
     printf("Appel t_free(%s)\n", name);
@@ -56,13 +56,13 @@ int t_free(char *name){
     }
 
     /* On envoie la longueur du nom à free */
-    tmp = strlen(name);
-    if (write(heapInfo->sock, &tmp, sizeof(tmp)) <= 0){
+    namelen = strlen(name);
+    if (write(heapInfo->sock, &namelen, sizeof(namelen)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On envoie le nom */
-    if (write(heapInfo->sock, name, strlen(name)) <= 0){
+    if (write(heapInfo->sock, name, namelen) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 

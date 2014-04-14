@@ -5,9 +5,11 @@
  * liés à des pointeurs */
 #define DHEAP_HASHTABLE_SIZE 257
 
+#include <inttypes.h>
+
 struct dheapVar {
     void *p;
-    int size;
+    uint64_t size;
     enum rw { DHEAPVAR_READ, DHEAPVAR_WRITE } rw;
     struct dheapVar *next;
 };

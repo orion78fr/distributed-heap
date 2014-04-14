@@ -14,7 +14,7 @@ char *dheapErrorMsg;
 int init_data(char *ip, int port){
     struct sockaddr_in servaddr;
     /* struct addrinfo hints, *result; */
-    int msgtype;
+    uint8_t msgtype;
 
 #if DEBUG
     printf("Appel init_data(%s, %d)\n", ip, port);
@@ -54,7 +54,7 @@ int init_data(char *ip, int port){
     }
 
     /* Reception du type de message (MSG_HEAP_SIZE) */			
-    if (read(heapInfo->sock, &msgtype, sizeof(int)) <= 0){
+    if (read(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 
@@ -68,7 +68,7 @@ int init_data(char *ip, int port){
     }
 
 #if DEBUG
-    printf("HeapSize: %d\n", heapInfo->heapSize);
+    printf("HeapSize: %" PRIu64 "\n", heapInfo->heapSize);
 #endif 
 
     /* allocation du tas dans la mémoire */
