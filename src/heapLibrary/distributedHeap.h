@@ -15,6 +15,7 @@
 #include <getopt.h>
 #include <arpa/inet.h>
 #include <inttypes.h>
+#include <poll.h>
 
 #include "dheapHashtable.h"
 
@@ -33,6 +34,8 @@ struct lastdHeapConnection {
 extern struct heapInfo *heapInfo;
 extern struct lastdHeapConnection *lastdHeapConnection;
 extern char *dheapErrorMsg;
+extern uint8_t msgtypeClient;
+
 
 
 /* TODO: enum partagé avec le serveur */
@@ -65,7 +68,8 @@ enum msgTypes {
     MSG_RELEASE,
     MSG_FREE,
     MSG_ERROR,
-    MSG_DISCONNECT
+    MSG_DISCONNECT,
+    MSG_TYPE_NULL /* TODO: A ajouter du côté serveur */
 };
 
 int init_data(char *ip, int port);
@@ -79,3 +83,4 @@ int t_release(void *p);
 int t_free(char *name);
 int receiveAck(uint8_t msgtype);
 int receiveAckPointer(uint8_t *msgtypeP);
+void *data_thread(void *arg);

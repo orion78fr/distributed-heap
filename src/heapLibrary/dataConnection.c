@@ -3,6 +3,8 @@
 struct heapInfo *heapInfo;
 struct lastdHeapConnection *lastdHeapConnection;
 char *dheapErrorMsg;
+pthread_t *dheap_tid;
+uint8_t *msgtypeClient;
 
 /**
  * Initialise la connexion avec le serveur central
@@ -80,6 +82,13 @@ int init_data(char *ip, int port){
     /* initialisation de la hashtable */
     init_hashtable();
 
+    /* création du thread client */
+    dheap_tid = malloc(sizeof(pthread_t));
+    if (pthread_create(dheap_tid, NULL, data_thread, NULL) == -1){
+        /* TODO: trouver une autre erreur */
+        return ERROR_UNKNOWN_ERROR;
+    }
+
     return DHEAP_SUCCESS;
 }
 
@@ -100,6 +109,7 @@ int reinit_data(){
  * @return enum errorCodes
  */
 int close_data(){
+    int threadStatus;
     if (heapInfo == NULL){
 #if DEBUG
     printf("Appel close_data() mais heapInfo NULL\n");
@@ -110,6 +120,17 @@ int close_data(){
 #if DEBUG
     printf("Appel close_data()\n");
 #endif 
+
+    /* Fermeture du thread client */
+    if (pthread_cancel(*dheap_tid)) != 0){
+        /* TODO: trouver une erreur */
+        return ERROR_UNKNOWN_ERROR;
+    }
+    if (pthread_join(*dheap_tid, &threadStatus)) != PTHREAD_CANCELED){
+        /* TODO: trouver une erreur */
+        return ERROR_UNKNOWN_ERROR;
+    }
+    free(dheap_tid);
 
     /* Fermeture de la connexion */
     if (close(heapInfo->sock) == -1){
