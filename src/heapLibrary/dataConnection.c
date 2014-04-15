@@ -4,7 +4,7 @@ struct heapInfo *heapInfo;
 struct lastdHeapConnection *lastdHeapConnection;
 char *dheapErrorMsg;
 pthread_t *dheap_tid;
-uint8_t *msgtypeClient;
+uint8_t *msgtypeClient, *dheapErrorNumber;
 
 /**
  * Initialise la connexion avec le serveur central
@@ -34,6 +34,7 @@ int init_data(char *ip, int port){
     strcpy(lastdHeapConnection->ip, ip);
     lastdHeapConnection->port = port;
     dheapErrorMsg = NULL;
+    dheapErrorNumber = NULL;
 
     heapInfo->sock = socket(AF_INET,SOCK_STREAM,0);
     /* TODO: Gestion des hostname en plus des IPs
@@ -85,8 +86,8 @@ int init_data(char *ip, int port){
     /* création du thread client */
     dheap_tid = malloc(sizeof(pthread_t));
     if (pthread_create(dheap_tid, NULL, data_thread, NULL) == -1){
-        /* TODO: trouver une autre erreur */
-        return ERROR_UNKNOWN_ERROR;
+        perror("pthread_create"); 
+        exit(EXIT_FAILURE);
     }
 
     return DHEAP_SUCCESS;
@@ -123,18 +124,19 @@ int close_data(){
 
     /* Fermeture du thread client */
     if (pthread_cancel(*dheap_tid)) != 0){
-        /* TODO: trouver une erreur */
-        return ERROR_UNKNOWN_ERROR;
+        perror("pthread_cancel"); 
+        exit(EXIT_FAILURE);
     }
     if (pthread_join(*dheap_tid, &threadStatus)) != PTHREAD_CANCELED){
-        /* TODO: trouver une erreur */
-        return ERROR_UNKNOWN_ERROR;
+        perror("pthread_join");
+        exit(EXIT_FAILURE);
     }
     free(dheap_tid);
 
     /* Fermeture de la connexion */
     if (close(heapInfo->sock) == -1){
-        /* TODO: quelle erreur renvoyer? */
+        perror("close");
+        exit(EXIT_FAILURE);
     }
 
     /* On vide le tas */
@@ -152,10 +154,14 @@ int close_data(){
     /* On supprime la hashtable */
     free_hashtable();
 
-    /* On vide le message d'erreur */
+    /* On vide le message d'erreur et le numero d'erreur */
     if (dheapErrorMsg != NULL){
         free(dheapErrorMsg);
         dheapErrorMsg = NULL;
+    }
+    if (dheapErrorNumber != NULL){
+        free(dheapErrorNumber);
+        dheapErrorNumber = NULL;
     }
 
     return DHEAP_SUCCESS;

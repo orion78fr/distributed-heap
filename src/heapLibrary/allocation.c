@@ -7,10 +7,15 @@
  */
 int t_malloc(uint64_t size, char *name){
     uint8_t msgtype, namelen;
+    int error;
 
 #if DEBUG
     printf("Appel t_malloc(%" PRIu64 ", %s)\n", size, name);
-#endif 
+#endif
+
+    /* On traite une erreur venant du thread de la librairie */
+    if ((error = checkError()) != DHEAP_SUCCESS)
+        return error;
 
     /* On envoie le type de message (ALLOC) */
     msgtype = MSG_ALLOC;
@@ -48,6 +53,10 @@ int t_free(char *name){
 #if DEBUG
     printf("Appel t_free(%s)\n", name);
 #endif 
+
+    /* On traite une erreur venant du thread de la librairie */
+    if ((error = checkError()) != DHEAP_SUCCESS)
+        return error;
 
     /* On envoie le type de message (FREE) */
     msgtype = MSG_FREE;

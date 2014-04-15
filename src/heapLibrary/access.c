@@ -12,6 +12,10 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
     printf("Appel t_access_common(%d, %s, p)\n", msgtype, name);
 #endif
 
+    /* On traite une erreur venant du thread de la librairie */
+    if ((error = checkError()) != DHEAP_SUCCESS)
+        return error;
+
     /* On envoie le msgtype */
     if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
         return DHEAP_ERROR_CONNECTION;
@@ -66,8 +70,7 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
         else if (msgtype == MSG_ACCESS_WRITE || MSG_ACCESS_WRITE_MODIFIED)
             dv->rw = DHEAPVAR_WRITE;
         else
-            return ERROR_UNKNOWN_ERROR; /* TODO: erreur à changer */
-        /* TODO: gerer l'erreur possible sur la hashtable ? */
+            return DHEAP_ERROR_UNEXPECTED_MSG;
         add_var(dv);
 
         return DHEAP_SUCCESS;
@@ -112,10 +115,13 @@ int t_release(void *p){
     uint64_t offset = 0;
     struct dheapVar *dv;
 
-    /* TODO: affichage du pointeur dans le debug */
 #if DEBUG
     printf("Appel t_release()\n");
 #endif 
+
+    /* On traite une erreur venant du thread de la librairie */
+    if ((error = checkError()) != DHEAP_SUCCESS)
+        return error;
 
     /* On vérifie que le pointeur passé est bien dans la zone du tas réparti */
     if ( p > heapInfo->heapStart || p < (heapInfo->heapStart - heapInfo->heapSize)){
@@ -151,8 +157,9 @@ int t_release(void *p){
     }
 
     /* On supprime la variable de la hashtable */
-    /* TODO: gérer l'erreur sur le retour de remove_var ? */
-    remove_var(p);
+    if (remove_var(p) != 0){
+        exit(EXIT_FAILURE);
+    }
 
     /* On s'occupe de l'acquittement ou de l'erreur */
     return receiveAck(MSG_RELEASE);
