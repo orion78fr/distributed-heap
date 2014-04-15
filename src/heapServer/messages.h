@@ -28,38 +28,50 @@ void *recv_data(int sock, int taille);
  * Puis, (super tableau en ASCII-art)
  * MSG TYPE -> int8
  *
- *      type         |            envoi             |         réponse
- * ----------------------------------------------------------------------------
- * MSG_HEAP_SIZE     | taille du tas (int64)        |        /
- *     S -> C        |                              |
- * ----------------------------------------------------------------------------
- * MSG_ALLOC         | taille du nom (int8)         |
- *     C -> S        | nom (taille * char8)         |        /
- *                   | taille de la variable (int64)|
- * ----------------------------------------------------------------------------
- * MSG_ACCESS_READ   | taille du nom (int8)         | offset (int64)
- *     C -> S        | nom (taille * char8)         | taille (int64)
- *                   |                              | si modif (READ_MODIFIED)
- *                   |                              |   contenu (taille * char8)
- * ----------------------------------------------------------------------------
- * MSG_ACCESS_WRITE  | taille du nom (int8)         | offset (int64)
- *     C -> S        | nom (taille * char8)         | taille (int64)
- *                   |                              | si modif (WRITE_MODIFIED)
- *                   |                              |   contenu (taille * char8)
- * ----------------------------------------------------------------------------
- * MSG_RELEASE       | offset (int64)               |        
- *     C -> S        | taille (int64)               |        /
- *                   | contenu (taille * char8)     |
- * ----------------------------------------------------------------------------
- * MSG_FREE          | taille du nom (int8)         |        /
- *     C -> S        | nom (taille * char8)         |        
- * ----------------------------------------------------------------------------
- * MSG_ERROR         | type d'erreur (int8)         |
- *     S <-> C       | taille du message (int8)     |        /
- *                   | message (taille * char8)     |
- * ----------------------------------------------------------------------------
- * MSG_DISCONNECT    |         /                    |        /
- *     S <-> C       |                              |
+ *      type         |            envoi              |         réponse
+ * -----------------------------------------------------------------------------
+ * MSG_HEAP_SIZE     | taille du tas (uint64)        |        /
+ *     S -> C        |                               |
+ * -----------------------------------------------------------------------------
+ * MSG_ALLOC         | taille du nom (uint8)         |
+ *     C -> S        | nom (taille*char8)            |        /
+ *                   | taille de la variable (uint64)|
+ * -----------------------------------------------------------------------------
+ * MSG_ACCESS_READ   | taille du nom (uint8)         | offset (uint64)
+ *     C -> S        | nom (taille * char8)          | taille (uint64)
+ *                   |                               | si modif (READ_MODIFIED)
+ *                   |                               |   contenu (taille*char8)
+ * -----------------------------------------------------------------------------
+ * MSG_ACCESS_WRITE  | taille du nom (uint8)         | offset (uint64)
+ *     C -> S        | nom (taille*char8)            | taille (uint64)
+ *                   |                               | si modif (WRITE_MODIFIED)
+ *                   |                               |   contenu (taille*char8)
+ * -----------------------------------------------------------------------------
+ * MSG_RELEASE       | offset (uint64)               |
+ *     C -> S        | taille (uint64)               |        /
+ *                   | contenu (taille*char8)        |
+ * -----------------------------------------------------------------------------
+ * MSG_FREE          | taille du nom (uint8)         |        /
+ *     C -> S        | nom (taille*char8)            |
+ * -----------------------------------------------------------------------------
+ * MSG_ERROR         | type d'erreur (uint8)         |
+ *     S <-> C       | taille du message (uint8)     |        /
+ *                   | message (taille*char8)        |
+ * -----------------------------------------------------------------------------
+ * MSG_DISCONNECT    |         /                     |        /
+ *     S <-> C       |                               |
+ * -----------------------------------------------------------------------------
+ * MSG_ADDBACKUP     | id du serveur (uint8)         |        /
+ *     S -> C        | taille de l'adresse (uint8)   |
+ *                   | adresse (taille*char8)        |
+ *                   | port (uint16)                 |
+ * -----------------------------------------------------------------------------
+ * MSG_PING          |         /                     |        /
+ *     S <-> C       |                               |
+ * -----------------------------------------------------------------------------
+ * MSG_CHANGEMAIN    | id du nouveau main (uint8)    |        /
+ *     S -> C        |                               |
+ * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int
  *  à cause des différences des machine (32 bit, 64 bit). On devrait utiliser
