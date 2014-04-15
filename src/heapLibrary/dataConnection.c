@@ -1,7 +1,6 @@
 #include "distributedHeap.h"
 
 struct heapInfo *heapInfo;
-struct lastdHeapConnection *lastdHeapConnection;
 char *dheapErrorMsg;
 pthread_t *dheap_tid;
 uint8_t *msgtypeClient, *dheapErrorNumber;
@@ -29,10 +28,6 @@ int init_data(char *ip, int port){
     /* TODO: vérifier la validité du port et de l'ip */
     
     heapInfo = malloc(sizeof(struct heapInfo));
-    lastdHeapConnection = malloc(sizeof(struct lastdHeapConnection));
-    lastdHeapConnection->ip = malloc(sizeof(char)*strlen(ip));
-    strcpy(lastdHeapConnection->ip, ip);
-    lastdHeapConnection->port = port;
     dheapErrorMsg = NULL;
     dheapErrorNumber = NULL;
 
@@ -94,18 +89,6 @@ int init_data(char *ip, int port){
 }
 
 /**
- * Reinitialise la connexion au serveur
- * @return enum errorCodes
- */
-int reinit_data(){
-    /* TODO: gérer les accès en cours au moment de la déconnexion */
-    if (lastdHeapConnection == NULL)
-        return DHEAP_ERROR_CONNECTION;
-    else
-        return init_data(lastdHeapConnection->ip, lastdHeapConnection->port);
-}
-
-/**
  * Ferme la connexion et libère toute les données liées au tas
  * @return enum errorCodes
  */
@@ -145,11 +128,6 @@ int close_data(){
     /* On vide la structure heapInfo */
     free(heapInfo);
     heapInfo = NULL;
-
-    /* On vide le lastdHeapConnection */
-    free(lastdHeapConnection->ip);
-    free(lastdHeapConnection);
-    lastdHeapConnection = NULL;
 
     /* On supprime la hashtable */
     free_hashtable();

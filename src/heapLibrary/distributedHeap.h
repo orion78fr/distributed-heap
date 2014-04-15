@@ -32,7 +32,6 @@ struct lastdHeapConnection {
 };
 
 extern struct heapInfo *heapInfo;
-extern struct lastdHeapConnection *lastdHeapConnection;
 extern char *dheapErrorMsg; /* Utilisé pour le ERROR_UNKNOWN_ERROR */
 extern int *dheapErrorNumber; /* Utilisé pour passer une erreur au client */
 extern uint8_t msgtypeClient;
@@ -74,7 +73,6 @@ enum msgTypes {
 };
 
 int init_data(char *ip, int port);
-int reinit_data();
 int close_data();
 int t_malloc(uint64_t size, char *name);
 int t_access_read(char *name, void **p);
