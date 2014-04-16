@@ -3,6 +3,7 @@
 
 enum msgTypes {
     MSG_HEAP_SIZE,
+    MSG_SERVER_ID,
     MSG_ALLOC,
     MSG_ACCESS_READ,
 	MSG_ACCESS_READ_MODIFIED,
@@ -11,7 +12,10 @@ enum msgTypes {
     MSG_RELEASE,
     MSG_FREE,
     MSG_ERROR,
-    MSG_DISCONNECT
+    MSG_DISCONNECT,
+    MSG_PING,
+    MSG_ADD_SERVER,
+    MSG_CHANGE_MAIN
 };
 
 typedef struct dataSend{
@@ -31,6 +35,9 @@ void *recv_data(int sock, int taille);
  *      type         |            envoi              |         réponse
  * -----------------------------------------------------------------------------
  * MSG_HEAP_SIZE     | taille du tas (uint64)        |        /
+ *     S -> C        |                               |
+ * -----------------------------------------------------------------------------
+ * MSG_SERVER_ID     | id du serveur (uint8)         |        /
  *     S -> C        |                               |
  * -----------------------------------------------------------------------------
  * MSG_ALLOC         | taille du nom (uint8)         |
@@ -61,7 +68,7 @@ void *recv_data(int sock, int taille);
  * MSG_DISCONNECT    |         /                     |        /
  *     S <-> C       |                               |
  * -----------------------------------------------------------------------------
- * MSG_ADDBACKUP     | id du serveur (uint8)         |        /
+ * MSG_ADD_SERVER     | id du serveur (uint8)        |        /
  *     S -> C        | taille de l'adresse (uint8)   |
  *                   | adresse (taille*char8)        |
  *                   | port (uint16)                 |
@@ -69,8 +76,8 @@ void *recv_data(int sock, int taille);
  * MSG_PING          |         /                     |        /
  *     S <-> C       |                               |
  * -----------------------------------------------------------------------------
- * MSG_CHANGEMAIN    | id du nouveau main (uint8)    |        /
- *     S -> C        |                               |
+ * MSG_CHANGE_MAIN   | id du nouveau main (uint8)    | ack (uint8) -> OK
+ *     S -> C        |                               | ou -> UNKNOWN SERVER ID
  * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int
