@@ -55,8 +55,8 @@ void *recv_data(int sock, int taille);
  *                   |                               |   contenu (taille*char8)
  * -----------------------------------------------------------------------------
  * MSG_RELEASE       | offset (uint64)               |
- *     C -> S        | taille (uint64)               |        /
- *                   | contenu (taille*char8)        |
+ *     C -> S        | si WR: taille (uint64)        |        /
+ *                   | si WR: contenu (taille*char8) |
  * -----------------------------------------------------------------------------
  * MSG_FREE          | taille du nom (uint8)         |        /
  *     C -> S        | nom (taille*char8)            |
