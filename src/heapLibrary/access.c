@@ -146,14 +146,16 @@ int t_release(void *p){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* On envoie la taille */
-    if (write(heapInfo->sock, &(dv->size), sizeof(dv->size)) == -1){
-        return DHEAP_ERROR_CONNECTION;
-    }
+    /* On envoie la taille seulement si on était en écriture */
+    if (dv->rw == DHEAPVAR_WRITE){
+        if (write(heapInfo->sock, &(dv->size), sizeof(dv->size)) == -1){
+            return DHEAP_ERROR_CONNECTION;
+        }
 
-    /* On envoie le contenu */
-    if (write(heapInfo->sock, p, dv->size) == -1){
-        return DHEAP_ERROR_CONNECTION;
+        /* On envoie le contenu */
+        if (write(heapInfo->sock, p, dv->size) == -1){
+            return DHEAP_ERROR_CONNECTION;
+        }
     }
 
     /* On supprime la variable de la hashtable */

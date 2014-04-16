@@ -1,9 +1,12 @@
 #include "distributedHeap.h"
 
 struct heapInfo *heapInfo;
+struct dheapServer *dheapServers;
 char *dheapErrorMsg;
 pthread_t *dheap_tid;
 uint8_t *msgtypeClient, *dheapErrorNumber;
+int countservers;
+struct pollfd *poll_list;
 
 /**
  * Initialise la connexion avec le serveur central
@@ -28,10 +31,21 @@ int init_data(char *ip, int port){
     /* TODO: vérifier la validité du port et de l'ip */
     
     heapInfo = malloc(sizeof(struct heapInfo));
+    heapInfo->mainId = 0;
+    dheapServers = malloc(sizeof(struct dheapServer));
+    dheapServers->id = 0;
+    dheapServers->address = malloc(sizeof(char)*strlen(ip));
+    strncpy(dheapServers->address, ip, strlen(ip));
+    dheapServers->port = port;
+    dheapServers->next = NULL;
+    countServers = 1;
+    poll_list = NULL;
+
     dheapErrorMsg = NULL;
     dheapErrorNumber = NULL;
 
     heapInfo->sock = socket(AF_INET,SOCK_STREAM,0);
+    dheapServers->sock = heapInfo->sock;
     /* TODO: Gestion des hostname en plus des IPs
      * memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_UNSPEC; // AF_INET ou AF_INET6 pour ipv4 ou 6
@@ -50,6 +64,11 @@ int init_data(char *ip, int port){
     if (connect(heapInfo->sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
+
+    /* TODO: dire si on considère le serveur comme main ou backup */
+
+    /* Reception de l'id du serveur auquel on se connecte */
+    /* TODO */
 
     /* Reception du type de message (MSG_HEAP_SIZE) */			
     if (read(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
@@ -116,7 +135,8 @@ int close_data(){
     }
     free(dheap_tid);
 
-    /* Fermeture de la connexion */
+    /* Fermeture des connexions */
+    /* TODO: fermer avec cleanServers() */
     if (close(heapInfo->sock) == -1){
         perror("close");
         exit(EXIT_FAILURE);
@@ -140,6 +160,14 @@ int close_data(){
     if (dheapErrorNumber != NULL){
         free(dheapErrorNumber);
         dheapErrorNumber = NULL;
+    }
+
+    countServers = 0;
+    msgtypeClient = MSG_TYPE_NULL;
+
+    if (poll_list != NULL){
+        free(poll_list);
+        poll_list = NULL;
     }
 
     return DHEAP_SUCCESS;

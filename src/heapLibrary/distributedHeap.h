@@ -21,17 +21,24 @@
 
 
 struct heapInfo {
+    uint8_t mainId;
     uint64_t heapSize;
     void *heapStart;
     int sock;
 };
 
-struct lastdHeapConnection {
-    char *ip;
+struct dheapServer {
+    uint8_t id;
+    int sock;
+    char *address;
     int port;
+    struct dheapServer *next;
 };
 
 extern struct heapInfo *heapInfo;
+extern struct dheapServer *dheapServers;
+extern int countServers;
+extern struct pollfd *poll_list;
 extern char *dheapErrorMsg; /* Utilisé pour le ERROR_UNKNOWN_ERROR */
 extern int *dheapErrorNumber; /* Utilisé pour passer une erreur au client */
 extern uint8_t msgtypeClient;
@@ -60,6 +67,7 @@ enum errorCodes {
 /* TODO: enum partagé avec le serveur */
 enum msgTypes {
     MSG_HEAP_SIZE,
+    MSG_SERVER_ID,
     MSG_ALLOC,
     MSG_ACCESS_READ,
     MSG_ACCESS_READ_MODIFIED,
@@ -69,19 +77,30 @@ enum msgTypes {
     MSG_FREE,
     MSG_ERROR,
     MSG_DISCONNECT,
+    MSG_PING,
+    MSG_ADD_SERVER,
+    MSG_CHANGE_MAIN,
     MSG_TYPE_NULL /* Utilisé entre le thread de la librairie et le thread client */
 };
 
+/* dataConnection.c */
 int init_data(char *ip, int port);
 int close_data();
+/* allocation.c */
 int t_malloc(uint64_t size, char *name);
+int t_free(char *name);
+/* access.c */
 int t_access_read(char *name, void **p);
 int t_access_write(char *name, void **p);
 int t_access_common(uint8_t msgtype, char *name, void **p);
 int t_release(void *p);
-int t_free(char *name);
+/* distributedHeap.c */
 int receiveAck(uint8_t msgtype);
 int receiveAckPointer(uint8_t *msgtypeP);
 void *data_thread(void *arg);
 void exit_data_thread(int e);
 int checkError();
+/* servers.c */
+int addserver(uint8_t id, char *address, int port);
+int switchMain(uint8_t id);
+void cleanServers();

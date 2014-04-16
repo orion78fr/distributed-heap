@@ -89,8 +89,8 @@ int checkError(){
  */
 void *data_thread(void *arg){
     /* TODO: à changer pour gérer plusieurs serveurs */
-    struct pollfd poll_list[1];
 
+    poll_list = malloc(sizeof(struct pollfd));
     msgtypeClient = MSG_TYPE_NULL;
 
     /* Création du poll */
@@ -99,41 +99,51 @@ void *data_thread(void *arg){
 
     /* Boucle avec le poll */
     while (1){
-        int retval;
-        retval = poll(poll_list, 1, -1);
+        int retval, i;
+        retval = poll(poll_list, countServers, -1);
         if (retval < 0){
             perror("poll");
             exit(EXIT_FAILURE); 
         }
         if (retval > 0){
-           if (poll_list[0].revents&POLLNVAL == POLLNVAL){
-               perror("poll socket"); 
-               exit(EXIT_FAILURE); 
-           }
-           if (poll_list[0].revents&POLLHUP == POLLHUP){
-                exit
-           }
-           if (poll_list[0].revents&POLLIN == POLLIN){
-               uint8_t msgtype;
-               if (read(poll_list[0].fd, &msgtype, sizeof(msgtype)) <= 0){
-                   exit(1); /* TODO: temporaire */
-                   /* switchToBackup(DHEAP_ERROR_CONNECTION); TODO: à voir et à améliorer */
-                   continue; 
-               }
-               if (msgtype < MSG_ERROR){
-                   /* On passe le message à l'autre thread */
-               } else if (msgtype == MSG_ERROR){
-                   /* On traite l'erreur */
-               } else {
-                    exit_data_thread(DHEAP_ERROR_UNEXPECTED_MSG);
-               }
-           }
+            for (i=0; i < countServers; i++){
+                if (poll_list[i].revents&POLLNVAL == POLLNVAL){
+                    perror("poll socket"); 
+                    exit(EXIT_FAILURE); 
+                }
+                if (poll_list[i].revents&POLLHUP == POLLHUP){
+
+                }
+                if (poll_list[i].revents&POLLIN == POLLIN){
+                    uint8_t msgtype;
+                    if (read(poll_list[i].fd, &msgtype, sizeof(msgtype)) <= 0){
+                        exit(1); /* TODO: temporaire */
+                        /* switchToBackup(DHEAP_ERROR_CONNECTION); TODO: à voir et à améliorer */
+                        continue; 
+                    }
+                    if (msgtype < MSG_ERROR && msgtype > MSG_SERVER_ID){
+                        /* On passe le message à l'autre thread */
+                    } else if (msgtype == MSG_ERROR){
+                        /* On traite l'erreur */
+                    } else if (msgtype == MSG_DISCONNECT){
+
+                    } else if (msgtype == MSG_PING){
+
+                    } else if (msgtype == MSG_ADD_SERVER){
+
+                    } else if (msgtype == MSG_CHANGE_MAIN){
+
+                    } else {
+                        exit_data_thread(DHEAP_ERROR_UNEXPECTED_MSG);
+                    }
+                }
+            }
         }
     }
 }
 
 /**
- * Ferme le thread et laisse un message d'erreur */
+ * Ferme le thread et laisse un message d'erreur
  * @param errorCodes
  */
 void exit_data_thread(int e){
