@@ -14,7 +14,8 @@ enum msgTypes {
     MSG_ERROR,
     MSG_DISCONNECT,
     MSG_PING,
-    MSG_ADD_SERVER
+    MSG_ADD_SERVER,
+    MSG_REMOVE_SERVER
 };
 
 typedef struct dataSend{
