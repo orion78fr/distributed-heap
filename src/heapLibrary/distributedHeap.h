@@ -25,6 +25,7 @@ struct heapInfo {
     uint64_t heapSize;
     void *heapStart;
     int sock;
+    uint16_t clientId;
 };
 
 struct dheapServer {
@@ -67,8 +68,8 @@ enum errorCodes {
 
 /* TODO: enum partagé avec le serveur */
 enum msgTypes {
-    MSG_HEAP_SIZE,
-    MSG_SERVER_ID,
+    MSG_HELLO_NEW,
+    MSG_HELLO_NOT_NEW,
     MSG_ALLOC,
     MSG_ACCESS_READ,
     MSG_ACCESS_READ_MODIFIED,
@@ -80,7 +81,7 @@ enum msgTypes {
     MSG_DISCONNECT,
     MSG_PING,
     MSG_ADD_SERVER,
-    MSG_CHANGE_MAIN,
+    MSG_REMOVE_SERVER,
     MSG_TYPE_NULL /* Utilisé entre le thread de la librairie et le thread client */
 };
 

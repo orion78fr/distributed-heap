@@ -48,18 +48,30 @@ int init_data(char *address, int port){
     dheapServers->status = 1;
     dheapServers->sock = heapInfo->sock;
 
-    /* TODO: dire si on considère le serveur comme main ou backup */
-
-    /* Reception de l'id du serveur auquel on se connecte */
-    /* TODO */
-
-    /* Reception du type de message (MSG_HEAP_SIZE) */			
+    /* on indique au serveur qu'on est nouveau dans le système */
+    msgtype = MSG_HELLO_NEW;
+    if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+    
+    /* Reception du type de message (MSG_HELLO_NEW) */			
     if (read(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    if (msgtype != MSG_HEAP_SIZE){
+    if (msgtype != MSG_HELLO_NEW){
         return DHEAP_ERROR_UNEXPECTED_MSG;
+    }
+
+    /* Reception de l'id du serveur auquel on se connecte */
+    if (read(heapInfo->sock, &(heapInfo->mainId), sizeof(heapInfo->mainId)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+    dheapServers->id = heapInfo->mainId;
+
+    /* Réception de notre id client */
+    if (read(heapInfo->sock, &(heapInfo->clientId), sizeof(heapInfo->clientId)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
     }
 
     /* Reception de la taille du tas */			
@@ -69,6 +81,7 @@ int init_data(char *address, int port){
 
 #if DEBUG
     printf("HeapSize: %" PRIu64 "\n", heapInfo->heapSize);
+    printf("ClientID: %" PRIu16 "\n", heapInfo->clientId);
 #endif 
 
     /* allocation du tas dans la mémoire */
@@ -141,7 +154,7 @@ int close_data(){
         dheapErrorNumber = NULL;
     }
 
-    countServers = 0;
+    countServersOnline = 0;
     msgtypeClient = MSG_TYPE_NULL;
 
     if (poll_list != NULL){

@@ -80,8 +80,10 @@ void cleanServers(){
 
     while (tmp != NULL){
         tofree = tmp;
-        if (tmp->sock != -1)
+        if (tmp->sock != -1){
+            /* TODO: envoyer un msg_disconnect ? */
             close(tmp->sock); /* TODO: vérifier erreur? */
+        }
         free(tmp->address);
         tmp = tmp->next;
         free(tofree);
