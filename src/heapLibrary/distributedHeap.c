@@ -110,14 +110,14 @@ void *data_thread(void *arg){
                     exit(EXIT_FAILURE); 
                 }
                 if (poll_list[i].revents&POLLHUP == POLLHUP){
-
+                    setDownAndSwitch(poll_list[i].fd);
+                    continue;
                 }
                 if (poll_list[i].revents&POLLIN == POLLIN){
                     uint8_t msgtype;
                     if (read(poll_list[i].fd, &msgtype, sizeof(msgtype)) <= 0){
-                        exit(1); /* TODO: temporaire */
-                        /* switchToBackup(DHEAP_ERROR_CONNECTION); TODO: à voir et à améliorer */
-                        continue; 
+                        setDownAndSwitch(poll_list[i].fd);
+                        continue;
                     }
                     if (msgtype < MSG_ERROR && msgtype > MSG_SERVER_ID){
                         /* On passe le message à l'autre thread */
@@ -128,8 +128,9 @@ void *data_thread(void *arg){
                     } else if (msgtype == MSG_PING){
 
                     } else if (msgtype == MSG_ADD_SERVER){
-
-                    } else if (msgtype == MSG_CHANGE_MAIN){
+                        /* Comme on modifie la poll_list, on repart dans la boucle */
+                        continue;
+                    } else if (msgtype == MSG_REM_SERVER){
 
                     } else {
                         exit_data_thread(DHEAP_ERROR_UNEXPECTED_MSG);
@@ -138,6 +139,14 @@ void *data_thread(void *arg){
             }
         }
     }
+}
+
+void setDownAndSwitch(int sock){
+    uint8_t sid;
+    sid = getServerIdBySock(sock);
+    setServerDown(sid);
+    if (sid == heapInfo->mainId)
+        switchMain();
 }
 
 /**

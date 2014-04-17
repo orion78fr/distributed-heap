@@ -23,12 +23,12 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
 
     /* On envoie la longueur du nom qu'on veut lire */
     namelen = strlen(name);
-    if (write(heapInfo->sock, &namelen, sizeof(namelen)) <= 0){
+    if (write(heapInfo->sock, &namelen, sizeof(namelen)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On envoie le nom */
-    if (write(heapInfo->sock, name, namelen) <= 0){
+    if (write(heapInfo->sock, name, namelen) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
     

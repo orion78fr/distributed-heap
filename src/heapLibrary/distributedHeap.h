@@ -19,6 +19,8 @@
 
 #include "dheapHashtable.h"
 
+#define DH_SERVER_RETRY 3
+
 
 struct heapInfo {
     uint8_t mainId;
@@ -104,7 +106,9 @@ void exit_data_thread(int e);
 int checkError();
 /* servers.c */
 int addserver(uint8_t id, char *address, int port);
-int switchMain(uint8_t id);
+int switchMain();
 void cleanServers();
 int connectToServer(char *address, int port);
 void buildPollList();
+void setServerDown(uint8_t id);
+uint8_t getServerIdBySock(int sock);

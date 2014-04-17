@@ -25,17 +25,17 @@ int t_malloc(uint64_t size, char *name){
 
     /* On envoie la longueur du nom à allouer */
     namelen = strlen(name);
-    if (write(heapInfo->sock, &namelen, sizeof(namelen)) <= 0){
+    if (write(heapInfo->sock, &namelen, sizeof(namelen)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On envoie le nom */
-    if (write(heapInfo->sock, name, namelen) <= 0){
+    if (write(heapInfo->sock, name, namelen) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On envoie la taille qu'on veut allouer */
-    if (write(heapInfo->sock, &size, sizeof(size)) <= 0){
+    if (write(heapInfo->sock, &size, sizeof(size)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 
@@ -66,12 +66,12 @@ int t_free(char *name){
 
     /* On envoie la longueur du nom à free */
     namelen = strlen(name);
-    if (write(heapInfo->sock, &namelen, sizeof(namelen)) <= 0){
+    if (write(heapInfo->sock, &namelen, sizeof(namelen)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 
     /* On envoie le nom */
-    if (write(heapInfo->sock, name, namelen) <= 0){
+    if (write(heapInfo->sock, name, namelen) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
 
