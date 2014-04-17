@@ -2,8 +2,8 @@
 #define HEAPSERVER_MESSAGES
 
 enum msgTypes {
-    MSG_HEAP_SIZE,
-    MSG_SERVER_ID,
+    MSG_HELLO_NEW,
+    MSG_HELLO_NOT_NEW,
     MSG_ALLOC,
     MSG_ACCESS_READ,
 	MSG_ACCESS_READ_MODIFIED,
@@ -14,8 +14,7 @@ enum msgTypes {
     MSG_ERROR,
     MSG_DISCONNECT,
     MSG_PING,
-    MSG_ADD_SERVER,
-    MSG_CHANGE_MAIN
+    MSG_ADD_SERVER
 };
 
 typedef struct dataSend{
@@ -28,17 +27,17 @@ int send_data(int sock, int msgType, int nb, ...);
 void *recv_data(int sock, int taille);
 
 /*
- * Chaque échange commence par le type de message (int)
+ * Chaque échange commence par le type de message (uint8)
  * Puis, (super tableau en ASCII-art)
- * MSG TYPE -> int8
  *
  *      type         |            envoi              |         réponse
  * -----------------------------------------------------------------------------
- * MSG_HEAP_SIZE     | taille du tas (uint64)        |        /
- *     S -> C        |                               |
+ * MSG_HELLO_NEW     |         /                     | Server id (uint8)
+ *     C -> S        |                               | Client id (uint16)
+ *                   |                               | Heap size (uint64)
  * -----------------------------------------------------------------------------
- * MSG_SERVER_ID     | id du serveur (uint8)         |        /
- *     S -> C        |                               |
+ * MSG_HELLO_NOT_NEW | Client id (uint16)            |        /
+ *     C -> S        |                               |
  * -----------------------------------------------------------------------------
  * MSG_ALLOC         | taille du nom (uint8)         |
  *     C -> S        | nom (taille*char8)            |        /
@@ -55,8 +54,9 @@ void *recv_data(int sock, int taille);
  *                   |                               |   contenu (taille*char8)
  * -----------------------------------------------------------------------------
  * MSG_RELEASE       | offset (uint64)               |
- *     C -> S        | si WR: taille (uint64)        |        /
- *                   | si WR: contenu (taille*char8) |
+ *     C -> S        | si accès en write             |
+ *                   |   taille (uint64)             |        /
+ *                   |   contenu (taille*char8)      |
  * -----------------------------------------------------------------------------
  * MSG_FREE          | taille du nom (uint8)         |        /
  *     C -> S        | nom (taille*char8)            |
@@ -68,16 +68,16 @@ void *recv_data(int sock, int taille);
  * MSG_DISCONNECT    |         /                     |        /
  *     S <-> C       |                               |
  * -----------------------------------------------------------------------------
- * MSG_ADD_SERVER     | id du serveur (uint8)        |        /
+ * MSG_ADD_SERVER    | id du serveur (uint8)         |        /
  *     S -> C        | taille de l'adresse (uint8)   |
  *                   | adresse (taille*char8)        |
  *                   | port (uint16)                 |
  * -----------------------------------------------------------------------------
+ * MSG_REMOVE_SERVER | id du serveur (uint8)         |        /
+ *     S -> C        |                               |
+ * -----------------------------------------------------------------------------
  * MSG_PING          |         /                     |        /
  *     S <-> C       |                               |
- * -----------------------------------------------------------------------------
- * MSG_CHANGE_MAIN   | id du nouveau main (uint8)    | ack (uint8) -> OK
- *     S -> C        |                               | ou -> UNKNOWN SERVER ID
  * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int
