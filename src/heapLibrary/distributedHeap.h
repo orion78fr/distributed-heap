@@ -32,12 +32,13 @@ struct dheapServer {
     int sock;
     char *address;
     int port;
+    uint8_t status; /* 0 = non connecté, 1 = connecté */
     struct dheapServer *next;
 };
 
 extern struct heapInfo *heapInfo;
 extern struct dheapServer *dheapServers;
-extern int countServers;
+extern int countServersOnline;
 extern struct pollfd *poll_list;
 extern char *dheapErrorMsg; /* Utilisé pour le ERROR_UNKNOWN_ERROR */
 extern int *dheapErrorNumber; /* Utilisé pour passer une erreur au client */
@@ -84,7 +85,7 @@ enum msgTypes {
 };
 
 /* dataConnection.c */
-int init_data(char *ip, int port);
+int init_data(char *address, int port);
 int close_data();
 /* allocation.c */
 int t_malloc(uint64_t size, char *name);
@@ -104,3 +105,5 @@ int checkError();
 int addserver(uint8_t id, char *address, int port);
 int switchMain(uint8_t id);
 void cleanServers();
+int connectToServer(char *address, int port);
+void buildPollList();

@@ -15,9 +15,7 @@ struct pollfd *poll_list;
  * @param ip du serveur, port du serveur
  * @return enum errorCodes
  */
-int init_data(char *ip, int port){
-    struct sockaddr_in servaddr;
-    /* struct addrinfo hints, *result; */
+int init_data(char *address, int port){
     uint8_t msgtype;
 
 #if DEBUG
@@ -34,36 +32,21 @@ int init_data(char *ip, int port){
     heapInfo->mainId = 0;
     dheapServers = malloc(sizeof(struct dheapServer));
     dheapServers->id = 0;
-    dheapServers->address = malloc(sizeof(char)*strlen(ip));
-    strncpy(dheapServers->address, ip, strlen(ip));
+    dheapServers->address = malloc(sizeof(char)*strlen(address));
+    strncpy(dheapServers->address, address, strlen(address));
     dheapServers->port = port;
     dheapServers->next = NULL;
-    countServers = 1;
     poll_list = NULL;
 
     dheapErrorMsg = NULL;
     dheapErrorNumber = NULL;
 
-    heapInfo->sock = socket(AF_INET,SOCK_STREAM,0);
-    dheapServers->sock = heapInfo->sock;
-    /* TODO: Gestion des hostname en plus des IPs
-     * memset(&hints, 0, sizeof(hints));
-    hints.ai_family = PF_UNSPEC; // AF_INET ou AF_INET6 pour ipv4 ou 6
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_ADDRCONFIG | AI_CANONNAME;
 
-    if (getaddrinfo(DHEAP_SERVER_ADDRESS, &hints, &result) == -1){
-        return DHEAP_ERROR_CONNECTION;
-    } */
-
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr=inet_addr(ip);
-    servaddr.sin_port=htons(port);
-
-    if (connect(heapInfo->sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1){
+    if ((heapInfo->sock = connectToServer(address, port)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
+    dheapServers->status = 1;
+    dheapServers->sock = heapInfo->sock;
 
     /* TODO: dire si on considère le serveur comme main ou backup */
 
@@ -136,11 +119,7 @@ int close_data(){
     free(dheap_tid);
 
     /* Fermeture des connexions */
-    /* TODO: fermer avec cleanServers() */
-    if (close(heapInfo->sock) == -1){
-        perror("close");
-        exit(EXIT_FAILURE);
-    }
+    cleanServers();
 
     /* On vide le tas */
     free(heapInfo->heapStart);

@@ -90,23 +90,21 @@ int checkError(){
 void *data_thread(void *arg){
     /* TODO: à changer pour gérer plusieurs serveurs */
 
-    poll_list = malloc(sizeof(struct pollfd));
     msgtypeClient = MSG_TYPE_NULL;
 
     /* Création du poll */
-    poll_list[0].fd = heapInfo->sock;
-    poll_list[0].events = POLLHUP | POLLIN | POLLNVAL; /* TODO: ajouter POLLERR? */
+    buildPollList();
 
     /* Boucle avec le poll */
     while (1){
         int retval, i;
-        retval = poll(poll_list, countServers, -1);
+        retval = poll(poll_list, countServersOnline, -1);
         if (retval < 0){
             perror("poll");
             exit(EXIT_FAILURE); 
         }
         if (retval > 0){
-            for (i=0; i < countServers; i++){
+            for (i=0; i < countServersOnline; i++){
                 if (poll_list[i].revents&POLLNVAL == POLLNVAL){
                     perror("poll socket"); 
                     exit(EXIT_FAILURE); 
