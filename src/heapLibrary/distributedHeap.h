@@ -43,7 +43,6 @@ extern struct heapInfo *heapInfo;
 extern struct dheapServer *dheapServers;
 extern int countServersOnline;
 extern struct pollfd *poll_list;
-extern char *dheapErrorMsg; /* Utilisé pour le ERROR_UNKNOWN_ERROR */
 extern int *dheapErrorNumber; /* Utilisé pour passer une erreur au client */
 extern uint8_t msgtypeClient;
 

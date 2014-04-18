@@ -2,7 +2,6 @@
 
 struct heapInfo *heapInfo;
 struct dheapServer *dheapServers;
-char *dheapErrorMsg;
 pthread_t *dheap_tid;
 uint8_t *msgtypeClient, *dheapErrorNumber;
 int countservers;
@@ -38,7 +37,6 @@ int init_data(char *address, int port){
     dheapServers->next = NULL;
     poll_list = NULL;
 
-    dheapErrorMsg = NULL;
     dheapErrorNumber = NULL;
 
 
@@ -144,11 +142,7 @@ int close_data(){
     /* On supprime la hashtable */
     free_hashtable();
 
-    /* On vide le message d'erreur et le numero d'erreur */
-    if (dheapErrorMsg != NULL){
-        free(dheapErrorMsg);
-        dheapErrorMsg = NULL;
-    }
+    /* On vide le numero d'erreur */
     if (dheapErrorNumber != NULL){
         free(dheapErrorNumber);
         dheapErrorNumber = NULL;

@@ -34,22 +34,6 @@ int receiveAckPointer(uint8_t *msgtypeP){
             return DHEAP_ERROR_CONNECTION;
         }
 
-        /* On récupère la taille du message d'erreur */
-        if (read(heapInfo->sock, &tailleError, sizeof(tailleError)) <= 0){
-            return DHEAP_ERROR_CONNECTION;
-        }
-
-        /* Si la taille est supérieur à 0 on récupère le message */
-        if (tailleError > 0){
-            if (dheapErrorMsg != NULL){
-                free(dheapErrorMsg);
-            }
-            dheapErrorMsg = malloc(sizeof(char)*tailleError);
-            if (read(heapInfo->sock, dheapErrorMsg, tailleError) <=0 ){
-                return DHEAP_ERROR_CONNECTION;
-            }
-        }
-
         /* On retourne le code d'erreur */
         return msgtypeReponse;
     } else {
