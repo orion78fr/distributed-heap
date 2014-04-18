@@ -40,7 +40,7 @@ int init_data(char *address, int port){
     dheapErrorNumber = NULL;
 
 
-    if ((heapInfo->sock = connectToServer(address, port)) == -1){
+    if ((heapInfo->sock = connectToServer(address, port, 1)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
     dheapServers->status = 1;

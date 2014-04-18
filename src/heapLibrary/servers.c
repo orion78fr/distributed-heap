@@ -3,7 +3,6 @@
 int addserver(uint8_t id, char *address, int port){
     struct dheapServer *newServer, *tmp;
     int addlen;
-    uint8_t msgtype;
 
     addlen = strlen(address);
 
@@ -21,30 +20,47 @@ int addserver(uint8_t id, char *address, int port){
     tmp->next = newServer;
 
     /* Connexion au serveur */
-    if ((newServer->sock = connectToServer(newServer->address, newServer->port)) == -1){
+    if ((newServer->sock = connectToServer(newServer->address, newServer->port, 0)) == -1){
         return 0;
     }
-    newServer->status = 1;
+    newServer->status = 2;
     
-    /* Déclaration au serveur */
-    msgtype = MSG_HELLO_NOT_NEW;
-    if (write(newServer->sock, &msgtype, sizeof(msgtype)) == -1){
-        setServerDown(newServer->id);
-        return 0;
-    }
-    if (write(newServer->sock, &(heapInfo->clientId), sizeof(heapInfo->clientId)) == -1){
-        setServerDown(newServer->id);
-        return 0;
-    }
-    if (read(newServer->sock, &msgtype, sizeof(msgtype)) <= 0){
-        setServerDown(newServer->id);
-        return 0;
-    }
-
-    /* Ajout dans la poll list */
     buildPollList();
-
+    
     return 0;
+}
+
+void helloNotNew(uint8_t sid){
+    /* Déclaration au serveur */
+    uint8_t msgtype;
+    struct dheapServer *ds;
+    int sockflags;
+
+    ds = getServerById(sid);
+
+    ds->status = 1;
+
+    /* on remet la socket en bloquante */
+    sockflags = fcntl(ds->sock, F_GETFL);
+    sockflags &=~ O_NONBLOCK;
+    if (fcntl(ds->sock, F_SETFL, sockflags) == -1)
+       exit(EXIT_FAILURE); 
+
+    msgtype = MSG_HELLO_NOT_NEW;
+    if (write(ds->sock, &msgtype, sizeof(msgtype)) == -1){
+        setServerDown(newServer->id);
+        return 0;
+    }
+    if (write(ds->sock, &(heapInfo->clientId), sizeof(heapInfo->clientId)) == -1){
+        setServerDown(newServer->id);
+        return 0;
+    }
+    if (read(ds->sock, &msgtype, sizeof(msgtype)) <= 0){
+        setServerDown(newServer->id);
+        return 0;
+    }
+
+    buildPollList();
 }
 
 void setServerDown(uint8_t id){
@@ -73,10 +89,10 @@ void buildPollList(){
 
     countServersOnline = 0;
     ds = dheapServers;
-    while (dh != NULL){
-        if (dh->status == 1 && dh->sock != -1)
+    while (ds != NULL){
+        if ((ds->status == 1 || ds->status == 2) && ds->sock != -1)
             countServersOnline++;
-        dh = dh->next;
+        ds = ds->next;
     }
 
     if (countServersOnline == 0){
@@ -87,12 +103,16 @@ void buildPollList(){
 
     new = malloc(sizeof(struct pollfd)*countServersOnline);
     ds = dheapServers;
-    while(dh != NULL){
+    while(ds != NULL){
         if (j >= countServersOnline)
             exit(EXIT_FAILURE);
-        if (dh->status == 1 && dh->sock != -1){
+        if (ds->status == 1 && ds->sock != -1){
             new[j].fd = ds->sock;
-            new[j].events = POLLHUP | POLLIN | POLLNVAL; /* POLLERR aussi? */
+            new[j].events = POLLHUP | POLLIN | POLLNVAL;
+            j++;
+        } else if (ds->status == 2 && ds->sock != -1){
+            new[j].fd = ds->sock;
+            new[j].events = POLLOUT | POLLHUP | POLLNVAL;
             j++;
         }
     }
@@ -124,12 +144,17 @@ void cleanServers(){
 }
 
 /* retourne un socket ou -1 */
-int connectToServer(char *address, int port){
+/* block: 0: not blocking, 1: blocking */
+int connectToServer(char *address, int port, int block){
     struct sockaddr_in servaddr;
     /* struct addrinfo hints, *result; */
-    int socket, retry;
+    int socket, socktype, retry;
 
-    socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (block == 0)
+        socktype = SOCK_STREAM | SOCK_NONBLOCK;
+    else
+        socktype = SOCK_STREAM;
+    socket = socket(AF_INET, socktype, 0);
 
     /* TODO: Gestion des hostname en plus des IPs
      * memset(&hints, 0, sizeof(hints));
@@ -148,6 +173,9 @@ int connectToServer(char *address, int port){
 
     retry = 0;
     while(connect(socket, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1){
+        if (errno == EINPROGRESS && block == 0){
+            return socket;
+        }
         retry++;
         if (retry == NB_SERVER_RETRY) 
             return -1;
@@ -155,6 +183,7 @@ int connectToServer(char *address, int port){
 
     return socket;
 }
+
 
 uint8_t getServerIdBySock(int sock){
     struct dheapServer *tmp;
@@ -168,4 +197,32 @@ uint8_t getServerIdBySock(int sock){
         exit(EXIT_FAILURE);
 
     return tmp->id;
+}
+
+struct dheapServer* getServerBySock(int sock){
+    struct dheapServer *tmp;
+
+    tmp = dheapServers;
+
+    while (tmp->sock != sock && tmp != NULL)
+        tmp = tmp->next;
+
+    if (tmp == NULL)
+        exit(EXIT_FAILURE);
+
+    return tmp;
+}
+
+struct dheapServer* getServerById(uint8_t sid){
+    struct dheapServer *tmp;
+
+    tmp = dheapServers;
+
+    while (tmp->id != sid && tmp != NULL)
+        tmp = tmp->next;
+
+    if (tmp == NULL)
+        exit(EXIT_FAILURE);
+
+    return tmp;
 }

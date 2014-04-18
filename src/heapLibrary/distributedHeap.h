@@ -16,6 +16,8 @@
 #include <arpa/inet.h>
 #include <inttypes.h>
 #include <poll.h>
+#include <errno.h>
+#include <fcntl.h>
 
 #include "dheapHashtable.h"
 
@@ -35,7 +37,7 @@ struct dheapServer {
     int sock;
     char *address;
     int port;
-    uint8_t status; /* 0 = non connecté, 1 = connecté */
+    uint8_t status; /* 0 = non connecté, 1 = connecté, 2 = connecting */
     struct dheapServer *next;
 };
 
@@ -103,11 +105,15 @@ int receiveAckPointer(uint8_t *msgtypeP);
 void *data_thread(void *arg);
 void exit_data_thread(int e);
 int checkError();
+void setDownAndSwitch(uint8_t sid);
 /* servers.c */
 int addserver(uint8_t id, char *address, int port);
 int switchMain();
 void cleanServers();
-int connectToServer(char *address, int port);
+int connectToServer(char *address, int portn int block);
 void buildPollList();
 void setServerDown(uint8_t id);
 uint8_t getServerIdBySock(int sock);
+struct dheapServer* getServerBySock(int sock);
+struct dheapServer* getServerById(uint8_t sid);
+void helloNotNew(uint8_t sid);

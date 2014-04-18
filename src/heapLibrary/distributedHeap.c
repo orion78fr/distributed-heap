@@ -82,6 +82,7 @@ void *data_thread(void *arg){
     /* Boucle avec le poll */
     while (1){
         int retval, i;
+        /* TODO: here reconnect servers */
         retval = poll(poll_list, countServersOnline, -1);
         if (retval < 0){
             perror("poll");
@@ -89,21 +90,28 @@ void *data_thread(void *arg){
         }
         if (retval > 0){
             for (i=0; i < countServersOnline; i++){
+                dheapServer *ds;
+                ds = getServerSock(poll_list[i].fd);
+
                 if (poll_list[i].revents&POLLNVAL == POLLNVAL){
-                    perror("poll socket"); 
-                    exit(EXIT_FAILURE); 
+                    setDownAndSwitch(ds->id);
+                    continue;
                 }
                 if (poll_list[i].revents&POLLHUP == POLLHUP){
-                    setDownAndSwitch(poll_list[i].fd);
+                    setDownAndSwitch(ds->id);
                     continue;
+                }
+                if (poll_list[i].events&POLLOUT == POLLOUT && poll_list[i].revents&POLLOUT == POLLOUT){
+                    helloNotNew(ds->id);
+                    continue; 
                 }
                 if (poll_list[i].revents&POLLIN == POLLIN){
                     uint8_t msgtype;
                     if (read(poll_list[i].fd, &msgtype, sizeof(msgtype)) <= 0){
-                        setDownAndSwitch(poll_list[i].fd);
+                        setDownAndSwitch(ds->id);
                         continue;
                     }
-                    if (msgtype < MSG_ERROR && msgtype > MSG_SERVER_ID){
+                    if (msgtype < MSG_ERROR && msgtype > MSG_SERVER_ID){ /* TODO: à changer */
                         /* On passe le message à l'autre thread */
                     } else if (msgtype == MSG_ERROR){
                         /* On traite l'erreur */
@@ -125,9 +133,7 @@ void *data_thread(void *arg){
     }
 }
 
-void setDownAndSwitch(int sock){
-    uint8_t sid;
-    sid = getServerIdBySock(sock);
+void setDownAndSwitch(uint8_t sid){
     setServerDown(sid);
     if (sid == heapInfo->mainId)
         switchMain();
