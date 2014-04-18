@@ -72,12 +72,16 @@ int add_data(char *name, int size)
         pthread_cond_init(&(newData->readCond), NULL);
 
         newData->offset = alloc_space(size);
+        if(newData->offset < 0){
+            free(newData);
+            return -2;
+        }
 
         pthread_mutex_lock(&hashTableMutex);
 
         newData->next = hashTable[sum];
         hashTable[sum] = newData;
-        
+
         memset(theHeap + newData->offset, 0, size);
 
         pthread_mutex_unlock(&hashTableMutex);

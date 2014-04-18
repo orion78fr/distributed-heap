@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
         perror("Wrong args\n");
         exit(EXIT_FAILURE);
     }
+
 #if DEBUG
     printf("Port : %d\n", parameters.port);
     printf("Max Clients : %d\n", parameters.maxClients);
@@ -45,7 +46,7 @@ int main(int argc, char *argv[])
         struct clientChain *newClient;
 
 #if DEBUG
-        printf("It's ok! I'm waiting!\n");
+        printf("Waiting for clients...\n");
 #endif
 
         /* On accepte la connexion */
@@ -53,29 +54,22 @@ int main(int argc, char *argv[])
             perror("accept");
             exit(EXIT_FAILURE);
         }
+
 #if DEBUG
         printf("New Client...\n");
-        /* GTU : Ajouter des getname etc... pour le debug (savoir 
+        /* GTU : Ajouter des getname etc... pour le debug (savoir
          * qui se connecte) */
 #endif
 
         if (clientsConnected > parameters.maxClients) {
-            int temp;
-            char *temp2 = "ERROR";
-
-            temp = MSG_ERROR;
-            write(sclient, (void *) &temp, sizeof(temp));       /* Msg type */
-            temp = ERROR_SERVER_FULL;
-            write(sclient, (void *) &temp, sizeof(temp));       /* Error type */
-            temp = strlen(temp2);
-            write(sclient, (void *) &temp, sizeof(temp));       /* Message size */
-            write(sclient, (void *) &temp2, temp);      /* Message */
-
+            /* ERREUR */
+            int errType=ERROR_SERVER_FULL;
+            send_data(sock, MSG_ERROR, 1, (DS){sizeof(int), &errType});
             shutdown(sclient, 2);
             close(sclient);
-
             continue;
         }
+
         /* Ajout du client dans la chaîne de socket (ajout au début pour
          * éviter le parcours) */
         newClient = malloc(sizeof(struct clientChain));
@@ -88,7 +82,8 @@ int main(int argc, char *argv[])
                        clientThread, (void *) sclient);
         clientsConnected++;
     }
-    /* GTU : Et comment on sort de là? Signaux puis envoi d'un END 
+
+    /* GTU : Et comment on sort de là? Signaux puis envoi d'un END
      * a tout les clients */
 
     while (clients != NULL) {

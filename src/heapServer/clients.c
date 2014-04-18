@@ -27,11 +27,23 @@ void *clientThread(void *arg)
     printf("[Client %d] Connexion\n", pthread_self());
 #endif
 
-    /* Envoi de la taille du stack */
-	if(send_data(sock, MSG_HEAP_SIZE, 1, 
-                    (DS){sizeof(int), &(parameters.heapSize)})<0){
-		goto disconnect;
-	}
+    if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+        goto disconnect;
+    }
+    if(msgType == MSG_HELLO_NEW){
+        temp = pthread_self();
+        if(send_data(sock, MSG_HELLO_NEW, 1,
+                        (DS){sizeof(int), &(parameters.serverNum)},
+                        (DS){sizeof(int), &(temp)},
+                        (DS){sizeof(int), &(parameters.heapSize)})<0){
+            goto disconnect;
+        }
+    } else {
+        if (read(sock, (void *) &temp, sizeof(temp)) <= 0) {       /* Msg type */
+            goto disconnect;
+        }
+        /* TODO : temp contient l'id du client... */
+    }
 
     /* Boucle principale */
     for (;;) {
@@ -53,18 +65,22 @@ void *clientThread(void *arg)
             if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Var size */
                 goto disconnect;
             }
+
 #if DEBUG
             printf("[Client %d] Allocation de %s de taille %d\n",
                    pthread_self(), content, temp);
 #endif
 
-            if (add_data(content, temp) != 0) {
+            if ((temp = add_data(content, temp)) != 0) {
                 /* ERREUR */
-                int errType=ERROR_VAR_NAME_EXIST;
-                int messageSize=0;
-                if(send_data(sock, MSG_ERROR, 2, 
-                                (DS){sizeof(int), &errType},
-                                (DS){sizeof(int), &messageSize})<0){
+                int errType;
+                if(temp == -1){
+                    errType = ERROR_VAR_NAME_EXIST;
+                } else {
+                    errType = ERROR_HEAP_FULL;
+                }
+                if(send_data(sock, MSG_ERROR, 1,
+                                (DS){sizeof(int), &errType})<0){
                     goto disconnect;
                 }
             } else {
@@ -88,21 +104,19 @@ void *clientThread(void *arg)
             printf("[Client %d] Demande d'accès en lecture de %s\n",
                    pthread_self(), content);
 #endif
-            
+
             if(acquire_read_lock(content) != 0) {
                 /* ERREUR */
                 int errType=ERROR_VAR_DOESNT_EXIST;
-                int messageSize=0;
-                if(send_data(sock, MSG_ERROR, 2, 
-                                (DS){sizeof(int), &errType},
-                                (DS){sizeof(int), &messageSize})<0){
+                if(send_data(sock, MSG_ERROR, 1,
+                                (DS){sizeof(int), &errType})<0){
                     goto disconnect;
                 }
             } else {
                 struct heapData *data = get_data(content);
                 int offset = data->offset;
                 int size = data->size;
-                
+
                 struct tempCorrespondance *newData = malloc(sizeof(struct tempCorrespondance));
                 newData->offset = offset;
                 newData->name = content;
@@ -110,9 +124,9 @@ void *clientThread(void *arg)
                 newData->next = corresp;
                 newData->write = 0;
                 corresp = newData;
-                
+
                 /* OK */
-                if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3, 
+                if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
                                 (DS){sizeof(int), &offset},
                                 (DS){sizeof(int), &size},
                                 (DS){size, theHeap + data->offset})<0){
@@ -137,17 +151,15 @@ void *clientThread(void *arg)
             if(acquire_write_lock(content) != 0) {
                 /* ERREUR */
                 int errType=ERROR_VAR_DOESNT_EXIST;
-                int messageSize=0;
-                if(send_data(sock, MSG_ERROR, 2, 
-                                (DS){sizeof(int), &errType},
-                                (DS){sizeof(int), &messageSize})<0){
+                if(send_data(sock, MSG_ERROR, 1,
+                                (DS){sizeof(int), &errType})<0){
                     goto disconnect;
                 }
             } else {
                 struct heapData *data = get_data(content);
                 int offset = data->offset;
                 int size = data->size;
-                
+
                 struct tempCorrespondance *newData = malloc(sizeof(struct tempCorrespondance));
                 newData->offset = offset;
                 newData->name = content;
@@ -155,9 +167,9 @@ void *clientThread(void *arg)
                 newData->next = corresp;
                 newData->write = 1;
                 corresp = newData;
-                
+
                 /* OK */
-                if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3, 
+                if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
                                 (DS){sizeof(int), &offset},
                                 (DS){sizeof(int), &size},
                                 (DS){size, theHeap + data->offset})<0){
@@ -170,40 +182,46 @@ void *clientThread(void *arg)
         case MSG_RELEASE:       /* Relachement de la variable */
             if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Offset */
                 goto disconnect;
-            } else {
-                struct tempCorrespondance *prevData = NULL, *data = corresp;
-                while(data->offset != temp){
-                    prevData = data;
-                    data = data->next;
-                }
-#if DEBUG
-                printf("[Client %d] Libération de %s\n", pthread_self(),
-                   data->name);
-#endif
-                content = malloc(sizeof(int));
-                if (read(sock, content, sizeof(int)) <= 0) {        /* Taille */
-                    goto disconnect;
-                }
-                if (read(sock, theHeap+temp, *(int*)content) <= 0) {        /* Contenu */
-                    goto disconnect;
-                }
-                if(data->write){
-                    release_write_lock(data->name);
-                } else {
-                    release_read_lock(data->name);
-                }
-                if(prevData == NULL){
-                    corresp = data->next;
-                } else {
-                    prevData->next = data->next;
-                }
-                free(data->name);
-                free(data);
-                if(send_data(sock, MSG_RELEASE, 0)<0){
+            }
+            struct tempCorrespondance *prevData = NULL, *data = corresp;
+            while(data != NULL && data->offset != temp){
+                prevData = data;
+                data = data->next;
+            }
+            if(data == NULL){
+                /* ERREUR */
+                int errType=ERROR_NOT_LOCKED;
+                if(send_data(sock, MSG_ERROR, 1,
+                                (DS){sizeof(int), &errType})<0){
                     goto disconnect;
                 }
             }
-            
+#if DEBUG
+            printf("[Client %d] Libération de %s\n", pthread_self(),
+               data->name);
+#endif
+            content = malloc(sizeof(int));
+            if (read(sock, content, sizeof(int)) <= 0) {        /* Taille */
+                goto disconnect;
+            }
+            if (read(sock, theHeap+temp, *(int*)content) <= 0) {        /* Contenu */
+                goto disconnect;
+            }
+            if(data->write){
+                release_write_lock(data->name);
+            } else {
+                release_read_lock(data->name);
+            }
+            if(prevData == NULL){
+                corresp = data->next;
+            } else {
+                prevData->next = data->next;
+            }
+            free(data->name);
+            free(data);
+            if(send_data(sock, MSG_RELEASE, 0)<0){
+                goto disconnect;
+            }
             break;
 
         case MSG_FREE:          /* Désallocation d'une variable */
@@ -231,10 +249,8 @@ void *clientThread(void *arg)
             }
 
             break;
-            
-        case MSG_HEAP_SIZE:     /* Clients should not send that */
+
         case MSG_ERROR: /* Message d'erreur */
-        case MSG_DISCONNECT:    /* Message de déconnection */
         default:                /* Unknown message code, version problem? */
             goto disconnect;
         }

@@ -63,4 +63,5 @@ void set_defaults()
     parameters.maxClients = MAX_CLIENTS;
     parameters.heapSize = HEAPSIZE;
     parameters.hashSize = HASHSIZE;
+    parameters.serverNum = 0;
 }

@@ -12,36 +12,21 @@ int send_data(int sock, int msgType, int nb, ...){
     va_list ap;
     int i;
     DS snd = {0,NULL};
-    
+
     if(write(sock, &msgType, sizeof(msgType)) <= 0){
         return -1;
     }
-    
+
     va_start(ap, nb);
-    
+
     for(i=0;i<nb;i++){
         snd = va_arg(ap, DS);
         if(write(sock, snd.data, snd.taille) <= 0){
             return -1;
         }
     }
-    
-    va_end(ap);
-    
-    return 0;
-}
 
-/**
- * Reçoit un message sur la socket
- * @param sock Socket de communication
- * @param taille Taille de la donnée à reçevoir
- * @return Pointeur sur la donnée lue, NULL sinon
- */
-void *recv_data(int sock, int taille){
-	void *data = malloc(taille);
-	if(read(sock, data, taille) <= 0){
-		free(data);
-		return NULL;
-	}
-	return data;
+    va_end(ap);
+
+    return 0;
 }

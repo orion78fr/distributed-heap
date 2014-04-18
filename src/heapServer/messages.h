@@ -6,9 +6,9 @@ enum msgTypes {
     MSG_HELLO_NOT_NEW,
     MSG_ALLOC,
     MSG_ACCESS_READ,
-	MSG_ACCESS_READ_MODIFIED,
+    MSG_ACCESS_READ_MODIFIED,
     MSG_ACCESS_WRITE,
-	MSG_ACCESS_WRITE_MODIFIED,
+    MSG_ACCESS_WRITE_MODIFIED,
     MSG_RELEASE,
     MSG_FREE,
     MSG_ERROR,
@@ -25,7 +25,6 @@ typedef struct dataSend{
 
 
 int send_data(int sock, int msgType, int nb, ...);
-void *recv_data(int sock, int taille);
 
 /*
  * Chaque échange commence par le type de message (uint8)
@@ -62,9 +61,8 @@ void *recv_data(int sock, int taille);
  * MSG_FREE          | taille du nom (uint8)         |        /
  *     C -> S        | nom (taille*char8)            |
  * -----------------------------------------------------------------------------
- * MSG_ERROR         | type d'erreur (uint8)         |
- *     S <-> C       | taille du message (uint8)     |        /
- *                   | message (taille*char8)        |
+ * MSG_ERROR         | type d'erreur (uint8)         |        /
+ *     S <-> C       |                               |
  * -----------------------------------------------------------------------------
  * MSG_DISCONNECT    |         /                     |        /
  *     S <-> C       |                               |
