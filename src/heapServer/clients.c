@@ -200,14 +200,15 @@ void *clientThread(void *arg)
             printf("[Client %d] Libération de %s\n", pthread_self(),
                data->name);
 #endif
-            content = malloc(sizeof(int));
-            if (read(sock, content, sizeof(int)) <= 0) {        /* Taille */
-                goto disconnect;
-            }
-            if (read(sock, theHeap+temp, *(int*)content) <= 0) {        /* Contenu */
-                goto disconnect;
-            }
+
             if(data->write){
+                content = malloc(sizeof(int));
+                if (read(sock, content, sizeof(int)) <= 0) {        /* Taille */
+                    goto disconnect;
+                }
+                if (read(sock, theHeap+temp, *(int*)content) <= 0) {        /* Contenu */
+                    goto disconnect;
+                }
                 release_write_lock(data->name);
             } else {
                 release_read_lock(data->name);
