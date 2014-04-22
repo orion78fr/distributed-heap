@@ -2,15 +2,16 @@
 #define HEAPSERVER_FREELIST
 
 struct freeListChain {
-    int startOffset;
-    int size;
+    uint64_t startOffset;
+    uint64_t size;
     struct freeListChain *next;
 };
 
 extern struct freeListChain *freeList;
 extern pthread_mutex_t freeListMutex;
 
-int alloc_space(int size);
-void free_space(int offset, int size);
+uint64_t alloc_space(uint64_t size);
+void free_space(uint64_t offset, uint64_t size);
+uint64_t defrag_if_possible(uint64_t size);
 
 #endif

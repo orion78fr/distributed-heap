@@ -99,8 +99,11 @@ int add_data(char *name, uint64_t size)
 
         newData->offset = alloc_space(size);
         if(newData->offset < 0){
-            free(newData);
-            return -2;
+            /* Tas plein, tentative de défrag */
+            if(defrag_if_possible(size)<0){
+                free(newData);
+                return -2;
+            }
         }
 
         pthread_mutex_lock(&hashTableMutex);

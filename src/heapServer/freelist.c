@@ -8,11 +8,11 @@ pthread_mutex_t freeListMutex = PTHREAD_MUTEX_INITIALIZER;
  * @param size Taille de la variable à allouer
  * @return L'offset de la variable
  */
-int alloc_space(int size)
+uint64_t alloc_space(uint64_t size)
 {
     struct freeListChain *tempFreeList;
     struct freeListChain *prevFreeList = NULL;
-    int offset = -1;
+    uint64_t offset = -1;
 
     pthread_mutex_lock(&freeListMutex);
 
@@ -45,8 +45,6 @@ int alloc_space(int size)
 
     pthread_mutex_unlock(&freeListMutex);
 
-    /* GTU : Si -1, peut être lancer une défragmentation et réessayer */
-
     return offset;
 }
 
@@ -55,7 +53,7 @@ int alloc_space(int size)
  * @param offset Offset de la variable libérée
  * @param size Taille de la variable libérée
  */
-void free_space(int offset, int size)
+void free_space(uint64_t offset, uint64_t size)
 {
     struct freeListChain *prevFreeList = NULL;
     struct freeListChain *nextFreeList;
