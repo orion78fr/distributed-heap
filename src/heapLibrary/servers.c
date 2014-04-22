@@ -140,7 +140,15 @@ void buildPollList(){
 }
 
 int switchMain(){
-    /* Remplace le sock de heapInfo et le mainId */
+    struct dheapServer *ds;
+    ds = dheapServers;
+    while (ds != NULL && ds->status != 1){
+        if (ds->status == 1){
+            heapInfo->mainId = ds->id;
+            heapInfo->sock = ds->sock;
+        }
+        ds = ds->next;
+    }
     return 0;
 }
 
@@ -152,8 +160,11 @@ void cleanServers(){
     while (tmp != NULL){
         tofree = tmp;
         if (tmp->sock != -1){
-            /* TODO: envoyer un msg_disconnect ? */
-            close(tmp->sock); /* TODO: vérifier erreur? */
+            uint8_t msgtype;
+            msgtype = MSG_DISCONNECT;
+            /* Pas de vérification d'erreur nécessaire pour le write */
+            write(tmp->sock, &msgtype, sizeof(msgtype));
+            close(tmp->sock);
         }
         free(tmp->address);
         tmp = tmp->next;

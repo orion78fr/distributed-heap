@@ -30,7 +30,6 @@ int receiveAckPointer(uint8_t *msgtypeP){
 #endif 
 
     /* On verifie s'il y a eu une erreur ou non */
-    /* TODO: && msgtype == MSG_RELEASE ?? */
     if (msgtypeReponse == MSG_ERROR){
         /* On récupère le code d'erreur */
         if (read(heapInfo->sock, &msgtypeReponse, sizeof(msgtypeReponse)) <= 0){
@@ -91,8 +90,6 @@ void setError(uint8_t e){
  * @param aucun
  */
 void *data_thread(void *arg){
-    /* TODO: à changer pour gérer plusieurs serveurs */
-
     msgtypeClient = MSG_TYPE_NULL;
 
 #if DEBUG
@@ -123,14 +120,14 @@ void *data_thread(void *arg){
 
                 if ((poll_list[i].revents&POLLNVAL) == POLLNVAL){
 #if DEBUG
-    printf("POLLNVAL, id = %d\n", ds->id);
+                    printf("POLLNVAL, id = %d\n", ds->id);
 #endif 
                     setDownAndSwitch(ds->id);
                     continue;
                 }
                 if ((poll_list[i].revents&POLLHUP) == POLLHUP){
 #if DEBUG
-    printf("POLLHUP, id = %d\n", ds->id);
+                    printf("POLLHUP, id = %d\n", ds->id);
 #endif 
                     setDownAndSwitch(ds->id);
                     continue;
@@ -152,7 +149,7 @@ void *data_thread(void *arg){
                         || msgtype == MSG_ERROR){
                         msgtypeClient = msgtype;
 #if DEBUG
-    printf("POLLIN, id = %d, msgtype = %d\n", ds->id, msgtypeClient);
+                        printf("POLLIN, id = %d, msgtype = %d\n", ds->id, msgtypeClient);
 #endif
                         pthread_mutex_lock(&readylock);
                         pthread_cond_wait(&readcond, &readlock);
