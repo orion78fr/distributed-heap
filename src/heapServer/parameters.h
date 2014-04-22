@@ -2,7 +2,8 @@
 #define HEAPSERVER_PARAMETERS
 
 #define PORTSERV 6969
-#define HEAPSIZE 1024
+/* 100 Mo */
+#define HEAPSIZE 1024*1024*100
 #define MAX_CLIENTS 20
 #define HASHSIZE 257
 

@@ -16,8 +16,8 @@ struct heapData {
     pthread_mutex_t mutex;
 
     char *name;
-    int offset;
-    int size;
+    uint64_t offset;
+    uint64_t size;
 
     struct clientChainRead *readAccess;
     struct clientChainWrite *writeAccess;
@@ -28,13 +28,16 @@ struct heapData {
     struct clientChainWrite *writeWait;
 
     struct heapData *next;
+    struct heapData *nextOffset;
 };
 
 extern struct heapData **hashTable;
+extern struct heapData **hashTableOffset;
 extern pthread_mutex_t hashTableMutex;
 extern void *theHeap;
 
 struct heapData *get_data(char *name);
+struct heapData *get_data_by_offset(uint64_t offset);
 int getHashSum(char *name);
 int add_data(char *name, int size);
 void init_data();
