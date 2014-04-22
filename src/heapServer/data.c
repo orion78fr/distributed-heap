@@ -3,6 +3,7 @@
 struct heapData **hashTable, **hashTableOffset;
 pthread_mutex_t hashTableMutex = PTHREAD_MUTEX_INITIALIZER;
 void *theHeap;
+pthread_mutex_t addDataMutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * Recupere la structure heapData correspondant à un nom
@@ -79,7 +80,9 @@ int getHashSum(char *name)
  */
 int add_data(char *name, uint64_t size)
 {
+    pthread_mutex_lock(&addDataMutex);
     if (get_data(name) != NULL) {
+        pthread_mutex_unlock(&addDataMutex);
         return -1;
     } else {
         int sum = getHashSum(name);
@@ -113,6 +116,7 @@ int add_data(char *name, uint64_t size)
 
         pthread_mutex_unlock(&hashTableMutex);
     }
+    pthread_mutex_unlock(&addDataMutex);
     return 0;
 }
 
