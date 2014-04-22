@@ -3,9 +3,11 @@
 struct heapInfo *heapInfo;
 struct dheapServer *dheapServers;
 pthread_t *dheap_tid;
-uint8_t *msgtypeClient, *dheapErrorNumber;
+uint8_t msgtypeClient, *dheapErrorNumber;
 int countservers;
 struct pollfd *poll_list;
+pthread_mutex_t readlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t readcond = PTHREAD_COND_INITIALIZER;
 
 /**
  * Initialise la connexion avec le serveur central
@@ -106,7 +108,7 @@ int init_data(char *address, int port){
  * @return enum errorCodes
  */
 int close_data(){
-    int threadStatus;
+    void *threadStatus;
     if (heapInfo == NULL){
 #if DEBUG
     printf("Appel close_data() mais heapInfo NULL\n");
@@ -119,13 +121,16 @@ int close_data(){
 #endif 
 
     /* Fermeture du thread client */
-    if (pthread_cancel(*dheap_tid)) != 0){
+    if (pthread_cancel(*dheap_tid) != 0){
         perror("pthread_cancel"); 
         exit(EXIT_FAILURE);
     }
-    if (pthread_join(*dheap_tid, &threadStatus)) != PTHREAD_CANCELED){
+    if (pthread_join(*dheap_tid, (void**) &threadStatus) != 0){
         perror("pthread_join");
         exit(EXIT_FAILURE);
+    }
+    if (threadStatus != PTHREAD_CANCELED){
+        exit(EXIT_FAILURE); /* TODO: erreur à revoir */
     }
     free(dheap_tid);
 

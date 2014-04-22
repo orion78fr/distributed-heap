@@ -48,16 +48,21 @@ void helloNotNew(uint8_t sid){
 
     msgtype = MSG_HELLO_NOT_NEW;
     if (write(ds->sock, &msgtype, sizeof(msgtype)) == -1){
-        setServerDown(newServer->id);
-        return 0;
+        setServerDown(ds->id);
+        return;
     }
     if (write(ds->sock, &(heapInfo->clientId), sizeof(heapInfo->clientId)) == -1){
-        setServerDown(newServer->id);
-        return 0;
+        setServerDown(ds->id);
+        return;
     }
     if (read(ds->sock, &msgtype, sizeof(msgtype)) <= 0){
-        setServerDown(newServer->id);
-        return 0;
+        setServerDown(ds->id);
+        return;
+    }
+
+    if (msgtype != MSG_HELLO_NOT_NEW){
+        setServerDown(ds->id);
+        return;
     }
 
     buildPollList();
@@ -148,13 +153,13 @@ void cleanServers(){
 int connectToServer(char *address, int port, int block){
     struct sockaddr_in servaddr;
     /* struct addrinfo hints, *result; */
-    int socket, socktype, retry;
+    int sock, socktype, retry;
 
     if (block == 0)
         socktype = SOCK_STREAM | SOCK_NONBLOCK;
     else
         socktype = SOCK_STREAM;
-    socket = socket(AF_INET, socktype, 0);
+    sock = socket(AF_INET, socktype, 0);
 
     /* TODO: Gestion des hostname en plus des IPs
      * memset(&hints, 0, sizeof(hints));
@@ -172,16 +177,16 @@ int connectToServer(char *address, int port, int block){
     servaddr.sin_port=htons(port);
 
     retry = 0;
-    while(connect(socket, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1){
+    while(connect(sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1){
         if (errno == EINPROGRESS && block == 0){
-            return socket;
+            return sock;
         }
         retry++;
-        if (retry == NB_SERVER_RETRY) 
+        if (retry == DH_SERVER_RETRY) 
             return -1;
     }
 
-    return socket;
+    return sock;
 }
 
 

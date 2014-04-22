@@ -45,8 +45,10 @@ extern struct heapInfo *heapInfo;
 extern struct dheapServer *dheapServers;
 extern int countServersOnline;
 extern struct pollfd *poll_list;
-extern int *dheapErrorNumber; /* Utilisé pour passer une erreur au client */
+extern uint8_t *dheapErrorNumber; /* Utilisé pour passer une erreur au client */
 extern uint8_t msgtypeClient;
+extern pthread_mutex_t readlock;
+extern pthread_cond_t readcond;
 
 
 
@@ -105,12 +107,14 @@ int receiveAckPointer(uint8_t *msgtypeP);
 void *data_thread(void *arg);
 void exit_data_thread(int e);
 int checkError();
+void setError(uint8_t e);
+void unlockAndSignal();
 void setDownAndSwitch(uint8_t sid);
 /* servers.c */
 int addserver(uint8_t id, char *address, int port);
 int switchMain();
 void cleanServers();
-int connectToServer(char *address, int portn int block);
+int connectToServer(char *address, int port, int block);
 void buildPollList();
 void setServerDown(uint8_t id);
 uint8_t getServerIdBySock(int sock);

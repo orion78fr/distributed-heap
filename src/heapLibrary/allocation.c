@@ -7,15 +7,15 @@
  */
 int t_malloc(uint64_t size, char *name){
     uint8_t msgtype, namelen;
-    int error;
+    int ret;
 
 #if DEBUG
     printf("Appel t_malloc(%" PRIu64 ", %s)\n", size, name);
 #endif
 
     /* On traite une erreur venant du thread de la librairie */
-    if ((error = checkError()) != DHEAP_SUCCESS)
-        return error;
+    if ((ret = checkError()) != DHEAP_SUCCESS)
+        return ret;
 
     /* On envoie le type de message (ALLOC) */
     msgtype = MSG_ALLOC;
@@ -39,7 +39,9 @@ int t_malloc(uint64_t size, char *name){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    return receiveAck(MSG_ALLOC);
+    ret = receiveAck(MSG_ALLOC);
+    unlockAndSignal();
+    return ret;
 }
 
 /**
@@ -49,14 +51,15 @@ int t_malloc(uint64_t size, char *name){
  */
 int t_free(char *name){
     uint8_t msgtype, namelen;
+    int ret;
 
 #if DEBUG
     printf("Appel t_free(%s)\n", name);
 #endif 
 
     /* On traite une erreur venant du thread de la librairie */
-    if ((error = checkError()) != DHEAP_SUCCESS)
-        return error;
+    if ((ret = checkError()) != DHEAP_SUCCESS)
+        return ret;
 
     /* On envoie le type de message (FREE) */
     msgtype = MSG_FREE;
@@ -75,5 +78,7 @@ int t_free(char *name){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    return receiveAck(MSG_FREE);
+    ret = receiveAck(MSG_FREE);
+    unlockAndSignal();
+    return ret;
 }

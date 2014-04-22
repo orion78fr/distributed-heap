@@ -7,14 +7,15 @@
  */
 int t_access_common(uint8_t msgtype, char *name, void **p){
     uint8_t namelen, retack;
+    int ret;
 
 #if DEBUG
     printf("Appel t_access_common(%d, %s, p)\n", msgtype, name);
 #endif
 
     /* On traite une erreur venant du thread de la librairie */
-    if ((error = checkError()) != DHEAP_SUCCESS)
-        return error;
+    if ((ret = checkError()) != DHEAP_SUCCESS)
+        return ret;
 
     /* On envoie le msgtype */
     if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
@@ -34,6 +35,7 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
     
     /* On traite le retour en cas d'erreur */
     if ((retack = receiveAckPointer(&msgtype)) != DHEAP_SUCCESS){
+        unlockAndSignal();
         return retack;
     } else {
         /* On traite le retour en cas de success */
@@ -41,11 +43,13 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
         struct dheapVar *dv;
         /* On récupère l'offset ou est située la variable */
         if (read(heapInfo->sock, &offset, sizeof(offset)) <= 0){
+            unlockAndSignal();
             return DHEAP_ERROR_CONNECTION;
         }
 
         /* On récupère la taille */
         if (read(heapInfo->sock, &tailleContent, sizeof(tailleContent)) <= 0){
+            unlockAndSignal();
             return DHEAP_ERROR_CONNECTION;
         }
 
@@ -56,6 +60,7 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
         if (msgtype == MSG_ACCESS_READ_MODIFIED || msgtype == MSG_ACCESS_WRITE_MODIFIED) {
             /* On récupère le contenu directement dans le pointeur */
             if (read(heapInfo->sock, *p, tailleContent) <= 0){
+                unlockAndSignal();
                 return DHEAP_ERROR_CONNECTION;
             }
         }
@@ -65,6 +70,9 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
         dv->p = *p;
         dv->size = tailleContent;
         dv->next = NULL;
+
+        unlockAndSignal();
+
         if (msgtype == MSG_ACCESS_READ || MSG_ACCESS_READ_MODIFIED)
             dv->rw = DHEAPVAR_READ;
         else if (msgtype == MSG_ACCESS_WRITE || MSG_ACCESS_WRITE_MODIFIED)
@@ -114,14 +122,15 @@ int t_release(void *p){
     uint8_t msgtype;
     uint64_t offset = 0;
     struct dheapVar *dv;
+    int ret;
 
 #if DEBUG
     printf("Appel t_release()\n");
 #endif 
 
     /* On traite une erreur venant du thread de la librairie */
-    if ((error = checkError()) != DHEAP_SUCCESS)
-        return error;
+    if ((ret = checkError()) != DHEAP_SUCCESS)
+        return ret;
 
     /* On vérifie que le pointeur passé est bien dans la zone du tas réparti */
     if ( p > heapInfo->heapStart || p < (heapInfo->heapStart - heapInfo->heapSize)){
@@ -146,13 +155,8 @@ int t_release(void *p){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* On envoie la taille seulement si on était en écriture */
+    /* On envoie le contenu seulement si on était en écriture */
     if (dv->rw == DHEAPVAR_WRITE){
-        if (write(heapInfo->sock, &(dv->size), sizeof(dv->size)) == -1){
-            return DHEAP_ERROR_CONNECTION;
-        }
-
-        /* On envoie le contenu */
         if (write(heapInfo->sock, p, dv->size) == -1){
             return DHEAP_ERROR_CONNECTION;
         }
@@ -164,5 +168,7 @@ int t_release(void *p){
     }
 
     /* On s'occupe de l'acquittement ou de l'erreur */
-    return receiveAck(MSG_RELEASE);
+    ret = receiveAck(MSG_RELEASE); /* TODO: à déplacer plus haut pour pas supprimer en cas d'erreur */
+    unlockAndSignal();
+    return ret;
 }
