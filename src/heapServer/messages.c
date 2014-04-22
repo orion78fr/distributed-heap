@@ -2,12 +2,7 @@
 
 struct clientChain *clients = NULL;
 
-struct tempCorrespondance{
-    int offset;
-    char *name;
-    int write;
-    struct tempCorrespondance *next;
-} *corresp = NULL;
+struct tempCorrespondance *corresp = NULL;
 
 
 /**
@@ -117,125 +112,6 @@ int do_alloc(int sock){
         /* OK */
         nom = NULL; /* Le nom est stocké dans la structure et ne doit pas être free, même en cas d'erreur d'envoi */
         if(send_data(sock, MSG_ALLOC, 0)<0){
-            goto disconnect;
-        }
-    }
-
-    return 0;
-    disconnect:
-    if(nom != NULL){
-        free(nom);
-    }
-    return -1;
-}
-
-int do_access_read(int sock){
-    uint8_t taille;
-    char *nom;
-
-    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
-        goto disconnect;
-    }
-
-    nom = malloc((taille + 1) * sizeof(char));
-    if(nom == NULL){
-        goto disconnect;
-    }
-
-    nom[taille] = '\0';
-
-    if (read(sock, nom, taille) <= 0) {        /* Name */
-        goto disconnect;
-    }
-
-#if DEBUG
-    printf("[Client %d] Demande d'accès en lecture de %s\n",
-           pthread_self(), nom);
-#endif
-
-    if(acquire_read_lock(nom) != 0) {
-        /* ERREUR */
-        if(send_error(sock, ERROR_VAR_DOESNT_EXIST)<0){
-            goto disconnect;
-        }
-    } else {
-        /* TODO à refaire */
-        struct heapData *data = get_data(nom);
-        int offset = data->offset;
-        int size = data->size;
-
-        struct tempCorrespondance *newData = malloc(sizeof(struct tempCorrespondance));
-        newData->offset = offset;
-        newData->name = nom;
-        nom = NULL;
-        newData->next = corresp;
-        newData->write = 0;
-        corresp = newData;
-
-        /* OK */
-        if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
-                        (DS){sizeof(offset), &offset},
-                        (DS){sizeof(size), &size},
-                        (DS){size, theHeap + data->offset})<0){
-            goto disconnect;
-        }
-    }
-
-    return 0;
-    disconnect:
-    if(nom != NULL){
-        free(nom);
-    }
-    return -1;
-}
-
-int do_access_write(int sock){
-    uint8_t taille;
-    char *nom;
-
-    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
-        goto disconnect;
-    }
-
-    nom = malloc((taille + 1) * sizeof(char));
-    if(nom == NULL){
-        goto disconnect;
-    }
-
-    nom[taille] = '\0';
-
-    if (read(sock, nom, taille) <= 0) {        /* Name */
-        goto disconnect;
-    }
-
-#if DEBUG
-    printf("[Client %d] Demande d'accès en écriture de %s\n",
-           pthread_self(), nom);
-#endif
-
-    if(acquire_write_lock(nom) != 0) {
-        /* ERREUR */
-        if(send_error(sock, ERROR_VAR_DOESNT_EXIST)<0){
-            goto disconnect;
-        }
-    } else {
-        struct heapData *data = get_data(nom);
-        int offset = data->offset;
-        int size = data->size;
-
-        struct tempCorrespondance *newData = malloc(sizeof(struct tempCorrespondance));
-        newData->offset = offset;
-        newData->name = nom;
-        nom = NULL;
-        newData->next = corresp;
-        newData->write = 1;
-        corresp = newData;
-
-        /* OK */
-        if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
-                        (DS){sizeof(offset), &offset},
-                        (DS){sizeof(size), &size},
-                        (DS){size, theHeap + data->offset})<0){
             goto disconnect;
         }
     }

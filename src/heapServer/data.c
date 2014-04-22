@@ -77,7 +77,7 @@ int getHashSum(char *name)
  * @param size Taille de la variable
  * @return 0 si succès, -1 si la variable existe déjà
  */
-int add_data(char *name, int size)
+int add_data(char *name, uint64_t size)
 {
     if (get_data(name) != NULL) {
         return -1;
@@ -188,9 +188,8 @@ int remove_data(char *name)
 }
 
 /* TODO faire les pthread_equal (== n'est pas bon) */
-int acquire_read_lock(char *name)
+int acquire_read_lock(struct heapData *data)
 {
-    struct heapData *data = get_data(name);
     struct clientChainRead *me;
 
     if (data == NULL) {
@@ -251,9 +250,8 @@ void acquire_read_sleep(struct heapData *data, struct clientChainRead *me)
     }
 }
 
-int acquire_write_lock(char *name)
+int acquire_write_lock(struct heapData *data)
 {
-    struct heapData *data = get_data(name);
     struct clientChainWrite *me;
 
     if (data == NULL) {

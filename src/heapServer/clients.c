@@ -40,6 +40,16 @@ void *clientThread(void *arg)
                 goto disconnect;
             }
             break;
+        case MSG_ACCESS_READ_BY_OFFSET:
+            if(do_access_read_by_offset(sock) == -1){
+                goto disconnect;
+            }
+            break;
+        case MSG_ACCESS_WRITE_BY_OFFSET:
+            if(do_access_write_by_offset(sock) == -1){
+                goto disconnect;
+            }
+            break;
         case MSG_RELEASE:       /* Relachement de la variable */
             if(do_release(sock) == -1){
                 goto disconnect;
