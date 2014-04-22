@@ -8,7 +8,8 @@ int clientsConnected = 0;
  */
 void *clientThread(void *arg)
 {
-    int sock = (int) arg;
+    int sock = ((struct clientChain*)arg)->sock;
+    ((struct clientChain*)arg)->clientId = pthread_self();
     uint8_t msgType;
 
 #if DEBUG

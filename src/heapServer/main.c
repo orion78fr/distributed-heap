@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
         /* Création d'un thread pour traiter les requêtes */
         pthread_create((pthread_t *) & (newClient->clientId), NULL,
-                       clientThread, (void *) sclient);
+                       clientThread, (void *) newClient);
         clientsConnected++;
     }
 

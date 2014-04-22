@@ -47,7 +47,7 @@ void acquire_read_sleep(struct heapData *data, struct clientChainRead *me);
 int acquire_write_lock(struct heapData *data);
 void acquire_write_sleep(struct heapData *data,
                          struct clientChainWrite *me);
-int release_read_lock(char *name);
-int release_write_lock(char *name);
+int release_read_lock(struct heapData *data);
+int release_write_lock(struct heapData *data);
 
 #endif

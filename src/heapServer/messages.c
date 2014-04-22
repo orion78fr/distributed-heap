@@ -2,9 +2,6 @@
 
 struct clientChain *clients = NULL;
 
-struct tempCorrespondance *corresp = NULL;
-
-
 /**
  * Envoie sur la socket sock les données passées en argument
  * @param sock Socket de communication
@@ -126,51 +123,46 @@ int do_alloc(int sock){
 
 int do_release(int sock){
     uint64_t offset;
+    struct heapData *data;
 
     if (read(sock, (void *) &offset, sizeof(offset)) <= 0) { /* Offset */
         goto disconnect;
     }
 
-    struct tempCorrespondance *prevData = NULL, *data = corresp;
-    while(data != NULL && data->offset != offset){
-        prevData = data;
-        data = data->next;
-    }
+    data = get_data_by_offset(offset);
     if(data == NULL){
-        /* ERREUR */
-        if(send_error(sock, ERROR_NOT_LOCKED)<0){
-            goto disconnect;
-        }
-    } else {
+        goto disconnect;
+    }
 
 #if DEBUG
         printf("[Client %d] Libération de %s\n", pthread_self(),
            data->name);
 #endif
 
-        if(data->write){
-            uint64_t varSize;
-            if (read(sock, (void *) &varSize, sizeof(varSize)) <= 0) {        /* Taille */
-                goto disconnect;
-            }
-            if (read(sock, theHeap+offset, varSize) <= 0) {        /* Contenu */
-                goto disconnect;
-            }
-            release_write_lock(data->name);
-        } else {
-            release_read_lock(data->name);
-        }
-        if(prevData == NULL){
-            corresp = data->next;
-        } else {
-            prevData->next = data->next;
-        }
-        free(data->name);
-        free(data);
-        if(send_data(sock, MSG_RELEASE, 0)<0){
+    if(data->writeAccess != NULL && (pthread_equal(data->writeAccess->clientId, pthread_self()) != 0)){
+        /* Lock en write */
+        if (read(sock, theHeap+offset, data->size) <= 0) {        /* Contenu */
             goto disconnect;
         }
+        release_write_lock(data);
+    } else {
+        struct clientChainRead *temp = data->readAccess;
+        while(temp != NULL && (pthread_equal(pthread_self(), temp->clientId) ==0)){
+            temp = temp->next;
+        }
+        if(temp == NULL){
+            if(send_error(sock, ERROR_NOT_LOCKED)<0){
+                goto disconnect;
+            }
+        } else {
+            release_read_lock(data);
+        }
     }
+
+    if(send_data(sock, MSG_RELEASE, 0)<0){
+        goto disconnect;
+    }
+
     return 0;
     disconnect:
     return -1;

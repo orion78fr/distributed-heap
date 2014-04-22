@@ -192,10 +192,6 @@ int acquire_read_lock(struct heapData *data)
 {
     struct clientChainRead *me;
 
-    if (data == NULL) {
-        return -1;
-    }
-
     pthread_mutex_lock(&(data->mutex));
 
     me = malloc(sizeof(struct clientChainRead));
@@ -254,10 +250,6 @@ int acquire_write_lock(struct heapData *data)
 {
     struct clientChainWrite *me;
 
-    if (data == NULL) {
-        return -1;
-    }
-
     pthread_mutex_lock(&(data->mutex));
 
     me = malloc(sizeof(struct clientChainWrite));
@@ -301,15 +293,10 @@ void acquire_write_sleep(struct heapData *data,
     }
 }
 
-int release_read_lock(char *name)
+int release_read_lock(struct heapData *data)
 {
-    struct heapData *data = get_data(name);
     struct clientChainRead *me, *prevMe;
     pthread_t myPid;
-
-    if (data == NULL) {
-        return -1;
-    }
 
     pthread_mutex_lock(&(data->mutex));
 
@@ -349,14 +336,8 @@ int release_read_lock(char *name)
     return 0;
 }
 
-int release_write_lock(char *name)
+int release_write_lock(struct heapData *data)
 {
-    struct heapData *data = get_data(name);
-
-    if (data == NULL) {
-        return -1;
-    }
-
     pthread_mutex_lock(&(data->mutex));
 
     if (data->writeAccess == NULL

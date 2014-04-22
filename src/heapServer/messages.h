@@ -27,13 +27,6 @@ typedef struct dataSend{
 
 
 extern struct clientChain *clients;
-struct tempCorrespondance{
-    int offset;
-    char *name;
-    int write;
-    struct tempCorrespondance *next;
-};
-extern struct tempCorrespondance *corresp;
 
 int send_data(int sock, uint8_t msgType, int nb, ...);
 int send_error(int sock, uint8_t errType);
@@ -45,6 +38,7 @@ int do_access_read_by_offset(int sock);
 int do_access_read_common(int sock, struct heapData *data);
 int do_access_write(int sock);
 int do_access_write_by_offset(int sock);
+int do_access_write_common(int sock, struct heapData *data);
 int do_release(int sock);
 int do_free(int sock);
 
@@ -76,8 +70,7 @@ int do_free(int sock);
  *                   |                               |   contenu (taille*char8)
  * -----------------------------------------------------------------------------
  * MSG_RELEASE       | offset (uint64)               |
- *     C -> S        | si accès en write             |
- *                   |   taille (uint64)             |        /
+ *     C -> S        | si accès en write             |        /
  *                   |   contenu (taille*char8)      |
  * -----------------------------------------------------------------------------
  * MSG_FREE          | taille du nom (uint8)         |        /
