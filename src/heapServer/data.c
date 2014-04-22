@@ -1,6 +1,6 @@
 #include "common.h"
 
-struct heapData **hashTable;
+struct heapData **hashTable, **hashTableOffset;
 pthread_mutex_t hashTableMutex = PTHREAD_MUTEX_INITIALIZER;
 void *theHeap;
 
@@ -20,6 +20,28 @@ struct heapData *get_data(char *name)
 
     while (data != NULL) {
         if (strcmp(name, data->name) == 0) {
+            break;
+        } else {
+            data = data->next;
+        }
+    }
+
+    pthread_mutex_unlock(&hashTableMutex);
+
+    return data;
+}
+
+struct heapData *get_data_by_offset(uint64_t offset)
+{
+    int sum = offset % parameters.hashSize;
+    struct heapData *data;
+
+    pthread_mutex_lock(&hashTableMutex);
+
+    data = hashTableOffset[sum];
+
+    while (data != NULL) {
+        if (data->offset == offset) {
             break;
         } else {
             data = data->next;
@@ -55,12 +77,13 @@ int getHashSum(char *name)
  * @param size Taille de la variable
  * @return 0 si succès, -1 si la variable existe déjà
  */
-int add_data(char *name, int size)
+int add_data(char *name, uint64_t size)
 {
     if (get_data(name) != NULL) {
         return -1;
     } else {
         int sum = getHashSum(name);
+        int offsetSum;
         struct heapData *newData = malloc(sizeof(struct heapData));
         newData->name = name;
         newData->size = size;
@@ -82,6 +105,10 @@ int add_data(char *name, int size)
         newData->next = hashTable[sum];
         hashTable[sum] = newData;
 
+        offsetSum = newData->offset % parameters.hashSize;
+        newData->nextOffset = hashTableOffset[offsetSum];
+        hashTableOffset[offsetSum] = newData;
+
         memset(theHeap + newData->offset, 0, size);
 
         pthread_mutex_unlock(&hashTableMutex);
@@ -98,6 +125,10 @@ void init_data()
     hashTable = malloc(parameters.hashSize * sizeof(struct heapData *));
     for (i = 0; i < parameters.hashSize; i++) {
         hashTable[i] = NULL;
+    }
+    hashTableOffset = malloc(parameters.hashSize * sizeof(struct heapData *));
+    for (i = 0; i < parameters.hashSize; i++) {
+        hashTableOffset[i] = NULL;
     }
 
     freeList = malloc(sizeof(struct freeListChain));
@@ -157,14 +188,9 @@ int remove_data(char *name)
 }
 
 /* TODO faire les pthread_equal (== n'est pas bon) */
-int acquire_read_lock(char *name)
+int acquire_read_lock(struct heapData *data)
 {
-    struct heapData *data = get_data(name);
     struct clientChainRead *me;
-
-    if (data == NULL) {
-        return -1;
-    }
 
     pthread_mutex_lock(&(data->mutex));
 
@@ -220,14 +246,9 @@ void acquire_read_sleep(struct heapData *data, struct clientChainRead *me)
     }
 }
 
-int acquire_write_lock(char *name)
+int acquire_write_lock(struct heapData *data)
 {
-    struct heapData *data = get_data(name);
     struct clientChainWrite *me;
-
-    if (data == NULL) {
-        return -1;
-    }
 
     pthread_mutex_lock(&(data->mutex));
 
@@ -272,15 +293,10 @@ void acquire_write_sleep(struct heapData *data,
     }
 }
 
-int release_read_lock(char *name)
+int release_read_lock(struct heapData *data)
 {
-    struct heapData *data = get_data(name);
     struct clientChainRead *me, *prevMe;
     pthread_t myPid;
-
-    if (data == NULL) {
-        return -1;
-    }
 
     pthread_mutex_lock(&(data->mutex));
 
@@ -320,14 +336,8 @@ int release_read_lock(char *name)
     return 0;
 }
 
-int release_write_lock(char *name)
+int release_write_lock(struct heapData *data)
 {
-    struct heapData *data = get_data(name);
-
-    if (data == NULL) {
-        return -1;
-    }
-
     pthread_mutex_lock(&(data->mutex));
 
     if (data->writeAccess == NULL

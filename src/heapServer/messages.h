@@ -6,8 +6,10 @@ enum msgTypes {
     MSG_HELLO_NOT_NEW,
     MSG_ALLOC,
     MSG_ACCESS_READ,
+    MSG_ACCESS_READ_BY_OFFSET,
     MSG_ACCESS_READ_MODIFIED,
     MSG_ACCESS_WRITE,
+    MSG_ACCESS_WRITE_BY_OFFSET,
     MSG_ACCESS_WRITE_MODIFIED,
     MSG_RELEASE,
     MSG_FREE,
@@ -24,7 +26,21 @@ typedef struct dataSend{
 } DS;
 
 
-int send_data(int sock, int msgType, int nb, ...);
+extern struct clientChain *clients;
+
+int send_data(int sock, uint8_t msgType, int nb, ...);
+int send_error(int sock, uint8_t errType);
+
+int do_greetings(int sock);
+int do_alloc(int sock);
+int do_access_read(int sock);
+int do_access_read_by_offset(int sock);
+int do_access_read_common(int sock, struct heapData *data);
+int do_access_write(int sock);
+int do_access_write_by_offset(int sock);
+int do_access_write_common(int sock, struct heapData *data);
+int do_release(int sock);
+int do_free(int sock);
 
 /*
  * Chaque échange commence par le type de message (uint8)
@@ -54,8 +70,7 @@ int send_data(int sock, int msgType, int nb, ...);
  *                   |                               |   contenu (taille*char8)
  * -----------------------------------------------------------------------------
  * MSG_RELEASE       | offset (uint64)               |
- *     C -> S        | si accès en write             |
- *                   |   taille (uint64)             |        /
+ *     C -> S        | si accès en write             |        /
  *                   |   contenu (taille*char8)      |
  * -----------------------------------------------------------------------------
  * MSG_FREE          | taille du nom (uint8)         |        /

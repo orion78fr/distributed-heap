@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <getopt.h>
 #include <stdarg.h>
+#include <inttypes.h>
 
 /* Headers perso */
 #include "data.h"

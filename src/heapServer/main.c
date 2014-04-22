@@ -63,8 +63,7 @@ int main(int argc, char *argv[])
 
         if (clientsConnected > parameters.maxClients) {
             /* ERREUR */
-            int errType=ERROR_SERVER_FULL;
-            send_data(sock, MSG_ERROR, 1, (DS){sizeof(int), &errType});
+            send_error(sclient, ERROR_SERVER_FULL);
             shutdown(sclient, 2);
             close(sclient);
             continue;
@@ -79,7 +78,7 @@ int main(int argc, char *argv[])
 
         /* Création d'un thread pour traiter les requêtes */
         pthread_create((pthread_t *) & (newClient->clientId), NULL,
-                       clientThread, (void *) sclient);
+                       clientThread, (void *) newClient);
         clientsConnected++;
     }
 
