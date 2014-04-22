@@ -4,7 +4,7 @@ struct heapInfo *heapInfo;
 struct dheapServer *dheapServers;
 pthread_t *dheap_tid;
 uint8_t msgtypeClient, *dheapErrorNumber;
-int countservers;
+int countServersOnline;
 struct pollfd *poll_list;
 pthread_mutex_t readlock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t readcond = PTHREAD_COND_INITIALIZER;
@@ -20,7 +20,7 @@ int init_data(char *address, int port){
     uint8_t msgtype;
 
 #if DEBUG
-    printf("Appel init_data(%s, %d)\n", ip, port);
+    printf("Appel init_data(%s, %d)\n", address, port);
 #endif
 
     /* Appel du close_data() au cas ou on aurait été déconnecté
@@ -53,7 +53,7 @@ int init_data(char *address, int port){
     if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
-    
+
     /* Reception du type de message (MSG_HELLO_NEW) */			
     if (read(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
         return DHEAP_ERROR_CONNECTION;
@@ -99,6 +99,15 @@ int init_data(char *address, int port){
         perror("pthread_create"); 
         exit(EXIT_FAILURE);
     }
+
+    pthread_mutex_lock(&readlock);
+    pthread_cond_wait(&readcond, &readlock);
+    pthread_cond_signal(&readcond);
+    pthread_mutex_unlock(&readlock);
+
+#if DEBUG
+    printf("Succes init_data()\n");
+#endif 
 
     return DHEAP_SUCCESS;
 }

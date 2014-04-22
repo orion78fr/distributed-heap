@@ -90,6 +90,10 @@ void buildPollList(){
     struct dheapServer *ds;
     int j = 0;
 
+#if DEBUG
+    printf("Appel de buildPollList()\n");
+#endif 
+
     old = poll_list;
 
     countServersOnline = 0;
@@ -101,6 +105,9 @@ void buildPollList(){
     }
 
     if (countServersOnline == 0){
+#if DEBUG
+        printf("ERROR: 0 servers online\n");
+#endif 
         free(old);
         exit_data_thread(DHEAP_ERROR_CONNECTION);
         return;
@@ -109,8 +116,9 @@ void buildPollList(){
     new = malloc(sizeof(struct pollfd)*countServersOnline);
     ds = dheapServers;
     while(ds != NULL){
-        if (j >= countServersOnline)
+        if (j > countServersOnline){
             exit(EXIT_FAILURE);
+        }
         if (ds->status == 1 && ds->sock != -1){
             new[j].fd = ds->sock;
             new[j].events = POLLHUP | POLLIN | POLLNVAL;
@@ -120,10 +128,15 @@ void buildPollList(){
             new[j].events = POLLOUT | POLLHUP | POLLNVAL;
             j++;
         }
+        ds = ds->next;
     }
 
     poll_list = new;
     free(old);
+
+#if DEBUG
+    printf("Fin de buildPollList(), %d servers online\n", countServersOnline);
+#endif 
 }
 
 int switchMain(){

@@ -23,6 +23,11 @@ int receiveAckPointer(uint8_t *msgtypeP){
 
     /* On receptionne le type du message de réponse */
     msgtypeReponse = msgtypeClient;
+    msgtypeClient = MSG_TYPE_NULL;
+
+#if DEBUG
+    printf("Réponse recu: %d\n", msgtypeReponse);
+#endif 
 
     /* On verifie s'il y a eu une erreur ou non */
     /* TODO: && msgtype == MSG_RELEASE ?? */
@@ -50,6 +55,9 @@ int receiveAckPointer(uint8_t *msgtypeP){
             return DHEAP_SUCCESS;
         }
     }
+#if DEBUG
+    printf("Fin de receiveAck()\n");
+#endif 
 }
 
 void unlockAndSignal(){
@@ -85,11 +93,17 @@ void *data_thread(void *arg){
 
     msgtypeClient = MSG_TYPE_NULL;
 
+#if DEBUG
+    printf("Création du thread()\n");
+#endif
+
     /* Création du poll */
     buildPollList();
 
     /* On bloque la lecture sur le socket (mainId) */
     pthread_mutex_lock(&readlock);
+    pthread_cond_signal(&readcond);
+    pthread_cond_wait(&readcond, &readlock);
 
     /* Boucle avec le poll */
     while (1){
@@ -106,10 +120,16 @@ void *data_thread(void *arg){
                 ds = getServerBySock(poll_list[i].fd);
 
                 if ((poll_list[i].revents&POLLNVAL) == POLLNVAL){
+#if DEBUG
+    printf("POLLNVAL, id = %d\n", ds->id);
+#endif 
                     setDownAndSwitch(ds->id);
                     continue;
                 }
                 if ((poll_list[i].revents&POLLHUP) == POLLHUP){
+#if DEBUG
+    printf("POLLHUP, id = %d\n", ds->id);
+#endif 
                     setDownAndSwitch(ds->id);
                     continue;
                 }
@@ -128,6 +148,9 @@ void *data_thread(void *arg){
                         || msgtype == MSG_ACCESS_WRITE || msgtype == MSG_ACCESS_WRITE_MODIFIED
                         || msgtype == MSG_RELEASE || msgtype == MSG_FREE){
                         msgtypeClient = msgtype;
+#if DEBUG
+    printf("POLLIN, id = %d, msgtype = %d\n", ds->id, msgtypeClient);
+#endif 
                         pthread_cond_wait(&readcond, &readlock);
                         continue;
                     } else if (msgtype == MSG_ERROR){
@@ -139,6 +162,9 @@ void *data_thread(void *arg){
                         setError(errorType);
 
                     } else if (msgtype == MSG_DISCONNECT){
+#if DEBUG
+                        printf("DISCONNECT, id = %d\n", ds->id);
+#endif
                         setDownAndSwitch(ds->id);
                         continue;
                     } else if (msgtype == MSG_PING){
@@ -160,6 +186,9 @@ void *data_thread(void *arg){
 }
 
 void setDownAndSwitch(uint8_t sid){
+#if DEBUG
+    printf("Appel de setDownAndSwitch(%" PRIu8 ")\n", sid);
+#endif 
     setServerDown(sid);
     if (sid == heapInfo->mainId)
         switchMain();
@@ -170,6 +199,9 @@ void setDownAndSwitch(uint8_t sid){
  * @param errorCodes
  */
 void exit_data_thread(int e){
+#if DEBUG
+    printf("Appel de exit_data_thread(%d)\n", e);
+#endif 
     if (dheapErrorNumber == NULL){
         dheapErrorNumber = malloc(sizeof(int));
     }

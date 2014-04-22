@@ -73,9 +73,9 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
 
         unlockAndSignal();
 
-        if (msgtype == MSG_ACCESS_READ || MSG_ACCESS_READ_MODIFIED)
+        if (msgtype == MSG_ACCESS_READ || msgtype == MSG_ACCESS_READ_MODIFIED)
             dv->rw = DHEAPVAR_READ;
-        else if (msgtype == MSG_ACCESS_WRITE || MSG_ACCESS_WRITE_MODIFIED)
+        else if (msgtype == MSG_ACCESS_WRITE || msgtype == MSG_ACCESS_WRITE_MODIFIED)
             dv->rw = DHEAPVAR_WRITE;
         else
             return DHEAP_ERROR_UNEXPECTED_MSG;
@@ -157,6 +157,9 @@ int t_release(void *p){
 
     /* On envoie le contenu seulement si on était en écriture */
     if (dv->rw == DHEAPVAR_WRITE){
+#if DEBUG
+        printf("Envoie du contenu (taille = )\n");
+#endif 
         if (write(heapInfo->sock, p, dv->size) == -1){
             return DHEAP_ERROR_CONNECTION;
         }
