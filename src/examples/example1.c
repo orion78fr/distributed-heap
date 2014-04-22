@@ -16,7 +16,7 @@ int main(int argc, char *args[])
 
     printf("Welcome in example number 1\n");
 
-    printf("init_data()\n");
+    printf("--------------------------- init_data()\n");
     if ((error = init_data("127.0.1.1", 6969)) != DHEAP_SUCCESS){
         switch(error){
             case DHEAP_ERROR_CONNECTION:
@@ -29,22 +29,22 @@ int main(int argc, char *args[])
         }
     }
 
-    printf("t_malloc(sizeof(int), 'i')\n");
+    printf("--------------------------- t_malloc(sizeof(int), 'i')\n");
     if ((error = t_malloc(sizeof(int), "i")) != DHEAP_SUCCESS){
         printf("Unhandeled error... number: %d\n", error);
         return EXIT_FAILURE;
     }
 
-    printf("t_access_write('i', (void**) &i))\n");
+    printf("--------------------------- t_access_write('i', (void**) &i))\n");
     if ((error = t_access_write("i",(void**) &i)) != DHEAP_SUCCESS){
         printf("Unhandeled error... number: %d\n", error);
         return EXIT_FAILURE;
     }
 
     *i = 4;
-    printf("i devient localement 4 : %d\n", *i);
+    printf("--------------------------- i devient localement 4 : %d\n", *i);
 
-    printf("t_release(i)\n");
+    printf("--------------------------- t_release(i)\n");
     if ((error = t_release(i)) != DHEAP_SUCCESS){
         printf("Unhandeled error... number: %d\n", error);
         return EXIT_FAILURE;
