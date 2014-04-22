@@ -15,6 +15,13 @@ int send_data(int sock, uint8_t msgType, int nb, ...){
     int i;
     DS snd = {0,NULL};
 
+#if DEBUG
+    static int num = 0;
+    printf("Envoi %d:\n", num++);
+    printf("\tmsgType: %d\n", msgType);
+#endif
+
+
     if(write(sock, &msgType, sizeof(msgType)) <= 0){
         return -1;
     }
@@ -23,10 +30,17 @@ int send_data(int sock, uint8_t msgType, int nb, ...){
 
     for(i=0;i<nb;i++){
         snd = va_arg(ap, DS);
+#if DEBUG
+        printf("\tSize %d\n", snd.taille);
+#endif
         if(write(sock, snd.data, snd.taille) <= 0){
             return -1;
         }
     }
+
+#if DEBUG
+    printf("\n");
+#endif
 
     va_end(ap);
 
@@ -47,7 +61,7 @@ int do_greetings(int sock){
 
     if(msgType == MSG_HELLO_NEW){
         clientId = sock;
-        if(send_data(sock, MSG_HELLO_NEW, 1,
+        if(send_data(sock, MSG_HELLO_NEW, 3,
                         (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
                         (DS){sizeof(clientId), &(clientId)},
                         (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
@@ -158,7 +172,6 @@ int do_release(int sock){
             release_read_lock(data);
         }
     }
-
     if(send_data(sock, MSG_RELEASE, 0)<0){
         goto disconnect;
     }
