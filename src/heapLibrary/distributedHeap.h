@@ -48,6 +48,7 @@ extern struct pollfd *poll_list;
 extern uint8_t *dheapErrorNumber; /* Utilisé pour passer une erreur au client */
 extern uint8_t msgtypeClient;
 extern pthread_mutex_t readlock;
+extern pthread_mutex_t readylock;
 extern pthread_cond_t readcond;
 
 

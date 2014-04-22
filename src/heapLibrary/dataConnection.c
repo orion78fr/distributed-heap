@@ -7,6 +7,7 @@ uint8_t msgtypeClient, *dheapErrorNumber;
 int countServersOnline;
 struct pollfd *poll_list;
 pthread_mutex_t readlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t readylock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t readcond = PTHREAD_COND_INITIALIZER;
 
 /**

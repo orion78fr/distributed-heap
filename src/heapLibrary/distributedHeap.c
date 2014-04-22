@@ -63,6 +63,8 @@ int receiveAckPointer(uint8_t *msgtypeP){
 void unlockAndSignal(){
     pthread_cond_signal(&readcond);
     pthread_mutex_unlock(&readlock);
+    pthread_mutex_lock(&readylock);
+    pthread_mutex_unlock(&readylock);
 }
 
 int checkError(){
@@ -146,21 +148,16 @@ void *data_thread(void *arg){
                     if (msgtype == MSG_ALLOC || msgtype == MSG_ACCESS_READ
                         || msgtype == MSG_ACCESS_READ || msgtype == MSG_ACCESS_READ_MODIFIED
                         || msgtype == MSG_ACCESS_WRITE || msgtype == MSG_ACCESS_WRITE_MODIFIED
-                        || msgtype == MSG_RELEASE || msgtype == MSG_FREE){
+                        || msgtype == MSG_RELEASE || msgtype == MSG_FREE
+                        || msgtype == MSG_ERROR){
                         msgtypeClient = msgtype;
 #if DEBUG
     printf("POLLIN, id = %d, msgtype = %d\n", ds->id, msgtypeClient);
-#endif 
+#endif
+                        pthread_mutex_lock(&readylock);
                         pthread_cond_wait(&readcond, &readlock);
+                        pthread_mutex_unlock(&readylock);
                         continue;
-                    } else if (msgtype == MSG_ERROR){
-                        uint8_t errorType;
-                        if (read(poll_list[i].fd, &errorType, sizeof(errorType)) <=0){
-                            setDownAndSwitch(ds->id);
-                            continue;
-                        }
-                        setError(errorType);
-
                     } else if (msgtype == MSG_DISCONNECT){
 #if DEBUG
                         printf("DISCONNECT, id = %d\n", ds->id);
