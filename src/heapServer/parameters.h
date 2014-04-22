@@ -9,9 +9,9 @@
 struct parameters {
     int port;
     int maxClients;
-    int heapSize;
+    uint64_t heapSize;
     int hashSize;
-    int serverNum;
+    uint8_t serverNum;
 };
 
 extern struct parameters parameters;

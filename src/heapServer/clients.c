@@ -17,33 +17,13 @@ struct tempCorrespondance{
 void *clientThread(void *arg)
 {
     int sock = (int) arg;
-
-    void *content = NULL;
-    int msgType;
-    int temp;
-    int erreur;
+    uint8_t msgType;
 
 #if DEBUG
     printf("[Client %d] Connexion\n", pthread_self());
 #endif
 
-    if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
-        goto disconnect;
-    }
-    if(msgType == MSG_HELLO_NEW){
-        temp = pthread_self();
-        if(send_data(sock, MSG_HELLO_NEW, 1,
-                        (DS){sizeof(int), &(parameters.serverNum)},
-                        (DS){sizeof(int), &(temp)},
-                        (DS){sizeof(int), &(parameters.heapSize)})<0){
-            goto disconnect;
-        }
-    } else {
-        if (read(sock, (void *) &temp, sizeof(temp)) <= 0) {       /* Msg type */
-            goto disconnect;
-        }
-        /* TODO : temp contient l'id du client... */
-    }
+    do_greetings(sock);
 
     /* Boucle principale */
     for (;;) {
@@ -54,41 +34,8 @@ void *clientThread(void *arg)
         /* Switch pour les différents types de messages */
         switch (msgType) {
         case MSG_ALLOC: /* Allocation d'une variable */
-            if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Name size */
+            if(do_alloc(sock) == -1){
                 goto disconnect;
-            }
-            content = malloc(temp * sizeof(char) + 1);
-            ((char *) content)[temp] = '\0';
-            if (read(sock, content, temp) <= 0) {        /* Name */
-                goto disconnect;
-            }
-            if (read(sock, (void *) &temp, sizeof(temp)) <= 0) { /* Var size */
-                goto disconnect;
-            }
-
-#if DEBUG
-            printf("[Client %d] Allocation de %s de taille %d\n",
-                   pthread_self(), content, temp);
-#endif
-
-            if ((temp = add_data(content, temp)) != 0) {
-                /* ERREUR */
-                int errType;
-                if(temp == -1){
-                    errType = ERROR_VAR_NAME_EXIST;
-                } else {
-                    errType = ERROR_HEAP_FULL;
-                }
-                if(send_data(sock, MSG_ERROR, 1,
-                                (DS){sizeof(int), &errType})<0){
-                    goto disconnect;
-                }
-            } else {
-                /* OK */
-                content = NULL;
-                if(send_data(sock, MSG_ALLOC, 0)<0){
-                    goto disconnect;
-                }
             }
             break;
         case MSG_ACCESS_READ:   /* Demande d'accès en lecture */

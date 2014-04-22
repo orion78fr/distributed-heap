@@ -24,7 +24,15 @@ typedef struct dataSend{
 } DS;
 
 
-int send_data(int sock, int msgType, int nb, ...);
+int send_data(int sock, uint8_t msgType, int nb, ...);
+int send_error(int sock, uint8_t errType);
+
+int do_greetings(int sock);
+int do_alloc(int sock);
+int do_access_read(int sock);
+int do_access_write(int sock);
+int do_release(int sock);
+int do_free(int sock);
 
 /*
  * Chaque échange commence par le type de message (uint8)
