@@ -17,7 +17,8 @@ enum msgTypes {
     MSG_DISCONNECT,
     MSG_PING,
     MSG_ADD_SERVER,
-    MSG_REMOVE_SERVER
+    MSG_REMOVE_SERVER,
+    MSG_RETRY
 };
 
 typedef struct dataSend{
@@ -92,6 +93,9 @@ int do_free(int sock);
  * -----------------------------------------------------------------------------
  * MSG_PING          |         /                     |        /
  *     S <-> C       |                               |
+ * -----------------------------------------------------------------------------
+ * MSG_RETRY         | Le message à réessayer        |        /
+ *     C -> S        |                               |
  * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int
