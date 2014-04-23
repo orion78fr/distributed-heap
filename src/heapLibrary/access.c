@@ -133,7 +133,7 @@ int t_release(void *p){
         return ret;
 
     /* On vérifie que le pointeur passé est bien dans la zone du tas réparti */
-    if ( p > heapInfo->heapStart || p < (heapInfo->heapStart - heapInfo->heapSize)){
+    if ( p < heapInfo->heapStart || p > (heapInfo->heapStart + heapInfo->heapSize)){
         return DHEAP_ERROR_BAD_POINTER;
     }
 

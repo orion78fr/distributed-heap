@@ -92,8 +92,8 @@ void setError(uint8_t e){
 void *data_thread(void *arg){
     msgtypeClient = MSG_TYPE_NULL;
 
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE);
-    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
 #if DEBUG
     printf("Création du thread()\n");
@@ -111,12 +111,12 @@ void *data_thread(void *arg){
     while (1){
         int retval, i;
 
-        pthread_setcancelstate(PTHREAD_CANCEL_ENABLE);
+        pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 
         /* TODO: here reconnect servers */
 
         retval = poll(poll_list, countServersOnline, -1);
-        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE);
+        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
         if (retval < 0){
             perror("poll");
             exit(EXIT_FAILURE); 
