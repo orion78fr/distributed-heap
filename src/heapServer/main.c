@@ -5,6 +5,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in sin;     /* Nom de la socket de connexion */
     int sock;                   /* Socket de connexion */
     int sclient;                /* Socket du client */
+    int sserver;                /* Socket du serveur */
 
     /* Parsing des arguments */
     if (parse_args(argc, argv)) {
@@ -17,6 +18,8 @@ int main(int argc, char *argv[])
     printf("Max Clients : %d\n", parameters.maxClients);
     printf("Heap Size : %d\n", parameters.heapSize);
     printf("Hash Size : %d\n", parameters.hashSize);
+    printf("Server Num : %d\n", parameters.serverNum);
+    printf("Address : %d\n", parameters.address);
 #endif
 
     init_data();
@@ -28,22 +31,83 @@ int main(int argc, char *argv[])
     }
 
     memset((void *) &sin, 0, sizeof(sin));
-    sin.sin_addr.s_addr = htonl(INADDR_ANY);
     sin.sin_port = htons(parameters.port);
     sin.sin_family = AF_INET;
 
     /* setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
      * GTU : Est-ce nécessaire? */
 
+
+
+    /* Connexion au server principal */
+    if(parameters.address!=""){
+        struct serverChain *newServer;
+        uint8_t msgtype = MSG_HELLO_NEW_SERVER;
+
+        sin.sin_addr.s_addr=inet_addr(parameters.address);
+
+#if DEBUG
+        printf("Connecting to Main Server...\n");
+#endif
+        if(connect(sserver, (struct sockaddr *)&sin, sizeof(sin)) == -1){
+            return ERROR_SERVER_CONNECTION;
+        }
+
+        /* Ajout du server dans la chaîne de socket (ajout au début pour
+         * éviter le parcours) */
+        newServer = malloc(sizeof(struct serverChain));
+        newServer->sock=sserver;
+        newServer->next=servers;
+        servers=newServer;
+
+        /*Mis à jour du tas, des clients, des servers */
+        msgtype = MSG_HELLO_NEW_SERVER;
+        if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
+            return ERROR_SERVER_CONNECTION;
+        }
+
+        /* Reception du type de message (MSG_HELLO_NEW_SERVER) */          
+        if (read(sserver, &msgtype, sizeof(msgtype)) <= 0){
+            return ERROR_SERVER_CONNECTION;
+        }
+
+        if (msgtype != MSG_HELLO_NEW_SERVER){
+            return ERROR_UNEXPECTED_MSG;
+        }
+
+        /* Reception de l'id du serveur auquel on se connecte */
+        if (read(sserver, &(newServer->serverId), sizeof(newServer->serverId)) <= 0){
+            return ERROR_SERVER_CONNECTION;
+        }
+
+        /* Réception de notre id client */
+        if (read(heapInfo->sock, &(serverId), sizeof(serverId)) <= 0){
+            return DHEAP_ERROR_CONNECTION;
+        }
+
+        /* Reception de la taille du tas */         
+        if (read(heapInfo->sock,&(heapInfo->heapSize),sizeof(heapInfo->heapSize)) <= 0){
+            return DHEAP_ERROR_CONNECTION;
+        }
+        /* Création d'un thread dédié au serveur */
+        pthread_create((pthread_t *) & (newServer->serverId), NULL,
+                       serverThread, (void *) newServer);
+        serverConnected++;
+    }
+
+    sin.sin_addr.s_addr = htonl(INADDR_ANY);
+
     /* Lien et écoute de la socket */
     if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
         perror("bind");
         exit(EXIT_FAILURE);
     }
+
     listen(sock, parameters.maxClients);
 
     for (;;) {
         struct clientChain *newClient;
+        struct serverChain *newServer;
 
 #if DEBUG
         printf("Waiting for clients...\n");
@@ -69,17 +133,38 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        /* Ajout du client dans la chaîne de socket (ajout au début pour
-         * éviter le parcours) */
-        newClient = malloc(sizeof(struct clientChain));
-        newClient->sock = sclient;
-        newClient->next = clients;
-        clients = newClient;
+        int test=do_greetings(sclient);
 
-        /* Création d'un thread pour traiter les requêtes */
-        pthread_create((pthread_t *) & (newClient->clientId), NULL,
-                       clientThread, (void *) newClient);
-        clientsConnected++;
+        /* client detected */
+        if(test=1{
+            /* Ajout du client dans la chaîne de socket (ajout au début pour
+             * éviter le parcours) */
+            newClient = malloc(sizeof(struct clientChain));
+            newClient->sock = sclient;
+            newClient->next = clients;
+            clients = newClient;
+
+            /* Création d'un thread pour traiter les requêtes */
+            pthread_create((pthread_t *) & (newClient->clientId), NULL,
+                           clientThread, (void *) newClient);
+            clientsConnected++;
+        }else if(test==2){ /* server detected */
+            /* Ajout du server dans la chaîne de socket (ajout au début pour
+             * éviter le parcours) */
+            newServer = malloc(sizeof(struct serverChain));
+            newServer->sock = sclient;
+            newServer->next = servers;
+            servers = newServer;
+
+            /* Création d'un thread pour traiter les requêtes */
+            pthread_create((pthread_t *) & (newServer->serverId), NULL,
+                           serverThread, (void *) newServer);
+            serversConnected++;
+        }else{ /* error detected */
+
+        }
+
+        
     }
 
     /* GTU : Et comment on sort de là? Signaux puis envoi d'un END
@@ -88,6 +173,11 @@ int main(int argc, char *argv[])
     while (clients != NULL) {
         pthread_join(clients->clientId, 0);
         clients = clients->next;
+    }
+
+    while (servers != NULL) {
+        pthread_join(servers->serverId, 0);
+        servers = servers->next;
     }
 
     shutdown(sock, 2);

@@ -1,22 +1,21 @@
 #include "common.h"
 
-int clientsConnected = 0;
+int serversConnected = 0;
 
 /**
- * Thread du client
- * @param arg Socket de communication du client
+ * Thread du server
+ * @param arg Socket de communication du server
  */
-void *clientThread(void *arg)
+void *serverThread(void *arg)
 {
-    int sock = ((struct clientChain*)arg)->sock;
-    ((struct clientChain*)arg)->clientId = pthread_self();
+    int sock = ((struct serverChain*)arg)->sock;
+    ((struct serverChain*)arg)->serverId = pthread_self();
     uint8_t msgType;
 
 #if DEBUG
-    printf("[Client %d] Connexion\n", pthread_self());
+    printf("[Server %d] Connexion\n", pthread_self());
 #endif
 
-    
 
     /* Boucle principale */
     for (;;) {
@@ -70,7 +69,7 @@ void *clientThread(void *arg)
 disconnect:
 
 #if DEBUG
-    printf("[Client %d] Déconnexion\n", pthread_self());
+    printf("[Server %d] Déconnexion\n", pthread_self());
 #endif
 
     /* Fermer la connexion */

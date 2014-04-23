@@ -13,6 +13,7 @@ struct parameters {
     uint64_t heapSize;
     int hashSize;
     uint8_t serverNum;
+    char *mainAddress;
 };
 
 extern struct parameters parameters;

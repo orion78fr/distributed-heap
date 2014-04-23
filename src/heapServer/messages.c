@@ -1,6 +1,7 @@
 #include "common.h"
 
 struct clientChain *clients = NULL;
+struct serverChain *servers = NULL;
 
 /**
  * Envoie sur la socket sock les données passées en argument
@@ -54,26 +55,38 @@ int send_error(int sock, uint8_t errType){
 int do_greetings(int sock){
     uint8_t msgType;
     uint16_t clientId;
+    uint16_t serverId;
+    int retour=0;
 
     if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
         goto disconnect;
     }
 
-    if(msgType == MSG_HELLO_NEW){
+    if(msgType == MSG_HELLO_NEW_CLIENT){
         clientId = sock;
-        if(send_data(sock, MSG_HELLO_NEW, 3,
+        if(send_data(sock, MSG_HELLO_NEW_CLIENT, 3,
                         (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
                         (DS){sizeof(clientId), &(clientId)},
                         (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
             goto disconnect;
         }
+        retour=1;
+    }else if(msgType == MSG_HELLO_NEW_SERVER){
+        serverId = sock;
+        if(send_data(sock, MSG_HELLO_NEW_SERVER, 3,
+                        (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
+                        (DS){sizeof(serverId), &(serverId)},
+                        (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
+            goto disconnect;
+        }
+        retour=2;
     } else {
         if (read(sock, (void *) &clientId, sizeof(clientId)) <= 0) {       /* Msg type */
             goto disconnect;
         }
         /* TODO : stocker l'id du client... */
     }
-    return 0;
+    return retour;
     disconnect:
     return -1;
 }

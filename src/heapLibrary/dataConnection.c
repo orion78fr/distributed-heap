@@ -50,7 +50,7 @@ int init_data(char *address, int port){
     dheapServers->sock = heapInfo->sock;
 
     /* on indique au serveur qu'on est nouveau dans le système */
-    msgtype = MSG_HELLO_NEW;
+    msgtype = MSG_HELLO_NEW_CLIENT;
     if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
@@ -60,7 +60,7 @@ int init_data(char *address, int port){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    if (msgtype != MSG_HELLO_NEW){
+    if (msgtype != MSG_HELLO_NEW_CLIENT){
         return DHEAP_ERROR_UNEXPECTED_MSG;
     }
 
