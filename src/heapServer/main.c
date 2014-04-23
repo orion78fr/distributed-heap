@@ -5,6 +5,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in sin;     /* Nom de la socket de connexion */
     int sock;                   /* Socket de connexion */
     int sclient;                /* Socket du client */
+    int temp = 1;
 
     /* Parsing des arguments */
     if (parse_args(argc, argv)) {
@@ -32,8 +33,8 @@ int main(int argc, char *argv[])
     sin.sin_port = htons(parameters.port);
     sin.sin_family = AF_INET;
 
-    /* setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
-     * GTU : Est-ce nécessaire? */
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &temp, sizeof(int));
+     /* GTU : Est-ce nécessaire? */
 
     /* Lien et écoute de la socket */
     if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0) {

@@ -1,48 +1,48 @@
 # Compilateur et flags
 CC = gcc
-CFLAGS = -W -Wall -ansi -pedantic -Iinclude 
-LFLAGS = -lrt -pthread
-
-# Variables pour créer le tar correspondant au dossier de TME POSIX
-TARNAME = ../PSAR.tgz
-TARFILES = README makefile bin include lib obj src
+FLAGS = -W -Wall -lrt -DDEBUG -g
 
 # Chemin des dossiers
 BIN = ./bin/
 OBJ = ./obj/
-INCLUDE = ./include/
 LIB = ./lib/
-SRC = ./src/heapServer/
 
-# Objets de chaque programme
-SERVER_OBJ = $(OBJ)main.o
+SRCSERVER = ./src/heapServer/
+SRCLIBRARY = ./src/heapLibrary/
+SRCEXAMPLE1 = ./src/examples/
+SRCEXAMPLE2 = ./src/examples/
+
+LIBRARY_NAME = heapLibrary.a
+SERVER_NAME = server
 
 # Permet d'afficher une ligne en bleu
 echoblue = @echo "\033[01;34m$(1)\033[00m"
 
-all: clean server
+all: ultraclean server library example1
 
 clean:
-	$(call echoblue,"Suppression des fichiers .o et des binaires")
-	@rm -rf $(OBJ)*.o $(BIN)*
+	$(call echoblue, "Suppression des fichiers librairies objets et binaires")
+	@rm -rf $(OBJ)* $(BIN)* $(LIB)*
 
 ultraclean: clean
-	$(call echoblue,"Suppression des fichiers temporaires")
+	$(call echoblue, "Suppression des fichiers temporaires")
 	@rm -rf */*~ *~
 
-tar: ultraclean
-	$(call echoblue,"Création du tar")
-	@rm -rf $(TARNAME)
-	@tar -zcf $(TARNAME) $(TARFILES)
+server:
+	$(call echoblue, "Compilation du serveur")
+	@$(CC) -o $(BIN)$(SERVER_NAME) $(SRCSERVER)*.c $(FLAGS)
 
-exo1: exo1serv exo1cli
+library:
+	$(call echoblue, "Compilation de la librairie")
+	@$(CC) -o $(OBJ)$@.o -c $(SRCLIBRARY)*.c $(FLAGS)
+	@ar -cvq $(LIB)$(LIBRARY_NAME) $(OBJ)$@.o
 
-server: $(SERVER_OBJ)
-	$(call echoblue,"Link de $^ en $@")
-	@$(CC) -o $(BIN)$@ $^ $(LFLAGS)
+example1: library
+	$(call echoblue, "Compilation de l'exemple 1")
+	@$(CC) -o $(BIN)$@ $(SRCEXAMPLE1)example1.c $(LIB)$(LIBRARY_NAME) $(FLAGS)
 
-$(OBJ)%.o: $(SRC)%.c
-	$(call echoblue,"Compilation de $< en $@")
-	@$(CC) -o $@ -c $< $(CFLAGS)
+example2: library
+	$(call echoblue, "Compilation de l'exemple 2")
+	@$(CC) -o $(BIN)$@ $(SRCEXAMPLE2)example2.c $(LIB)$(LIBRARY_NAME) $(FLAGS)
 
-
+.PHONY: server clean ultraclean library example1 example2

@@ -98,9 +98,10 @@ int add_data(char *name, uint64_t size)
         pthread_cond_init(&(newData->readCond), NULL);
 
         newData->offset = alloc_space(size);
-        if(newData->offset < 0){
+        if(newData->offset == -1){
             /* Tas plein, tentative de défrag */
-            if(defrag_if_possible(size)<0){
+            newData->offset = defrag_if_possible(size);
+            if(newData->offset == -1){
                 free(newData);
                 return -2;
             }
