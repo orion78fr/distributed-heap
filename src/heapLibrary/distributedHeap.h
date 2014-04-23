@@ -114,15 +114,16 @@ int t_access_read(char *name, void **p);
 int t_access_write(char *name, void **p);
 int t_access_common(uint8_t msgtype, char *name, void **p);
 int t_release(void *p);
-/* distributedHeap.c */
+/* ack.c */
 int receiveAck(uint8_t msgtype);
 int receiveAckPointer(uint8_t *msgtypeP);
+/* thread.c */
 void *data_thread(void *arg);
 void exit_data_thread(int e);
+/* distributedHeap.c */
 int checkError();
 void setError(uint8_t e);
 void unlockAndSignal();
-void setDownAndSwitch(uint8_t sid);
 /* servers.c */
 int addserver(uint8_t id, char *address, int port);
 int switchMain();
@@ -134,3 +135,4 @@ uint8_t getServerIdBySock(int sock);
 struct dheapServer* getServerBySock(int sock);
 struct dheapServer* getServerById(uint8_t sid);
 void helloNotNew(uint8_t sid);
+void setDownAndSwitch(uint8_t sid);

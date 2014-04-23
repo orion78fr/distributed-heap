@@ -236,6 +236,15 @@ int connectToServer(char *address, int port, int block){
     return sock;
 }
 
+void setDownAndSwitch(uint8_t sid){
+#if DEBUG
+    printf("Appel de setDownAndSwitch(%" PRIu8 ")\n", sid);
+#endif 
+    setServerDown(sid);
+    if (sid == heapInfo->mainId)
+        switchMain();
+}
+
 
 uint8_t getServerIdBySock(int sock){
     struct dheapServer *tmp;
