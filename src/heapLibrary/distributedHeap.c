@@ -29,11 +29,17 @@ int receiveAckPointer(uint8_t *msgtypeP){
     printf("Réponse recu: %d\n", msgtypeReponse);
 #endif 
 
+    if (msgtypeReponse == MSG_RETRY){
+        unlockAndSignal();
+        return DHEAP_RETRY;
+    }
+
     /* On verifie s'il y a eu une erreur ou non */
     if (msgtypeReponse == MSG_ERROR){
         /* On récupère le code d'erreur */
         if (read(heapInfo->sock, &msgtypeReponse, sizeof(msgtypeReponse)) <= 0){
-            return DHEAP_ERROR_CONNECTION;
+            setDownAndSwitch(heapInfo->mainId);
+            return DHEAP_RETRY;
         }
 
         /* On retourne le code d'erreur */
@@ -64,6 +70,7 @@ void unlockAndSignal(){
     pthread_mutex_unlock(&readlock);
     pthread_mutex_lock(&readylock);
     pthread_mutex_unlock(&readylock);
+    sched_yield();
 }
 
 int checkError(){
@@ -129,14 +136,32 @@ void *data_thread(void *arg){
                 if ((poll_list[i].revents&POLLNVAL) == POLLNVAL){
 #if DEBUG
                     printf("POLLNVAL, id = %d\n", ds->id);
-#endif 
+#endif
+                    if (ds->id == heapInfo->mainId){
+                        if (pthread_mutex_trylock(&mainlock) != 0){
+                            msgtypeClient = MSG_RETRY;
+                            switchMain();
+                            pthread_cond_wait(&readcond, &readlock);
+                        } else {
+                            pthread_mutex_unlock(&mainlock);
+                        }
+                    }
                     setDownAndSwitch(ds->id);
                     continue;
                 }
                 if ((poll_list[i].revents&POLLHUP) == POLLHUP){
 #if DEBUG
                     printf("POLLHUP, id = %d\n", ds->id);
-#endif 
+#endif
+                    if (ds->id == heapInfo->mainId){
+                        if (pthread_mutex_trylock(&mainlock) != 0){
+                            msgtypeClient = MSG_RETRY;
+                            switchMain();
+                            pthread_cond_wait(&readcond, &readlock);
+                        } else {
+                            pthread_mutex_unlock(&mainlock);
+                        }
+                    }
                     setDownAndSwitch(ds->id);
                     continue;
                 }

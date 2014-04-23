@@ -15,6 +15,7 @@ int addserver(uint8_t id, char *address, int port){
     newServer->status = 0;
 
     tmp = dheapServers;
+    pthread_mutex_lock(&polllock);
     while (tmp->next != NULL)
         tmp = tmp->next;
     tmp->next = newServer;
@@ -24,6 +25,7 @@ int addserver(uint8_t id, char *address, int port){
         return 0;
     }
     newServer->status = 2;
+    pthread_mutex_unlock(&polllock);
     
     buildPollList();
     
@@ -38,7 +40,9 @@ void helloNotNew(uint8_t sid){
 
     ds = getServerById(sid);
 
+    pthread_mutex_lock(&polllock);
     ds->status = 1;
+    pthread_mutex_unlock(&polllock);
 
     /* on remet la socket en bloquante */
     sockflags = fcntl(ds->sock, F_GETFL);
@@ -70,19 +74,31 @@ void helloNotNew(uint8_t sid){
 
 void setServerDown(uint8_t id){
     struct dheapServer *tmp;
+    uint8_t msgtype;
 
     tmp = dheapServers;
+    pthread_mutex_lock(&polllock);
     while (tmp->id != id && tmp != NULL)
         tmp = tmp->next;
 
     if (tmp == NULL)
         exit(EXIT_FAILURE);
 
+    if (tmp->sock == -1 && tmp->status == 0){
+        return;
+    }
+
+    msgtype = MSG_DISCONNECT;
+    /* Pas de vérification d'erreur nécessaire pour le write */
+    write(tmp->sock, &msgtype, sizeof(msgtype));
     close(tmp->sock);
     tmp->sock = -1;
     tmp->status = 0;
 
-    buildPollList();
+    pthread_mutex_unlock(&polllock);
+
+    if (pthread_equal(pthread_self(), *dheap_tid) == 1)
+        buildPollList();
 }
 
 void buildPollList(){
@@ -95,6 +111,8 @@ void buildPollList(){
 #endif 
 
     old = poll_list;
+    
+    pthread_mutex_lock(&polllock);
 
     countServersOnline = 0;
     ds = dheapServers;
@@ -134,6 +152,8 @@ void buildPollList(){
     poll_list = new;
     free(old);
 
+    pthread_mutex_unlock(&polllock);
+
 #if DEBUG
     printf("Fin de buildPollList(), %d servers online\n", countServersOnline);
 #endif 
@@ -141,6 +161,9 @@ void buildPollList(){
 
 int switchMain(){
     struct dheapServer *ds;
+#if DEBUG
+        printf("Appel de switchMain()\n");
+#endif 
     ds = dheapServers;
     while (ds != NULL && ds->status != 1){
         if (ds->status == 1){

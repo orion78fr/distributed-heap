@@ -5,9 +5,13 @@ struct dheapServer *dheapServers;
 pthread_t *dheap_tid;
 uint8_t msgtypeClient, *dheapErrorNumber;
 int countServersOnline;
+int isReqCurrently;
 struct pollfd *poll_list;
 pthread_mutex_t readlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t writelock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mainlock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t readylock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t polllock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t readcond = PTHREAD_COND_INITIALIZER;
 
 /**
@@ -128,7 +132,9 @@ int close_data(){
 
 #if DEBUG
     printf("Appel close_data()\n");
-#endif 
+#endif
+
+    isReqCurrently = 0;
 
     /* Fermeture du thread client */
     if (pthread_cancel(*dheap_tid) != 0){

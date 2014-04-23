@@ -47,9 +47,14 @@ extern int countServersOnline;
 extern struct pollfd *poll_list;
 extern uint8_t *dheapErrorNumber; /* Utilisé pour passer une erreur au client */
 extern uint8_t msgtypeClient;
+extern pthread_t *dheap_tid;
 extern pthread_mutex_t readlock;
+extern pthread_mutex_t writelock;
+extern pthread_mutex_t mainlock;
 extern pthread_mutex_t readylock;
+extern pthread_mutex_t polllock;
 extern pthread_cond_t readcond;
+extern int isReqCurrently; /* 0 = NON, 1 = OUI */ 
 
 
 
@@ -70,7 +75,10 @@ enum errorCodes {
     DHEAP_ERROR_HEAP_ALLOC,
     DHEAP_ERROR_BAD_POINTER,
     DHEAP_BAD_SERVER_ADDRESS,
-    DHEAP_BAD_SERVER_PORT
+    DHEAP_BAD_SERVER_PORT,
+
+    /* utilisation interne */
+    DHEAP_RETRY
 };
 
 /* TODO: enum partagé avec le serveur */
@@ -91,6 +99,7 @@ enum msgTypes {
     MSG_PING,
     MSG_ADD_SERVER,
     MSG_REMOVE_SERVER,
+    MSG_RETRY,
     MSG_TYPE_NULL /* Utilisé entre le thread de la librairie et le thread client */
 };
 
