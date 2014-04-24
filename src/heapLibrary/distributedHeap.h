@@ -143,3 +143,4 @@ struct dheapServer* getServerById(uint8_t sid);
 void helloNotNew(uint8_t sid);
 void setDownAndSwitch(uint8_t sid);
 void setTime(uint8_t sid);
+int removeServer(uint8_t sid);

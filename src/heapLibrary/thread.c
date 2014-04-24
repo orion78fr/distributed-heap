@@ -154,11 +154,18 @@ void *data_thread(void *arg){
                         printf("PING, id = %d\n", ds->id);
 #endif
                         ds->lastPing = 0;
+                        continue;
                     } else if (msgtype == MSG_ADD_SERVER){
                         /* Comme on modifie la poll_list, on repart dans la boucle */
                         continue;
                     } else if (msgtype == MSG_REMOVE_SERVER){
-
+                        uint8_t serverId;
+                        if (read(poll_list[i].fd, &serverId, sizeof(msgtype)) <= 0){
+                            setDownAndSwitch(ds->id);
+                            continue;
+                        }
+                        removeServer(serverId);
+                        continue;
                     } else {
                         exit_data_thread(DHEAP_ERROR_UNEXPECTED_MSG);
                     }

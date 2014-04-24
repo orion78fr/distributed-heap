@@ -201,6 +201,30 @@ int switchMain(){
     return 0;
 }
 
+int removeServer(uint8_t sid){
+    struct dheapServer *tmp, *prev;
+
+    tmp = dheapServers;
+    prev = NULL;
+
+    while (tmp != NULL){
+        if (tmp->id == sid){
+            setServerDown(sid);
+            if (prev == NULL)
+                dheapServers = tmp->next;
+            else
+                prev->next = tmp->next;
+            free(tmp->address);
+            free(tmp);
+            return 0;
+        }
+        prev = tmp;
+        tmp = tmp->next;
+    }
+
+    return -1;
+}
+
 void cleanServers(){
     struct dheapServer *tmp, *tofree;
 
