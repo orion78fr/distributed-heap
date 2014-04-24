@@ -5,7 +5,6 @@ void unlockAndSignal(){
     pthread_mutex_unlock(&readlock);
     pthread_mutex_lock(&readylock);
     pthread_mutex_unlock(&readylock);
-    sched_yield();
 }
 
 int checkError(){

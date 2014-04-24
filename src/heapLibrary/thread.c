@@ -217,6 +217,10 @@ void exit_data_thread(int e){
         dheapErrorNumber = malloc(sizeof(int));
     }
     *dheapErrorNumber = e;
+    msgtypeClient = MSG_DISCONNECT_RELEASE_ALL;
+    pthread_mutex_unlock(&readlock);
+    free(dheap_tid);
+    close_data(); /* TODO: peut potentiellement créer des bugs */
     pthread_exit(NULL);
 }
 

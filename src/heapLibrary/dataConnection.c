@@ -138,18 +138,20 @@ int close_data(){
 #endif
 
     /* Fermeture du thread client */
-    if (pthread_cancel(*dheap_tid) != 0){
-        perror("pthread_cancel"); 
-        exit(EXIT_FAILURE);
+    if (dheap_tid != NULL){
+        if (pthread_cancel(*dheap_tid) != 0){
+            perror("pthread_cancel"); 
+            exit(EXIT_FAILURE);
+        }
+        if (pthread_join(*dheap_tid, (void**) &threadStatus) != 0){
+            perror("pthread_join");
+            exit(EXIT_FAILURE);
+        }
+        if (threadStatus != PTHREAD_CANCELED){
+            exit(EXIT_FAILURE); /* TODO: erreur à revoir */
+        }
+        free(dheap_tid);
     }
-    if (pthread_join(*dheap_tid, (void**) &threadStatus) != 0){
-        perror("pthread_join");
-        exit(EXIT_FAILURE);
-    }
-    if (threadStatus != PTHREAD_CANCELED){
-        exit(EXIT_FAILURE); /* TODO: erreur à revoir */
-    }
-    free(dheap_tid);
 
     /* Fermeture des connexions */
     cleanServers();
@@ -165,7 +167,7 @@ int close_data(){
     free_hashtable();
 
     /* On vide le numero d'erreur */
-    if (dheapErrorNumber != NULL){
+    if (dheapErrorNumber != NULL && msgtypeClient != MSG_DISCONNECT_RELEASE_ALL){
         free(dheapErrorNumber);
         dheapErrorNumber = NULL;
     }

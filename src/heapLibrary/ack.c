@@ -34,6 +34,10 @@ int receiveAckPointer(uint8_t *msgtypeP){
         return DHEAP_RETRY;
     }
 
+    if (msgtypeReponse == MSG_DISCONNECT_RELEASE_ALL){
+        return *dheapErrorNumber;
+    }
+
     /* On verifie s'il y a eu une erreur ou non */
     if (msgtypeReponse == MSG_ERROR){
         /* On récupère le code d'erreur */

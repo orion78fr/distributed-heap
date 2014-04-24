@@ -234,7 +234,10 @@ void cleanServers(){
         tofree = tmp;
         if (tmp->sock != -1){
             uint8_t msgtype;
-            msgtype = MSG_DISCONNECT;
+            if (tmp->id == heapInfo->mainId)
+                msgtype = MSG_DISCONNECT_RELEASE_ALL;
+            else
+                msgtype = MSG_DISCONNECT;
             /* Pas de vérification d'erreur nécessaire pour le write */
             write(tmp->sock, &msgtype, sizeof(msgtype));
             close(tmp->sock);
