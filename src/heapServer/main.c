@@ -68,6 +68,12 @@ int main(int argc, char *argv[])
         newServer->next=servers;
         servers=newServer;
 
+        /* Ajout du main à la poll_list */
+        poll_list=NULL;
+        poll_list=malloc(sizeof(struct pollfd));
+        poll_list[0].fd = newServer->sock;
+        poll_list[0].events = POLLHUP | POLLIN | POLLNVAL;
+
         /*Mis à jour du tas, des clients, des servers */
         msgtype = MSG_HELLO_NEW_SERVER;
         if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
@@ -88,25 +94,10 @@ int main(int argc, char *argv[])
             return ERROR_BACKUP_INIT;
         }
 
-        /* Réception de notre id client */
-        if (read(sserver, &(serverId), sizeof(serverId)) <= 0){
+        /* Réception de notre id server */
+        if (read(sserver, &(parameters.serverNum), sizeof(parameters.serverNum)) <= 0){
             return ERROR_BACKUP_INIT;
         }
-
-        /* normalement avec init_data(), on a déjà la bonne taille du tas 
-         * et l'initialisation est faite */
-
-#if DEBUG
-        printf("HeapSize: %" PRIu64 "\n", heapData->size);
-        printf("ServerID: %" PRIu16 "\n", serverId);
-#endif 
-
-        /* allocation du tas dans la mémoire */
-        heapInfo->heapStart = malloc(heapInfo->heapSize);
-        if (heapInfo->heapStart == NULL){
-            return ERROR_BACKUP_INIT;
-        }
-
 
         pthread_mutex_unlock(&schainlock);
 
@@ -165,38 +156,13 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        int test=do_greetings(sclient);
+        int test=do_inquire(sclient);
 
         /* client detected */
         if(test=1{
-            /* Ajout du client dans la chaîne de socket (ajout au début pour
-             * éviter le parcours) */
-            newClient = malloc(sizeof(struct clientChain));
-            newClient->sock = sclient;
-            newClient->next = clients;
-            clients = newClient;
-
-            /* Création d'un thread pour traiter les requêtes */
-            pthread_create((pthread_t *) & (newClient->clientId), NULL,
-                           clientThread, (void *) newClient);
-            clientsConnected++;
-        }else if(test==2){ /* server detected */
-            /* Ajout du server dans la chaîne de socket (ajout au début pour
-             * éviter le parcours) */
-
-            pthread_mutex_lock(&schainlock);
-            newServer = malloc(sizeof(struct serverChain));
-            newServer->sock = sclient;
-            newServer->next = servers;
-            servers = newServer;
-            serversConnected++;
-            pthread_mutex_unlock(&schainlock);
-            /* Création d'un thread pour traiter les requêtes */
-            /*
-            pthread_create((pthread_t *) & (newServer->serverId), NULL,
-                           serverThread, (void *) newServer);
-            */
-            
+            /* Ajout d'un client */
+        }else if(test==2){ 
+            /* server detected */  
         }else{ /* error detected */
 
         }

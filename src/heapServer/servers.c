@@ -1,6 +1,7 @@
 #include "common.h"
 
-int serversConnected = 0;
+int serversConnected = 1;
+struct pollfd *poll_list;
 
 /**
  * Thread du server
@@ -8,9 +9,9 @@ int serversConnected = 0;
  */
 void *serverThread(void *arg)
 {
-    struct serverChain *serv=(struct serverChain*)arg;
+    struct serverChain *myself=(struct serverChain*)arg;
     //int sock = ((struct serverChain*)arg)->sock;
-    ((struct serverChain*)arg)->serverId = pthread_self();
+    myself->serverId = pthread_self();
     uint8_t msgType;
 
 #if DEBUG
@@ -20,6 +21,32 @@ void *serverThread(void *arg)
 
     /* Boucle principale */
     for (;;) {
+        int retval, i;
+
+        retval = poll(poll_list, serversConnected, -1);
+        if (retval < 0){
+            perror("poll");
+            return(EXIT_FAILURE);
+        }
+        if (retval > 0){
+            struct serverChain *server = myself;
+            for (i=0; i<serversConnected)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        }
+
         if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
             goto disconnect;
         }
@@ -28,41 +55,6 @@ void *serverThread(void *arg)
         switch (msgType) {
         case MSG_TOTAL_REPLICATION: /* Demande de replication totale */
             if(do_replication(sock) == -1){
-                goto disconnect;
-            }
-            break;
-        case MSG_ALLOC: /* Allocation d'une variable */
-            if(do_alloc(sock) == -1){
-                goto disconnect;
-            }
-            break;
-        case MSG_ACCESS_READ:   /* Demande d'accès en lecture */
-            if(do_access_read(sock) == -1){
-                goto disconnect;
-            }
-            break;
-        case MSG_ACCESS_WRITE:  /* Demande d'accès en écriture */
-            if(do_access_write(sock) == -1){
-                goto disconnect;
-            }
-            break;
-        case MSG_ACCESS_READ_BY_OFFSET:
-            if(do_access_read_by_offset(sock) == -1){
-                goto disconnect;
-            }
-            break;
-        case MSG_ACCESS_WRITE_BY_OFFSET:
-            if(do_access_write_by_offset(sock) == -1){
-                goto disconnect;
-            }
-            break;
-        case MSG_RELEASE:       /* Relachement de la variable */
-            if(do_release(sock) == -1){
-                goto disconnect;
-            }
-            break;
-        case MSG_FREE:          /* Désallocation d'une variable */
-            if(do_free(sock) == -1){
                 goto disconnect;
             }
             break;

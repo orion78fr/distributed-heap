@@ -16,7 +16,7 @@ void *clientThread(void *arg)
     printf("[Client %d] Connexion\n", pthread_self());
 #endif
 
-    
+    do_greetings(sock);
 
     /* Boucle principale */
     for (;;) {

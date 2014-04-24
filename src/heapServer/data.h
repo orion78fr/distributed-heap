@@ -12,6 +12,17 @@ struct clientChainWrite {
     pthread_cond_t cond;
 };
 
+struct serverChainRead {
+    pthread_t serverId;
+    struct serverChainRead *next;
+};
+
+struct serverChainWrite {
+    pthread_t serverId;
+    struct serverChainWrite *next;
+    pthread_cond_t cond;
+};
+
 struct heapData {
     pthread_mutex_t mutex;
 
@@ -26,6 +37,15 @@ struct heapData {
     pthread_cond_t readCond;
 
     struct clientChainWrite *writeWait;
+
+    struct serverChainRead *serverReadAccess;
+    struct serverChainWrite *serverWriteAccess;
+
+    struct serverChainRead *serverReadWait;
+    pthread_cond_t serverReadCond;
+
+    struct serverChainWrite *serverWriteWait;
+
 
     struct heapData *next;
     struct heapData *nextOffset;

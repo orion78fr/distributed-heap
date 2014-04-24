@@ -52,41 +52,64 @@ int send_error(int sock, uint8_t errType){
     return send_data(sock, MSG_ERROR, 1, (DS){sizeof(errType), &errType});
 }
 
-int do_greetings(int sock){
+int do_inquire(int sock){
     uint8_t msgType;
-    uint16_t clientId;
-    uint16_t serverId;
-    int retour=0;
 
     if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
         goto disconnect;
     }
 
     if(msgType == MSG_HELLO_NEW_CLIENT){
-        clientId = sock;
-        if(send_data(sock, MSG_HELLO_NEW_CLIENT, 3,
-                        (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
-                        (DS){sizeof(clientId), &(clientId)},
-                        (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
-            goto disconnect;
-        }
-        retour=1;
+
+        /* Ajout du client dans la chaîne de socket (ajout au début pour
+         * éviter le parcours) */
+        newClient = malloc(sizeof(struct clientChain));
+        newClient->sock = sock;
+        newClient->next = clients;
+        clients = newClient;
+
+        /* Création d'un thread pour traiter les requêtes */
+        pthread_create((pthread_t *) & (newClient->clientId), NULL,
+                       clientThread, (void *) newClient);
+        clientsConnected++;
+        return 1;
+
     }else if(msgType == MSG_HELLO_NEW_SERVER){
-        serverId = sock;
+
+        pthread_mutex_lock(&schainlock);
+        newServer = malloc(sizeof(struct serverChain));
+        newServer->serverId = serversConnected;
+        newServer->sock = sock;
+        newServer->next = servers;
+        servers = newServer;
+        serversConnected++;
+        pthread_mutex_unlock(&schainlock);
+
         if(send_data(sock, MSG_HELLO_NEW_SERVER, 3,
                         (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
-                        (DS){sizeof(serverId), &(serverId)},
+                        (DS){sizeof(newServer->serverId), &(newServer->serverId)},
                         (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
             goto disconnect;
         }
-        retour=2;
-    } else {
-        if (read(sock, (void *) &clientId, sizeof(clientId)) <= 0) {       /* Msg type */
-            goto disconnect;
-        }
-        /* TODO : stocker l'id du client... */
+        return 2;
     }
-    return retour;
+    return -1;
+}
+
+/* TODO ajouter l'envoi des @ des autres serveurs et leurs id */
+int do_greetings(int sock){
+    uint8_t msgType;
+    uint16_t clientId;
+
+    
+    clientId = sock;
+    if(send_data(sock, MSG_HELLO_NEW, 3,
+                (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
+                (DS){sizeof(clientId), &(clientId)},
+                (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
+       goto disconnect;
+    }
+    return 0;
     disconnect:
     return -1;
 }
@@ -231,4 +254,10 @@ int do_free(int sock){
     return 0;
     disconnect:
     return -1;
+}
+
+int do_total_replication(int sock){
+
+
+
 }

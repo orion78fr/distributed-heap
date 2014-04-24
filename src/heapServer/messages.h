@@ -43,66 +43,64 @@ int do_access_write_by_offset(int sock);
 int do_access_write_common(int sock, struct heapData *data);
 int do_release(int sock);
 int do_free(int sock);
+int do_total_replication(int sock);
 
 /*
  * Chaque échange commence par le type de message (uint8)
  * Puis, (super tableau en ASCII-art)
  *
- *      type         |            envoi              |         réponse
+ *      type             |            envoi              |         réponse
  * -----------------------------------------------------------------------------
- * MSG_HELLO_NEW_CLIENT        /                     | Server id (uint8)
- *     C -> S        |                               | Client id (uint16)
- *                   |                               | Heap size (uint64)
+ * MSG_HELLO_NEW_CLIENT  |             /                 | Server id (uint8)
+ *     C -> S            |                               | Client id (uint16)
+ *                       |                               | Heap size (uint64)
  * -----------------------------------------------------------------------------
- * MSG_HELLO_NEW_SERVER        /                     | Server id (uint8)
- *     S -> S        |                               | Client id (uint16)
- *                   |                               | Heap size (uint64)
- 
+ * MSG_HELLO_NEW_SERVER  |             /                 | Server id (uint8)
+ *     S -> S            |                               | Server id (uint16)
  * -----------------------------------------------------------------------------
- * MSG_HELLO_NOT_NEW | Client id (uint16)            |        /
- *     C -> S        |                               |
+ * MSG_HELLO_NOT_NEW     | Client id (uint16)            |          /
+ *     C -> S            |                               |
  * -----------------------------------------------------------------------------
- * MSG_ALLOC         | taille du nom (uint8)         |
- *     C -> S        | nom (taille*char8)            |        /
- *                   | taille de la variable (uint64)|
+ * MSG_ALLOC             | taille du nom (uint8)         |
+ *     C -> S            | nom (taille*char8)            |          /
+ *                       | taille de la variable (uint64)|
  * -----------------------------------------------------------------------------
- * MSG_ACCESS_READ   | taille du nom (uint8)         | offset (uint64)
- *     C -> S        | nom (taille * char8)          | taille (uint64)
- *                   |                               | si modif (READ_MODIFIED)
- *                   |                               |   contenu (taille*char8)
+ * MSG_ACCESS_READ       | taille du nom (uint8)         | offset (uint64)
+ *     C -> S            | nom (taille * char8)          | taille (uint64)
+ *                       |                               | si modif (READ_MODIFIED)
+ *                       |                               |   contenu (taille*char8)
  * -----------------------------------------------------------------------------
- * MSG_ACCESS_WRITE  | taille du nom (uint8)         | offset (uint64)
- *     C -> S        | nom (taille*char8)            | taille (uint64)
- *                   |                               | si modif (WRITE_MODIFIED)
- *                   |                               |   contenu (taille*char8)
+ * MSG_ACCESS_WRITE      | taille du nom (uint8)         | offset (uint64)
+ *     C -> S            | nom (taille*char8)            | taille (uint64)
+ *                       |                               | si modif (WRITE_MODIFIED)
+ *                       |                               |   contenu (taille*char8)
  * -----------------------------------------------------------------------------
- * MSG_RELEASE       | offset (uint64)               |
- *     C -> S        | si accès en write             |        /
- *                   |   contenu (taille*char8)      |
+ * MSG_RELEASE           | offset (uint64)               |
+ *     C -> S            | si accès en write             |          /
+ *                       |   contenu (taille*char8)      |
  * -----------------------------------------------------------------------------
- * MSG_FREE          | taille du nom (uint8)         |        /
- *     C -> S        | nom (taille*char8)            |
+ * MSG_FREE              | taille du nom (uint8)         |          /
+ *     C -> S            | nom (taille*char8)            |
  * -----------------------------------------------------------------------------
- * MSG_ERROR         | type d'erreur (uint8)         |        /
- *     S <-> C       |                               |
+ * MSG_ERROR             | type d'erreur (uint8)         |          /
+ *     S <-> C           |                               |
  * -----------------------------------------------------------------------------
- * MSG_DISCONNECT    |         /                     |        /
- *     S <-> C       |                               |
+ * MSG_DISCONNECT        |             /                 |          /
+ *     S <-> C           |                               |
  * -----------------------------------------------------------------------------
- * MSG_ADD_SERVER    | id du serveur (uint8)         |        /
- *     S -> C        | taille de l'adresse (uint8)   |
- *                   | adresse (taille*char8)        |
- *                   | port (uint16)                 |
+ * MSG_ADD_SERVER        | id du serveur (uint8)         |          /
+ *     S -> C            | taille de l'adresse (uint8)   | 
+ *                       | adresse (taille*char8)        |
+ *                       | port (uint16)                 |
  * -----------------------------------------------------------------------------
- * MSG_REMOVE_SERVER | id du serveur (uint8)         |        /
- *     S -> C        |                               |
+ * MSG_REMOVE_SERVER     | id du serveur (uint8)         |          /
+ *     S -> C            |                               |
  * -----------------------------------------------------------------------------
- * MSG_PING          |         /                     |        /
- *     S <-> C       |                               |
+ * MSG_PING              |             /                 |          /
+ *     S <-> C           |                               |
  * -----------------------------------------------------------------------------
- * -----------------------------------------------------------------------------
- * MSG_TOTAL_REPLICATION       /                     |        /
- *     S <-> S       |                               |
+ * MSG_TOTAL_REPLICATION |             /                 |          /
+ *     S <-> S           |                               |
  * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int

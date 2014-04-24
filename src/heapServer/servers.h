@@ -9,6 +9,7 @@ struct serverChain {
 
 extern int serversConnected;
 extern struct serverChain *servers;
+extern struct pollfd *poll_list;
 
 
 void *serverThread(void *arg);
