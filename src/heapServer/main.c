@@ -1,7 +1,7 @@
 #include "common.h"
 
 
-pthread_mutex_t schainlock = PTHREAD_MUTEX_INITIALIZER;
+extern pthread_mutex_t schainlock = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char *argv[])
 {
@@ -109,6 +109,16 @@ int main(int argc, char *argv[])
 
 
         pthread_mutex_unlock(&schainlock);
+
+        /* demande de mis à jour du tas et des locks */
+        msgtype = MSG_TOTAL_REPLICATION;
+        if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
+            return ERROR_SERVER_CONNECTION;
+        }
+
+
+
+
         /* Création d'un thread dédié aux serveurs */
         /*
         pthread_create((pthread_t *) & (newServer->serverId), NULL,
@@ -208,7 +218,7 @@ int main(int argc, char *argv[])
         servers = servers->next;
     }
     */
-    
+
     pthread_join(serverId,0);
 
     shutdown(sock, 2);

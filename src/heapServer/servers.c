@@ -1,7 +1,6 @@
 #include "common.h"
 
 int serversConnected = 0;
-pthread_mutex_t schainlock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * Thread du server
@@ -27,6 +26,11 @@ void *serverThread(void *arg)
 
         /* Switch pour les différents types de messages */
         switch (msgType) {
+        case MSG_TOTAL_REPLICATION: /* Demande de replication totale */
+            if(do_replication(sock) == -1){
+                goto disconnect;
+            }
+            break;
         case MSG_ALLOC: /* Allocation d'une variable */
             if(do_alloc(sock) == -1){
                 goto disconnect;

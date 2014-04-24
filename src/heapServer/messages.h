@@ -18,7 +18,8 @@ enum msgTypes {
     MSG_DISCONNECT,
     MSG_PING,
     MSG_ADD_SERVER,
-    MSG_REMOVE_SERVER
+    MSG_REMOVE_SERVER,
+    MSG_TOTAL_REPLICATION
 };
 
 typedef struct dataSend{
@@ -49,9 +50,14 @@ int do_free(int sock);
  *
  *      type         |            envoi              |         réponse
  * -----------------------------------------------------------------------------
- * MSG_HELLO_NEW     |         /                     | Server id (uint8)
+ * MSG_HELLO_NEW_CLIENT        /                     | Server id (uint8)
  *     C -> S        |                               | Client id (uint16)
  *                   |                               | Heap size (uint64)
+ * -----------------------------------------------------------------------------
+ * MSG_HELLO_NEW_SERVER        /                     | Server id (uint8)
+ *     S -> S        |                               | Client id (uint16)
+ *                   |                               | Heap size (uint64)
+ 
  * -----------------------------------------------------------------------------
  * MSG_HELLO_NOT_NEW | Client id (uint16)            |        /
  *     C -> S        |                               |
@@ -93,6 +99,10 @@ int do_free(int sock);
  * -----------------------------------------------------------------------------
  * MSG_PING          |         /                     |        /
  *     S <-> C       |                               |
+ * -----------------------------------------------------------------------------
+ * -----------------------------------------------------------------------------
+ * MSG_TOTAL_REPLICATION       /                     |        /
+ *     S <-> S       |                               |
  * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int
