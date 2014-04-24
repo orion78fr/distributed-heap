@@ -1,5 +1,11 @@
 #include "distributedHeap.h"
 
+/**
+ * Ajoute un serveur à la liste de serveurs, puis lance la connexion,
+ * et rebuild la poll list pour le prendre en compte.
+ * @param id du nouveau serveur, adresse, port
+ * @return toujours 0
+ */
 int addserver(uint8_t id, char *address, int port){
     struct dheapServer *newServer, *tmp;
     int addlen;
@@ -35,6 +41,11 @@ int addserver(uint8_t id, char *address, int port){
     return 0;
 }
 
+/**
+ * Lance la reconnexion aux serveurs qui ne sont pas connectés,
+ * seulement si la dernière tentative est plus ancienne que la durée
+ * du timeout du pong
+ */
 void reconnectServers(){
     struct dheapServer *tmp;
 
@@ -56,6 +67,11 @@ void reconnectServers(){
     pthread_mutex_unlock(&polllock);
 }
 
+/**
+ * Appelé quand le serveur est connecté, et envoie le client id qu'on
+ * a reçu lors de la connexion au serveur main au moment de l'init_dat()
+ * @param serveur id 
+ */
 void helloNotNew(uint8_t sid){
     /* Déclaration au serveur */
     uint8_t msgtype;
@@ -96,7 +112,14 @@ void helloNotNew(uint8_t sid){
     buildPollList();
 }
 
-void setServerDown(uint8_t id){
+/**
+ * Ferme la connexion d'un serveur et le place sur down,
+ * puis rebuild la poll list si on est le thread de la librairie.
+ * Si on ne l'est pas, alors on ne veut pas interférer avec un poll
+ * qui pourrait être en cours.
+ * @param serveur id, buildPollList = 0 -> ne pas rebuild, 1 -> rebuild.
+ */
+void setServerDownInternal(uint8_t id, int doBuildPollList){
     struct dheapServer *tmp;
     uint8_t msgtype;
 
@@ -123,10 +146,20 @@ void setServerDown(uint8_t id){
 
     pthread_mutex_unlock(&polllock);
 
-    if (pthread_equal(pthread_self(), *dheap_tid) == 1)
+    if (pthread_equal(pthread_self(), *dheap_tid) == 1 && doBuildPollList == 1)
         buildPollList();
 }
 
+void setServerDown(uint8_t id){
+    setServerDownInternal(id, 1);
+}
+void setServerDownNoRebuild(uint8_t id){
+    setServerDownInternal(id, 0);
+}
+
+/**
+ * Créer la poll list à partir de la liste de serveurs et de leurs status
+ */
 void buildPollList(){
     struct pollfd *old, *new;
     struct dheapServer *ds;
@@ -161,6 +194,7 @@ void buildPollList(){
     ds = dheapServers;
     while(ds != NULL){
         if (j > countServersOnline){
+            free(new);
             exit(EXIT_FAILURE);
         }
         if (ds->status == 1 && ds->sock != -1){
@@ -185,6 +219,10 @@ void buildPollList(){
 #endif 
 }
 
+/**
+ * Permet de changer de serveur main en cherchant un serveur avec le status à 1
+ * @return 0 si un nouveau main a été trouvé, exit le thread sinon
+ */
 int switchMain(){
     struct dheapServer *ds;
 #if DEBUG
@@ -195,12 +233,19 @@ int switchMain(){
         if (ds->status == 1){
             heapInfo->mainId = ds->id;
             heapInfo->sock = ds->sock;
+            return 0;
         }
         ds = ds->next;
     }
-    return 0;
+    exit_data_thread(DHEAP_ERROR_CONNECTION);
+    return -1;
 }
 
+/**
+ * Supprime un serveur de la liste de serveurs
+ * @param serveur id
+ * @return 0 si réussi, -1 sinon
+ */
 int removeServer(uint8_t sid){
     struct dheapServer *tmp, *prev;
 
@@ -225,6 +270,11 @@ int removeServer(uint8_t sid){
     return -1;
 }
 
+/**
+ * Ferme toutes les connexions aux serveurs, envoie un RELEASE ALL
+ * au main pour être sur de libérer les accès en cours,
+ * puis free l'espace alloué pour les structures des serveurs
+ */
 void cleanServers(){
     struct dheapServer *tmp, *tofree;
 
@@ -248,8 +298,11 @@ void cleanServers(){
     }    
 }
 
-/* retourne un socket ou -1 */
-/* block: 0: not blocking, 1: blocking */
+/**
+ * Se connecte à un serveur et retourne une socket
+ * @param adresse du serveur, port, block=0 -> connexion non bloquante, =1->bloquant
+ * @return socket ou -1
+ */
 int connectToServer(char *address, int port, int block){
     struct sockaddr_in servaddr;
     /* struct addrinfo hints, *result; */
@@ -289,6 +342,11 @@ int connectToServer(char *address, int port, int block){
     return sock;
 }
 
+/**
+ * Appel setServerDown() pour fermer la connexion d'un serveur,
+ * puis switchMain() dans le cas où le serveur fermé était le main
+ * @param id du serveur
+ */
 void setDownAndSwitch(uint8_t sid){
 #if DEBUG
     printf("Appel de setDownAndSwitch(%" PRIu8 ")\n", sid);
@@ -299,6 +357,11 @@ void setDownAndSwitch(uint8_t sid){
 }
 
 
+/**
+ * Retourne l'id d'un serveur depuis sa socket
+ * @param socket
+ * @return serveur id
+ */
 uint8_t getServerIdBySock(int sock){
     struct dheapServer *tmp;
 
@@ -313,6 +376,11 @@ uint8_t getServerIdBySock(int sock){
     return tmp->id;
 }
 
+/**
+ * Retourne la structure d'un serveur depuis sa socket
+ * @param socket
+ * @return structure dheapServer associé à la socket
+ */
 struct dheapServer* getServerBySock(int sock){
     struct dheapServer *tmp;
 
@@ -327,6 +395,11 @@ struct dheapServer* getServerBySock(int sock){
     return tmp;
 }
 
+/**
+ * Retourne la structure d'un serveur depuis son id
+ * @param serveur id
+ * @return structure dheapServer associé à l'id
+ */
 struct dheapServer* getServerById(uint8_t sid){
     struct dheapServer *tmp;
 
@@ -341,6 +414,10 @@ struct dheapServer* getServerById(uint8_t sid){
     return tmp;
 }
 
+/**
+ * Actualise l'heure du dernier message reçu d'un serveur
+ * @param serveur id
+ */
 void setTime(uint8_t sid){
     struct dheapServer *ds;
     ds = getServerById(sid);

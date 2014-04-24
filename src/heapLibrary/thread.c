@@ -1,7 +1,9 @@
 #include "distributedHeap.h"
 
 /**
- * Thread de la librairie gérant les lectures et les ping/pong
+ * Thread de la librairie gérant les lectures de msgtypes,
+ * les ping/pong, les déconnexions, les ajouts et suppressions
+ * de serveurs, et les reconnexions
  * @param aucun
  */
 void *data_thread(void *arg){
@@ -35,13 +37,13 @@ void *data_thread(void *arg){
                 if (dstmp->id == heapInfo->mainId){
                     if (pthread_mutex_trylock(&mainlock) != 0){
                         msgtypeClient = MSG_RETRY;
+                        setServerDownNoRebuild(dstmp->id);
                         switchMain();
                         pthread_cond_wait(&readcond, &readlock);
                     } else {
                         pthread_mutex_unlock(&mainlock);
                     }
                 }
-                setDownAndSwitch(dstmp->id);
                 dstmp = dstmp->next;
                 continue;
             }
@@ -54,13 +56,13 @@ void *data_thread(void *arg){
                     if (dstmp->id == heapInfo->mainId){
                         if (pthread_mutex_trylock(&mainlock) != 0){
                             msgtypeClient = MSG_RETRY;
+                            setServerDownNoRebuild(dstmp->id);
                             switchMain();
                             pthread_cond_wait(&readcond, &readlock);
                         } else {
                             pthread_mutex_unlock(&mainlock);
                         }
                     }
-                    setDownAndSwitch(dstmp->id);
                     dstmp = dstmp->next;
                     continue;
                 }
@@ -93,13 +95,13 @@ void *data_thread(void *arg){
                     if (ds->id == heapInfo->mainId){
                         if (pthread_mutex_trylock(&mainlock) != 0){
                             msgtypeClient = MSG_RETRY;
+                            setServerDownNoRebuild(ds->id);
                             switchMain();
                             pthread_cond_wait(&readcond, &readlock);
                         } else {
                             pthread_mutex_unlock(&mainlock);
                         }
                     }
-                    setDownAndSwitch(ds->id);
                     break;
                 }
                 if ((poll_list[i].revents&POLLHUP) == POLLHUP){
@@ -109,13 +111,13 @@ void *data_thread(void *arg){
                     if (ds->id == heapInfo->mainId){
                         if (pthread_mutex_trylock(&mainlock) != 0){
                             msgtypeClient = MSG_RETRY;
+                            setServerDownNoRebuild(ds->id);
                             switchMain();
                             pthread_cond_wait(&readcond, &readlock);
                         } else {
                             pthread_mutex_unlock(&mainlock);
                         }
                     }
-                    setDownAndSwitch(ds->id);
                     break;
                 }
                 if ((poll_list[i].events&POLLOUT) == POLLOUT && (poll_list[i].revents&POLLOUT) == POLLOUT){
@@ -206,19 +208,19 @@ void *data_thread(void *arg){
 }
 
 /**
- * Ferme le thread et laisse un message d'erreur
+ * Ferme le thread et laisse un message d'erreur,
+ * puis ferme les connexions et ferme le thread
  * @param errorCodes
  */
-void exit_data_thread(int e){
+void exit_data_thread(uint8_t e){
 #if DEBUG
     printf("Appel de exit_data_thread(%d)\n", e);
 #endif 
-    if (dheapErrorNumber == NULL){
-        dheapErrorNumber = malloc(sizeof(int));
-    }
-    *dheapErrorNumber = e;
+    setError(e);
     msgtypeClient = MSG_DISCONNECT_RELEASE_ALL;
     pthread_mutex_unlock(&readlock);
+    pthread_mutex_unlock(&writelock);
+    pthread_mutex_unlock(&mainlock);
     free(dheap_tid);
     close_data(); /* TODO: peut potentiellement créer des bugs */
     pthread_exit(NULL);

@@ -127,7 +127,7 @@ int receiveAck(uint8_t msgtype);
 int receiveAckPointer(uint8_t *msgtypeP);
 /* thread.c */
 void *data_thread(void *arg);
-void exit_data_thread(int e);
+void exit_data_thread(uint8_t e);
 /* distributedHeap.c */
 int checkError();
 void setError(uint8_t e);
@@ -139,7 +139,9 @@ void cleanServers();
 int connectToServer(char *address, int port, int block);
 void reconnectServers();
 void buildPollList();
+void setServerDownInternal(uint8_t id, int doBuildPollList);
 void setServerDown(uint8_t id);
+void setServerDownNoRebuild(uint8_t id);
 uint8_t getServerIdBySock(int sock);
 struct dheapServer* getServerBySock(int sock);
 struct dheapServer* getServerById(uint8_t sid);
