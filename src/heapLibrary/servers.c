@@ -13,6 +13,8 @@ int addserver(uint8_t id, char *address, int port){
     newServer->port = port;
     newServer->next = NULL;
     newServer->status = 0;
+    newServer->lastMsgTime = 0;
+    newServer->lastPing = 0;
 
     tmp = dheapServers;
     pthread_mutex_lock(&polllock);
@@ -94,6 +96,8 @@ void setServerDown(uint8_t id){
     close(tmp->sock);
     tmp->sock = -1;
     tmp->status = 0;
+    tmp->lastMsgTime = 0;
+    tmp->lastPing = 0;
 
     pthread_mutex_unlock(&polllock);
 
@@ -286,4 +290,10 @@ struct dheapServer* getServerById(uint8_t sid){
         exit(EXIT_FAILURE);
 
     return tmp;
+}
+
+void setTime(uint8_t sid){
+    struct dheapServer *ds;
+    ds = getServerById(sid);
+    ds->lastMsgTime = time(NULL);
 }

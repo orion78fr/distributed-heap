@@ -18,10 +18,13 @@
 #include <poll.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include "dheapHashtable.h"
 
 #define DH_SERVER_RETRY 3
+#define PONG_TIMEOUT 5
+#define TIMEOUT_BEFORE_PING 10
 
 
 struct heapInfo {
@@ -39,6 +42,8 @@ struct dheapServer {
     int port;
     uint8_t status; /* 0 = non connecté, 1 = connecté, 2 = connecting */
     struct dheapServer *next;
+    time_t lastMsgTime;
+    time_t lastPing;
 };
 
 extern struct heapInfo *heapInfo;
@@ -54,7 +59,6 @@ extern pthread_mutex_t mainlock;
 extern pthread_mutex_t readylock;
 extern pthread_mutex_t polllock;
 extern pthread_cond_t readcond;
-extern int isReqCurrently; /* 0 = NON, 1 = OUI */ 
 
 
 
@@ -136,3 +140,4 @@ struct dheapServer* getServerBySock(int sock);
 struct dheapServer* getServerById(uint8_t sid);
 void helloNotNew(uint8_t sid);
 void setDownAndSwitch(uint8_t sid);
+void setTime(uint8_t sid);

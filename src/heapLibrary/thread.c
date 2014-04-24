@@ -25,18 +25,59 @@ void *data_thread(void *arg){
     /* Boucle avec le poll */
     while (1){
         int retval, i;
+        struct dheapServer *dstmp;
+
+        /* TODO: reconnect servers */
+        /* On vérifie s'il faut ping une machine ou s'il faut la déconnecter */
+        dstmp = dheapServers;
+        while (dstmp != NULL){
+            /* On vérifie s'il y a un ping en attente */
+            if (dstmp->lastPing != 0 && dstmp->lastPing < (time(NULL) - (PONG_TIMEOUT*2))){
+                if (dstmp->id == heapInfo->mainId){
+                    if (pthread_mutex_trylock(&mainlock) != 0){
+                        msgtypeClient = MSG_RETRY;
+                        switchMain();
+                        pthread_cond_wait(&readcond, &readlock);
+                    } else {
+                        pthread_mutex_unlock(&mainlock);
+                    }
+                }
+                setDownAndSwitch(dstmp->id);
+                dstmp = dstmp->next;
+                continue;
+            }
+
+            /* On vérifie s'il faut pinger */
+            if (dstmp->status == 1 && dstmp->lastMsgTime < (time(NULL) - TIMEOUT_BEFORE_PING)){
+                uint8_t msgtype = MSG_PING;
+                if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+                    if (dstmp->id == heapInfo->mainId){
+                        if (pthread_mutex_trylock(&mainlock) != 0){
+                            msgtypeClient = MSG_RETRY;
+                            switchMain();
+                            pthread_cond_wait(&readcond, &readlock);
+                        } else {
+                            pthread_mutex_unlock(&mainlock);
+                        }
+                    }
+                    setDownAndSwitch(dstmp->id);
+                    dstmp = dstmp->next;
+                    continue;
+                }
+                dstmp->lastPing = time(NULL);
+            }
+
+            dstmp = dstmp->next;
+        }
 
         pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 
-        /* TODO: here reconnect servers */
-
-        retval = poll(poll_list, countServersOnline, -1);
+        retval = poll(poll_list, countServersOnline, PONG_TIMEOUT*1000);
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
         if (retval < 0){
             perror("poll");
             exit(EXIT_FAILURE); 
-        }
-        if (retval > 0){
+        } else if (retval > 0){
             for (i=0; i < countServersOnline; i++){
                 struct dheapServer *ds;
                 ds = getServerBySock(poll_list[i].fd);
@@ -74,7 +115,8 @@ void *data_thread(void *arg){
                     continue;
                 }
                 if ((poll_list[i].events&POLLOUT) == POLLOUT && (poll_list[i].revents&POLLOUT) == POLLOUT){
-                    helloNotNew(ds->id);
+                    helloNotNew(ds->id); /* TODO: risque de blocage sur le read du ack */
+                    setTime(ds->id);
                     continue; 
                 }
                 if ((poll_list[i].revents&POLLIN) == POLLIN){
@@ -83,6 +125,7 @@ void *data_thread(void *arg){
                         setDownAndSwitch(ds->id);
                         continue;
                     }
+                    setTime(ds->id);
                     if (msgtype == MSG_ALLOC || msgtype == MSG_ACCESS_READ
                         || msgtype == MSG_ACCESS_READ || msgtype == MSG_ACCESS_READ_MODIFIED
                         || msgtype == MSG_ACCESS_WRITE || msgtype == MSG_ACCESS_WRITE_MODIFIED
@@ -103,7 +146,10 @@ void *data_thread(void *arg){
                         setDownAndSwitch(ds->id);
                         continue;
                     } else if (msgtype == MSG_PING){
-
+#if DEBUG
+                        printf("PING, id = %d\n", ds->id);
+#endif
+                        ds->lastPing = 0;
                     } else if (msgtype == MSG_ADD_SERVER){
                         /* Comme on modifie la poll_list, on repart dans la boucle */
                         continue;
@@ -114,7 +160,7 @@ void *data_thread(void *arg){
                     }
                 }
             }
-        }
+        } 
     }
 
     pthread_mutex_unlock(&readlock);

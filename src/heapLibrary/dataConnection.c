@@ -5,7 +5,6 @@ struct dheapServer *dheapServers;
 pthread_t *dheap_tid;
 uint8_t msgtypeClient, *dheapErrorNumber;
 int countServersOnline;
-int isReqCurrently;
 struct pollfd *poll_list;
 pthread_mutex_t readlock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t writelock = PTHREAD_MUTEX_INITIALIZER;
@@ -84,6 +83,9 @@ int init_data(char *address, int port){
         return DHEAP_ERROR_CONNECTION;
     }
 
+    dheapServers->lastMsgTime = time(NULL);
+    dheapServers->lastPing = 0;
+
 #if DEBUG
     printf("HeapSize: %" PRIu64 "\n", heapInfo->heapSize);
     printf("ClientID: %" PRIu16 "\n", heapInfo->clientId);
@@ -133,8 +135,6 @@ int close_data(){
 #if DEBUG
     printf("Appel close_data()\n");
 #endif
-
-    isReqCurrently = 0;
 
     /* Fermeture du thread client */
     if (pthread_cancel(*dheap_tid) != 0){
