@@ -100,7 +100,7 @@ void *data_thread(void *arg){
                         }
                     }
                     setDownAndSwitch(ds->id);
-                    continue;
+                    break;
                 }
                 if ((poll_list[i].revents&POLLHUP) == POLLHUP){
 #if DEBUG
@@ -116,18 +116,18 @@ void *data_thread(void *arg){
                         }
                     }
                     setDownAndSwitch(ds->id);
-                    continue;
+                    break;
                 }
                 if ((poll_list[i].events&POLLOUT) == POLLOUT && (poll_list[i].revents&POLLOUT) == POLLOUT){
                     helloNotNew(ds->id); /* TODO: risque de blocage sur le read du ack */
                     setTime(ds->id);
-                    continue; 
+                    break; 
                 }
                 if ((poll_list[i].revents&POLLIN) == POLLIN){
                     uint8_t msgtype;
                     if (read(poll_list[i].fd, &msgtype, sizeof(msgtype)) <= 0){
                         setDownAndSwitch(ds->id);
-                        continue;
+                        break;
                     }
                     setTime(ds->id);
                     if (msgtype == MSG_ALLOC || msgtype == MSG_ACCESS_READ
@@ -148,7 +148,7 @@ void *data_thread(void *arg){
                         printf("DISCONNECT, id = %d\n", ds->id);
 #endif
                         setDownAndSwitch(ds->id);
-                        continue;
+                        break;
                     } else if (msgtype == MSG_PING){
 #if DEBUG
                         printf("PING, id = %d\n", ds->id);
@@ -157,21 +157,49 @@ void *data_thread(void *arg){
                         continue;
                     } else if (msgtype == MSG_ADD_SERVER){
                         /* Comme on modifie la poll_list, on repart dans la boucle */
-                        continue;
+                        uint8_t serverId, addlen;
+                        char *servAddress;
+                        uint16_t servPort;
+#if DEBUG
+                        printf("ADD_SERVER, id = %d\n", ds->id);
+#endif
+                        if (read(poll_list[i].fd, &serverId, sizeof(serverId)) <= 0){
+                            setDownAndSwitch(ds->id);
+                            break;
+                        }
+                        if (read(poll_list[i].fd, &addlen, sizeof(addlen)) <= 0){
+                            setDownAndSwitch(ds->id);
+                            break;
+                        }
+                        servAddress = malloc(sizeof(char)*addlen);
+                        if (read(poll_list[i].fd, servAddress, sizeof(char)*addlen) <= 0){
+                            setDownAndSwitch(ds->id);
+                            break;
+                        }
+                        if (read(poll_list[i].fd, &servPort, sizeof(servPort)) <= 0){
+                            setDownAndSwitch(ds->id);
+                            break;
+                        }
+                        addserver(serverId, servAddress, servPort);
+                        break;
                     } else if (msgtype == MSG_REMOVE_SERVER){
                         uint8_t serverId;
-                        if (read(poll_list[i].fd, &serverId, sizeof(msgtype)) <= 0){
+#if DEBUG
+                        printf("REMOVE_SERVER, id = %d\n", ds->id);
+#endif
+                        if (read(poll_list[i].fd, &serverId, sizeof(serverId)) <= 0){
                             setDownAndSwitch(ds->id);
-                            continue;
+                            break;
                         }
                         removeServer(serverId);
-                        continue;
+                        break;
                     } else {
                         exit_data_thread(DHEAP_ERROR_UNEXPECTED_MSG);
                     }
                 }
             }
-        } 
+        }
+        continue; 
     }
 
     pthread_mutex_unlock(&readlock);
