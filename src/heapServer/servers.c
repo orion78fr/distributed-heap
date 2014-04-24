@@ -1,6 +1,7 @@
 #include "common.h"
 
 int serversConnected = 0;
+pthread_mutex_t schainlock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * Thread du server
@@ -8,7 +9,8 @@ int serversConnected = 0;
  */
 void *serverThread(void *arg)
 {
-    int sock = ((struct serverChain*)arg)->sock;
+    struct serverChain *serv=(struct serverChain*)arg;
+    //int sock = ((struct serverChain*)arg)->sock;
     ((struct serverChain*)arg)->serverId = pthread_self();
     uint8_t msgType;
 

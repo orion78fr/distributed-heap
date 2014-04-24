@@ -9,6 +9,7 @@ struct serverChain {
 
 extern int serversConnected;
 extern struct serverChain *servers;
+extern pthread_mutex_t schainlock;
 
 void *serverThread(void *arg);
 

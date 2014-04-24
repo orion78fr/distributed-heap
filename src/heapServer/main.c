@@ -1,5 +1,8 @@
 #include "common.h"
 
+
+pthread_mutex_t schainlock = PTHREAD_MUTEX_INITIALIZER;
+
 int main(int argc, char *argv[])
 {
     struct sockaddr_in sin;     /* Nom de la socket de connexion */
@@ -37,6 +40,9 @@ int main(int argc, char *argv[])
     /* setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
      * GTU : Est-ce nécessaire? */
 
+    /* Création d'un thread pour traiter les requêtes servers */
+    pthread_create((pthread_t *) & (serverId), NULL,
+                    serverThread, (void *) servers);
 
 
     /* Connexion au server principal */
@@ -52,6 +58,8 @@ int main(int argc, char *argv[])
         if(connect(sserver, (struct sockaddr *)&sin, sizeof(sin)) == -1){
             return ERROR_SERVER_CONNECTION;
         }
+
+        pthread_mutex_lock(&schainlock);
 
         /* Ajout du server dans la chaîne de socket (ajout au début pour
          * éviter le parcours) */
@@ -77,22 +85,36 @@ int main(int argc, char *argv[])
 
         /* Reception de l'id du serveur auquel on se connecte */
         if (read(sserver, &(newServer->serverId), sizeof(newServer->serverId)) <= 0){
-            return ERROR_SERVER_CONNECTION;
+            return ERROR_BACKUP_INIT;
         }
 
         /* Réception de notre id client */
-        if (read(heapInfo->sock, &(serverId), sizeof(serverId)) <= 0){
-            return DHEAP_ERROR_CONNECTION;
+        if (read(sserver, &(serverId), sizeof(serverId)) <= 0){
+            return ERROR_BACKUP_INIT;
         }
 
-        /* Reception de la taille du tas */         
-        if (read(heapInfo->sock,&(heapInfo->heapSize),sizeof(heapInfo->heapSize)) <= 0){
-            return DHEAP_ERROR_CONNECTION;
+        /* normalement avec init_data(), on a déjà la bonne taille du tas 
+         * et l'initialisation est faite */
+
+#if DEBUG
+        printf("HeapSize: %" PRIu64 "\n", heapData->size);
+        printf("ServerID: %" PRIu16 "\n", serverId);
+#endif 
+
+        /* allocation du tas dans la mémoire */
+        heapInfo->heapStart = malloc(heapInfo->heapSize);
+        if (heapInfo->heapStart == NULL){
+            return ERROR_BACKUP_INIT;
         }
-        /* Création d'un thread dédié au serveur */
+
+
+        pthread_mutex_unlock(&schainlock);
+        /* Création d'un thread dédié aux serveurs */
+        /*
         pthread_create((pthread_t *) & (newServer->serverId), NULL,
                        serverThread, (void *) newServer);
         serverConnected++;
+        */
     }
 
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -151,15 +173,20 @@ int main(int argc, char *argv[])
         }else if(test==2){ /* server detected */
             /* Ajout du server dans la chaîne de socket (ajout au début pour
              * éviter le parcours) */
+
+            pthread_mutex_lock(&schainlock);
             newServer = malloc(sizeof(struct serverChain));
             newServer->sock = sclient;
             newServer->next = servers;
             servers = newServer;
-
+            serversConnected++;
+            pthread_mutex_unlock(&schainlock);
             /* Création d'un thread pour traiter les requêtes */
+            /*
             pthread_create((pthread_t *) & (newServer->serverId), NULL,
                            serverThread, (void *) newServer);
-            serversConnected++;
+            */
+            
         }else{ /* error detected */
 
         }
@@ -175,10 +202,14 @@ int main(int argc, char *argv[])
         clients = clients->next;
     }
 
+    /*
     while (servers != NULL) {
         pthread_join(servers->serverId, 0);
         servers = servers->next;
     }
+    */
+    
+    pthread_join(serverId,0);
 
     shutdown(sock, 2);
     close(sock);
