@@ -27,7 +27,6 @@ void *data_thread(void *arg){
         int retval, i;
         struct dheapServer *dstmp;
 
-        /* TODO: reconnect servers */
         /* On vérifie s'il faut ping une machine ou s'il faut la déconnecter */
         dstmp = dheapServers;
         while (dstmp != NULL){
@@ -69,6 +68,9 @@ void *data_thread(void *arg){
 
             dstmp = dstmp->next;
         }
+
+        /* On essaye de se reconnecter aux serveurs offline */
+        reconnectServers();
 
         pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 

@@ -21,6 +21,7 @@ int addserver(uint8_t id, char *address, int port){
     while (tmp->next != NULL)
         tmp = tmp->next;
     tmp->next = newServer;
+    tmp->lastConnect = time(NULL);
 
     /* Connexion au serveur */
     if ((newServer->sock = connectToServer(newServer->address, newServer->port, 0)) == -1){
@@ -32,6 +33,27 @@ int addserver(uint8_t id, char *address, int port){
     buildPollList();
     
     return 0;
+}
+
+void reconnectServers(){
+    struct dheapServer *tmp;
+
+    pthread_mutex_lock(&polllock); /* TODO: peut etre que ce lock n'est pas necessaire */
+    
+    tmp = dheapServers;
+    while (tmp != NULL){
+        if (tmp->status == 0 && tmp->lastConnect < (time(NULL)-PONG_TIMEOUT)){
+            tmp->lastConnect = time(NULL);
+            if ((tmp->sock = connectToServer(tmp->address, tmp->port, 0)) != -1){
+                tmp->status = 2;
+            }
+        }
+        tmp = tmp->next;
+    }
+
+    buildPollList();
+
+    pthread_mutex_unlock(&polllock);
 }
 
 void helloNotNew(uint8_t sid){

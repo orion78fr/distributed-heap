@@ -41,6 +41,7 @@ int init_data(char *address, int port){
     strncpy(dheapServers->address, address, strlen(address));
     dheapServers->port = port;
     dheapServers->next = NULL;
+    dheapServers->lastConnect = time(NULL);
     poll_list = NULL;
 
     dheapErrorNumber = NULL;

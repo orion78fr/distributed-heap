@@ -44,6 +44,7 @@ struct dheapServer {
     struct dheapServer *next;
     time_t lastMsgTime;
     time_t lastPing;
+    time_t lastConnect;
 };
 
 extern struct heapInfo *heapInfo;
@@ -133,6 +134,7 @@ int addserver(uint8_t id, char *address, int port);
 int switchMain();
 void cleanServers();
 int connectToServer(char *address, int port, int block);
+void reconnectServers();
 void buildPollList();
 void setServerDown(uint8_t id);
 uint8_t getServerIdBySock(int sock);
