@@ -39,7 +39,9 @@ void *data_thread(void *arg){
                         msgtypeClient = MSG_RETRY;
                         setServerDownNoRebuild(dstmp->id);
                         switchMain();
+                        pthread_mutex_lock(&readylock);
                         pthread_cond_wait(&readcond, &readlock);
+                        pthread_mutex_unlock(&readylock);
                     } else {
                         pthread_mutex_unlock(&mainlock);
                     }
@@ -58,7 +60,9 @@ void *data_thread(void *arg){
                             msgtypeClient = MSG_RETRY;
                             setServerDownNoRebuild(dstmp->id);
                             switchMain();
+                            pthread_mutex_lock(&readylock);
                             pthread_cond_wait(&readcond, &readlock);
+                            pthread_mutex_unlock(&readylock);
                         } else {
                             pthread_mutex_unlock(&mainlock);
                         }
@@ -97,7 +101,9 @@ void *data_thread(void *arg){
                             msgtypeClient = MSG_RETRY;
                             setServerDownNoRebuild(ds->id);
                             switchMain();
+                            pthread_mutex_lock(&readylock);
                             pthread_cond_wait(&readcond, &readlock);
+                            pthread_mutex_unlock(&readylock);
                         } else {
                             pthread_mutex_unlock(&mainlock);
                         }
@@ -113,7 +119,9 @@ void *data_thread(void *arg){
                             msgtypeClient = MSG_RETRY;
                             setServerDownNoRebuild(ds->id);
                             switchMain();
+                            pthread_mutex_lock(&readylock);
                             pthread_cond_wait(&readcond, &readlock);
+                            pthread_mutex_unlock(&readylock);
                         } else {
                             pthread_mutex_unlock(&mainlock);
                         }
