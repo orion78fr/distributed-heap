@@ -5,7 +5,7 @@
  * @param type du message, nom de la variable, pointeur pour la récupérer
  * @return enum errorCodes
  */
-int t_access_common(uint8_t msgtype, char *name, void **p){
+int t_access_common(uint8_t msgtype, char *name, void **p, uint64_t offset){
     uint8_t namelen, retack;
     int ret;
     int done = 0;
@@ -41,19 +41,35 @@ int t_access_common(uint8_t msgtype, char *name, void **p){
             continue;
         }
 
-        /* On envoie la longueur du nom qu'on veut lire */
-        namelen = strlen(name);
-        if (write(heapInfo->sock, &namelen, sizeof(namelen)) == -1){
-            setDownAndSwitch(heapInfo->mainId);
-            done = -1;
-            continue;
-        }
+        /* access by offset */
+        if (msgtype == MSG_ACCESS_READ_BY_OFFSET || msgtype == MSG_ACCESS_READ_BY_OFFSET){
+            /* On vérifie que l'offset passé n'est pas supérieur à la taille du tas */
+            if (offset > heapInfo->heapSize){
+                pthread_mutex_lock(&mainlock);
+                pthread_mutex_lock(&writelock);
+                return DHEAP_ERROR_BAD_POINTER;
+            }
 
-        /* On envoie le nom */
-        if (write(heapInfo->sock, name, namelen) == -1){
-            setDownAndSwitch(heapInfo->mainId);
-            done = -1;
-            continue;
+            if (write(heapInfo->sock, &offset, sizeof(offset)) == -1){
+                setDownAndSwitch(heapInfo->mainId);
+                done = -1;
+                continue;
+            }
+        } else {
+            /* On envoie la longueur du nom qu'on veut lire */
+            namelen = strlen(name);
+            if (write(heapInfo->sock, &namelen, sizeof(namelen)) == -1){
+                setDownAndSwitch(heapInfo->mainId);
+                done = -1;
+                continue;
+            }
+
+            /* On envoie le nom */
+            if (write(heapInfo->sock, name, namelen) == -1){
+                setDownAndSwitch(heapInfo->mainId);
+                done = -1;
+                continue;
+            }
         }
 
         pthread_mutex_unlock(&writelock);
@@ -137,7 +153,7 @@ int t_access_read(char *name, void **p){
     printf("Appel t_access_read(%s)\n", name);
 #endif 
     msgtype = MSG_ACCESS_READ;
-    return t_access_common(msgtype, name, p);
+    return t_access_common(msgtype, name, p, 0);
 }
 
 /**
@@ -151,7 +167,35 @@ int t_access_write(char *name, void **p){
     printf("Appel t_access_write(%s)\n", name);
 #endif 
     msgtype = MSG_ACCESS_WRITE;
-    return t_access_common(msgtype, name, p);
+    return t_access_common(msgtype, name, p, 0);
+}
+
+/**
+ * Demander l'accès en lecture sur une variable via son offset
+ * @param offset de la variable, pointeur pour la récupérer
+ * @return enum errorCodes
+ */
+int t_access_read_byoffset(uint64_t offset, void **p){
+    uint8_t msgtype;
+#if DEBUG
+    printf("Appel t_access_read_byoffset(%" PRIu64 ")\n", offset);
+#endif 
+    msgtype = MSG_ACCESS_READ_BY_OFFSET;
+    return t_access_common(msgtype, NULL, p, offset);
+}
+
+/**
+ * Demander l'accès en écriture sur une variable via son offset
+ * @param offset de la variable, pointeur pour la récupérer
+ * @return enum errorCodes
+ */
+int t_access_write_byoffset(uint64_t offset, void **p){
+    uint8_t msgtype;
+#if DEBUG
+    printf("Appel t_access_write_byoffset(%" PRIu64 ")\n", offset);
+#endif 
+    msgtype = MSG_ACCESS_WRITE_BY_OFFSET;
+    return t_access_common(msgtype, NULL, p, offset);
 }
 
 /**

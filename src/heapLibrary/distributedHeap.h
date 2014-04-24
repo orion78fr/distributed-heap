@@ -118,7 +118,9 @@ int t_free(char *name);
 /* access.c */
 int t_access_read(char *name, void **p);
 int t_access_write(char *name, void **p);
-int t_access_common(uint8_t msgtype, char *name, void **p);
+int t_access_read_byoffset(uint64_t offset, void **p);
+int t_access_write_byoffset(uint64_t offset, void **p);
+int t_access_common(uint8_t msgtype, char *name, void **p, uint64_t offset);
 int t_release(void *p);
 /* ack.c */
 int receiveAck(uint8_t msgtype);
