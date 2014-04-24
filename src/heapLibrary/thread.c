@@ -49,6 +49,7 @@ void *data_thread(void *arg){
             /* On vérifie s'il faut pinger */
             if (dstmp->status == 1 && dstmp->lastMsgTime < (time(NULL) - TIMEOUT_BEFORE_PING)){
                 uint8_t msgtype = MSG_PING;
+                pthread_mutex_lock(&writelock);
                 if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
                     if (dstmp->id == heapInfo->mainId){
                         if (pthread_mutex_trylock(&mainlock) != 0){
@@ -63,6 +64,7 @@ void *data_thread(void *arg){
                     dstmp = dstmp->next;
                     continue;
                 }
+                pthread_mutex_unlock(&writelock);
                 dstmp->lastPing = time(NULL);
             }
 
