@@ -102,6 +102,9 @@ int main(int argc, char *argv[])
         if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
+
+        rcv_total_replication(sserver);
+
     }else{
         servers=NULL;
     }

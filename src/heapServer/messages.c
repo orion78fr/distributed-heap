@@ -261,8 +261,112 @@ int do_free(int sock){
     return -1;
 }
 
-int do_total_replication(int sock){
+int snd_total_replication(int sock){
 
 
 
+}
+
+int rcv_total_replication(int sock){
+    int *servId;
+    char **servAddress;
+    uint8_t taille;
+    char *nom;
+    uint64_t offset;
+    uint64_t varSize;
+    struct heapData *data;
+    uint8_t continuer;
+
+    /* Replication des serveurs */
+    if (read(sock, (void *) &serversConnected, sizeof(serversConnected)) <= 0) { /* Nombre serveurs */
+        goto disconnect;
+    }
+
+    servAddress = malloc(serversConnected * sizeof(char*));
+    for (int i = 0; i < serversConnected; i++)
+        servAddress[i] = malloc(16);
+
+    for(int i=0; i<serversConnected; i++){
+        struct serverChain *newServer;
+        if (read(sock, (void *) &newServer->serverId, sizeof(newServer->serverId)) <= 0) { /* Nombre serveurs */
+            goto disconnect;
+        } 
+        if (read(sock, (void *) &servAddress[i], sizeof(servAddress[i])) <= 0) { /* Nombre serveurs */
+            goto disconnect;
+        } 
+    }
+
+    /* Replication des données */
+
+    if (read(sock, (void *) &continuer, sizeof(continuer)) <= 0) { /* nouvelle donnee a recevoir */
+        goto disconnect;
+    }
+
+    while(continuer!=0){
+        if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* taille donnee a recevoir */
+            goto disconnect;
+        }   
+        if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* taille donnee a recevoir */
+            goto disconnect;
+        }   
+    }
+
+
+    /* connexion aux serveurs */
+
+
+    /* envoi d'un message pour confirmer la replication totale */
+
+
+}
+
+int snd_partial_replication(int sock){
+
+}
+
+int rcv_partial_replication(int sock){
+    uint8_t taille;
+    char *nom;
+    struct heapData *data;
+
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+    data = get_data(nom);
+
+    if(data == NULL){/* création de la var */
+#if DEBUG
+    printf("[Server %d] Demande creation(replication partielle) de %s\n",
+           pthread_self(), data->name);
+#endif
+        
+        /* TODO */
+
+    } else {/* mis à jour de la var */
+#if DEBUG
+    printf("[Server %d] Demande mis a jour(replication partielle) de %s\n",
+           pthread_self(), data->name);
+#endif
+
+        /* TODO */  
+    
+    }
+    return 0;
+    disconnect:
+    if(nom != NULL){
+        free(nom);
+    }
+    return -1;
 }

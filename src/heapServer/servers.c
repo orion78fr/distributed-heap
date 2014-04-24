@@ -35,6 +35,47 @@ void *serverThread(void *arg)
         if (retval > 0){
             struct serverChain *server = firstServer;
             for (i=0; i<serversConnected)
+                if((poll_list[i].revents&POLLNVAL)==POLLNVAL){
+#if DEBUG
+    printf("POLLNVAL, server id = %d\n", server->serverId);
+#endif 
+                    /* traiter la deco server */
+                    continue;
+                }
+                if ((poll_list[i].revents&POLLHUP) == POLLHUP){
+#if DEBUG
+    printf("POLLHUP, server id = %d\n", server->serverId);
+#endif 
+                    /* traiter la deco server */
+                    continue;
+                }
+                if ((poll_list[i].revents&POLLIN) == POLLIN){
+                    uint8_t msgtype;
+                    if (read(poll_list[i].fd, &msgtype, sizeof(msgtype)) <= 0){
+                        /* traiter le prob server */
+                        continue;
+                    }
+                    /* Switch pour les différents types de messages */
+                    switch (msgType) {
+                    case MSG_TOTAL_REPLICATION: /* Replication totale */
+                        if(snd_total_replication(poll_list[i].fd) == -1){
+                            goto disconnect;
+                        }
+                        break;
+                    case MSG_PARTIAL_REPLICATION:   /* Replication partielle */
+                        if(do_partial_replication(poll_list[i].fd) == -1){
+                            goto disconnect;
+                        }
+                        break;
+                    case MSG_PING:  /* Ping server */
+                        if(do_ping(poll_list[i].fd) == -1){
+                            goto disconnect;
+                        }
+                        break;
+                    case MSG_ERROR: /* Message d'erreur */
+                    default:                /* Unknown message code, version problem? */
+                        goto disconnect;
+                    }
 
 
 
@@ -43,28 +84,7 @@ void *serverThread(void *arg)
 
 
 
-
-
-
-
-
-
-        }
-
-        if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
-            goto disconnect;
-        }
-
-        /* Switch pour les différents types de messages */
-        switch (msgType) {
-        case MSG_TOTAL_REPLICATION: /* Demande de replication totale */
-            if(do_replication(sock) == -1){
-                goto disconnect;
-            }
-            break;
-        case MSG_ERROR: /* Message d'erreur */
-        default:                /* Unknown message code, version problem? */
-            goto disconnect;
+                server = server->next;
         }
     }
 
