@@ -10,6 +10,7 @@ int main(int argc, char *argv[])
     int sclient;                /* Socket du client */
     int sserver;                /* Socket du serveur */
 
+
     /* Parsing des arguments */
     if (parse_args(argc, argv)) {
         perror("Wrong args\n");
@@ -64,6 +65,7 @@ int main(int argc, char *argv[])
         newServer = malloc(sizeof(struct serverChain));
         newServer->sock=sserver;
         newServer->next=servers;
+        newServer->serverAddress=parameters.address;
         servers=newServer;
 
         /* Ajout du main à la poll_list */

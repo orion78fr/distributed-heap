@@ -92,8 +92,7 @@ int do_inquire(int sock){
 
         if(send_data(sock, MSG_HELLO_NEW_SERVER, 3,
                         (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
-                        (DS){sizeof(newServer->serverId), &(newServer->serverId)},
-                        (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
+                        (DS){sizeof(newServer->serverId), &(newServer->serverId)})<0){
             goto disconnect;
         }
         return 2;
@@ -262,7 +261,94 @@ int do_free(int sock){
 }
 
 int snd_total_replication(int sock){
+    struct  serverChain *servTemp = servers;
+    struct heapData *data=NULL;
+    uint8_t continuer=0, tailleNom;
 
+    if(write(sock, &serversConnected, sizeof(serversConnected)) <= 0){
+        goto disconnect;
+    }
+
+    for(int i=0; i<serversConnected; i++){
+
+        if(write(sock, &servTemp->serverId, sizeof(servTemp->serverId)) <= 0){
+            goto disconnect;
+        }
+
+        if(write(sock, &servTemp->serverAddress, sizeof(servTemp->serverAddress)) <= 0){
+            goto disconnect;
+        }
+
+       servTemp=servTemp->next;
+    }
+
+    pthread_mutex_lock(&hashTableMutex);
+    int i=0;
+    while(data==NULL && i!=hashSize){
+        data = hashTable[i]
+        i++;
+    }
+    if(data!=NULL){
+        continuer=1;
+    }
+    while(continuer){
+
+
+        
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        tailleNom = strlen(data->name);
+        if(write(sock, &tailleNom, sizeof(tailleNom)) <= 0){
+            goto disconnect;
+        }  
+
+        if(write(sock, &data->name, sizeof(data->name)) <= 0){
+            goto disconnect;
+        }        
+
+        if(write(sock, &data->offset, sizeof(data->offset)) <= 0){
+            goto disconnect;
+        }
+
+        if(write(sock, &data->size, sizeof(data->size)) <= 0){
+            goto disconnect;
+        }
+
+        /* TODO            *
+         * Lock en attente */
+
+
+
+        
+
+        newData->next = hashTable[sum];
+        hashTable[sum] = newData;
+
+        offsetSum = newData->offset % parameters.hashSize;
+        newData->nextOffset = hashTableOffset[offsetSum];
+        hashTableOffset[offsetSum] = newData;
+
+
+
+
+
+
+        while(data==NULL && i!=hashSize){
+            data = hashTable[i];
+            i++;
+        }
+        if(data==NULL){
+            continuer=0;
+        }
+    }
+
+    pthread_mutex_unlock(&hashTableMutex);
+
+    if(write(sock, &continuer, sizeof(continuer)) <= 0){
+        goto disconnect;
+    }
 
 
 }
@@ -278,20 +364,24 @@ int rcv_total_replication(int sock){
     uint8_t continuer;
 
     /* Replication des serveurs */
+
+
     if (read(sock, (void *) &serversConnected, sizeof(serversConnected)) <= 0) { /* Nombre serveurs */
         goto disconnect;
     }
 
-    servAddress = malloc(serversConnected * sizeof(char*));
+    /*servAddress = malloc(serversConnected * sizeof(char*));
     for (int i = 0; i < serversConnected; i++)
-        servAddress[i] = malloc(16);
+        servAddress[i] = malloc(16);*/
 
     for(int i=0; i<serversConnected; i++){
         struct serverChain *newServer;
-        if (read(sock, (void *) &newServer->serverId, sizeof(newServer->serverId)) <= 0) { /* Nombre serveurs */
+        newServer = malloc(sizeof(struct serverChain));
+
+        if (read(sock, (void *) &newServer->serverId, sizeof(newServer->serverId)) <= 0) { /* id des serveurs */
             goto disconnect;
         } 
-        if (read(sock, (void *) &servAddress[i], sizeof(servAddress[i])) <= 0) { /* Nombre serveurs */
+        if (read(sock, (void *) &newServer->serverAddress, sizeof(newServer->serverAddress)) <= 0) { /* Nombre serveurs */
             goto disconnect;
         } 
     }
@@ -303,10 +393,44 @@ int rcv_total_replication(int sock){
     }
 
     while(continuer!=0){
-        if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* taille donnee a recevoir */
+        struct heapData *newData = malloc(sizeof(struct heapData));
+
+        if(read(sock, (void *) &taille, sizeof(taille)) <= 0){
             goto disconnect;
-        }   
-        if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* taille donnee a recevoir */
+        }  
+
+        if(read(sock, &newData->name, taille) <= 0){
+            goto disconnect;
+        }        
+
+        if(read(sock, &newData->offset, sizeof(newData->offset)) <= 0){
+            goto disconnect;
+        }
+
+        if(write(sock, &newData->size, sizeof(newData->size)) <= 0){
+            goto disconnect;
+        }
+
+
+        /* TODO            *
+         * Lock en attente */
+        int sum = getHashSum(newData->name); 
+        int offsetSum = newData->offset % parameters.hashSize;
+        
+        pthread_mutex_lock(&hashTableMutex);
+
+        newData->next = hashTable[sum];
+        hashTable[sum] = newData;
+
+        offsetSum = newData->offset % parameters.hashSize;
+        newData->nextOffset = hashTableOffset[offsetSum];
+        hashTableOffset[offsetSum] = newData;
+
+        memset(theHeap + newData->offset, 0, size);
+
+        pthread_mutex_unlock(&hashTableMutex);
+
+        if (read(sock, (void *) &continuer, sizeof(continuer)) <= 0) { /* nouvelle donnee a recevoir */
             goto disconnect;
         }   
     }

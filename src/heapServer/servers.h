@@ -5,6 +5,7 @@ struct serverChain {
     pthread_t serverId;
     int sock;
     struct serverChain *next;
+    char *serverAddress;
 };
 
 extern int serversConnected;
