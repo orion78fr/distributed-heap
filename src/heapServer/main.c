@@ -40,9 +40,7 @@ int main(int argc, char *argv[])
     /* setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
      * GTU : Est-ce nécessaire? */
 
-    /* Création d'un thread pour traiter les requêtes servers */
-    pthread_create((pthread_t *) & (serverId), NULL,
-                    serverThread, (void *) servers);
+
 
 
     /* Connexion au server principal */
@@ -59,7 +57,7 @@ int main(int argc, char *argv[])
             return ERROR_SERVER_CONNECTION;
         }
 
-        pthread_mutex_lock(&schainlock);
+
 
         /* Ajout du server dans la chaîne de socket (ajout au début pour
          * éviter le parcours) */
@@ -99,24 +97,18 @@ int main(int argc, char *argv[])
             return ERROR_BACKUP_INIT;
         }
 
-        pthread_mutex_unlock(&schainlock);
-
-        /* demande de mis à jour du tas et des locks */
+        /* demande de mis à jour du tas et des locks et du nombre de serveur */
         msgtype = MSG_TOTAL_REPLICATION;
         if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
-
-
-
-
-        /* Création d'un thread dédié aux serveurs */
-        /*
-        pthread_create((pthread_t *) & (newServer->serverId), NULL,
-                       serverThread, (void *) newServer);
-        serverConnected++;
-        */
+    }else{
+        servers=NULL;
     }
+
+    /* Création d'un thread pour traiter les requêtes servers */
+    pthread_create((pthread_t *) & (parameters.serverNum), NULL,
+                    serverThread, (void *) servers);
 
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
 

@@ -99,8 +99,13 @@ int do_total_replication(int sock);
  * MSG_PING              |             /                 |          /
  *     S <-> C           |                               |
  * -----------------------------------------------------------------------------
- * MSG_TOTAL_REPLICATION |             /                 |          /
- *     S <-> S           |                               |
+ * MSG_TOTAL_REPLICATION |             /                 | nombre servers
+ *     S <-> S           |             /                 | @chaque serveur
+ *                       |             /                 | nom
+ *                       |             /                 | offset
+ *                       |             /                 | size
+ *                       |             /                 | lock en attente
+ *                       |             /                 | 
  * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int

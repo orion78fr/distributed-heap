@@ -82,7 +82,12 @@ int do_inquire(int sock){
         newServer->sock = sock;
         newServer->next = servers;
         servers = newServer;
+
+        poll_list=realloc(poll_list,sizeof(struct pollfd)*serversConnected);
+        poll_list[serversConnected].fd = newServer->sock;
+        poll_list[serversConnected].events = POLLHUP | POLLIN | POLLNVAL;
         serversConnected++;
+
         pthread_mutex_unlock(&schainlock);
 
         if(send_data(sock, MSG_HELLO_NEW_SERVER, 3,
