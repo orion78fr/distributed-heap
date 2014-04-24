@@ -40,3 +40,18 @@ void setError(uint8_t e){
         dheapErrorNumber = malloc(sizeof(uint8_t));
     *dheapErrorNumber = e;
 }
+
+/**
+ * Appel setServerDown() pour fermer la connexion d'un serveur,
+ * puis switchMain() dans le cas où le serveur fermé était le main
+ * @param id du serveur
+ */
+void setDownAndSwitch(uint8_t sid){
+#if DEBUG
+    printf("Appel de setDownAndSwitch(%" PRIu8 ")\n", sid);
+#endif 
+    setServerDown(sid);
+    if (sid == heapInfo->mainId)
+        switchMain();
+}
+

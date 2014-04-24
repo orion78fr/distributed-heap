@@ -132,20 +132,22 @@ void exit_data_thread(uint8_t e);
 int checkError();
 void setError(uint8_t e);
 void unlockAndSignal();
+void setDownAndSwitch(uint8_t sid);
 /* servers.c */
 int addserver(uint8_t id, char *address, int port);
-int switchMain();
 void cleanServers();
 int connectToServer(char *address, int port, int block);
 void reconnectServers();
+void helloNotNew(uint8_t sid);
+/* serversPoll.c */
 void buildPollList();
 void setServerDownInternal(uint8_t id, int doBuildPollList);
 void setServerDown(uint8_t id);
 void setServerDownNoRebuild(uint8_t id);
+int switchMain();
+/* serversTools.c */
+int removeServer(uint8_t sid);
+void setTime(uint8_t sid);
 uint8_t getServerIdBySock(int sock);
 struct dheapServer* getServerBySock(int sock);
 struct dheapServer* getServerById(uint8_t sid);
-void helloNotNew(uint8_t sid);
-void setDownAndSwitch(uint8_t sid);
-void setTime(uint8_t sid);
-int removeServer(uint8_t sid);
