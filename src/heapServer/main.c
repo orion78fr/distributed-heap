@@ -134,18 +134,19 @@ int main(int argc, char *argv[])
         struct clientChain *newClient;
         struct serverChain *newServer;
         char address[14];
-        struct sockaddr *addr;
-        socklen_t *addr_len;
+        struct sockaddr addr;
 
 #if DEBUG
         printf("Waiting for clients...\n");
 #endif
 
         /* On accepte la connexion */
-        if ((sclient = accept(sock, addr, addr_len)) == -1) {
+        if ((sclient = accept(sock, (struct sockaddr*)&addr, sizeof(addr))) == -1) {
             perror("accept");
             exit(EXIT_FAILURE);
         }
+
+        address = inet_ntoa (addr.sin_addr);
 
 #if DEBUG
         printf("New Client...\n");
@@ -161,7 +162,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        int test=do_inquire(sclient);
+        int test=do_inquire(sclient, &address);
 
         /* client detected */
         if(test=1{

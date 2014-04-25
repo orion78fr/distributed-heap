@@ -52,7 +52,7 @@ int send_error(int sock, uint8_t errType){
     return send_data(sock, MSG_ERROR, 1, (DS){sizeof(errType), &errType});
 }
 
-int do_inquire(int sock){
+int do_inquire(int sock, char* address){
     uint8_t msgType;
 
     if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
@@ -82,6 +82,7 @@ int do_inquire(int sock){
         newServer = malloc(sizeof(struct serverChain));
         newServer->sock = sock;
         newServer->next = servers;
+        newServer->serverAddress = address;
         newServer->serverId = numServer;
         numServer++;
         servers = newServer;
@@ -332,12 +333,105 @@ int snd_total_replication(int sock){
 
         /* TODO            *
          * Lock en attente */
-        if(write(sock, data->readAccess, sizeof(data->)) <= 0){
-            goto disconnect;
+
+        struct clientChainRead *readAccessTemp = readAccess;
+        uint16_t continuer;
+        while(readAccessTemp!=NULL){
+            if(write(sock, &readAccessTemp->clientId, sizeof(readAccessTemp->clientId)) <= 0){
+                goto disconnect;
+            }
+            continuer = readAccessTemp->clientId;
+            readAccessTemp = readAccessTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+                goto disconnect;
         }
 
 
+        struct clientChainRead *readWaitTemp = readWait;
+        while(readWaitTemp!=NULL){
+            if(write(sock, &readWaitTemp->clientId, sizeof(readWaitTemp->clientId)) <= 0){
+                goto disconnect;
+            }
+            continuer = readWaitTemp->clientId;
+            readWaitTemp = readWaitTemp->next;
+        }
+        
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
 
+        struct clientChainWrite *writeAccessTemp = writeAccess;
+        while(writeAccessTemp!=NULL){
+            if(write(sock, &writeAccessTemp->clientId, sizeof(writeAccessTemp->clientId)) <= 0){
+                goto disconnect;
+            }
+            continuer = writeAccessTemp->clientId;
+            writeAccessTemp = writeAccessTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct clientChainWrite *writeWaitTemp = writeWait;
+        while(writeWaitTemp!=NULL){
+            if(write(sock, &writeWaitTemp->clientId, sizeof(writeWaitTemp->clientId)) <= 0){
+                goto disconnect;
+            }
+            continuer = writeWaitTemp->clientId;
+            writeWaitTemp = writeWaitTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct serverChainRead *serverReadAccessTemp = serverReadAccess;
+        while(serverReadAccessTemp!=NULL){
+            if(write(sock, &serverReadAccessTemp->serverId, sizeof(serverReadAccessTemp->serverId)) <= 0){
+                goto disconnect;
+            }
+            continuer = serverReadAccessTemp->clientId;
+            serverReadAccessTemp = serverReadAccessTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct serverChainRead *serverReadWaitTemp = serverReadWait;
+        while(serverReadWaitTemp!=NULL){
+            if(write(sock, &serverReadWaitTemp->serverId, sizeof(serverReadWaitTemp->serverId)) <= 0){
+                goto disconnect;
+            }
+            continuer = serverReadWaitTemp->clientId;
+            serverReadWaitTemp = serverReadWaitTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct serverChainWrite *serverWriteAccessTemp = serverWriteAccess;
+        while(serverWriteAccessTemp!=NULL){
+            if(write(sock, &serverWriteAccessTemp->serverId, sizeof(serverWriteAccessTemp->serverId)) <= 0){
+                goto disconnect;
+            }
+            continuer = serverWriteAccessTemp->clientId;
+            serverWriteAccessTemp = serverWriteAccessTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct serverChainWrite *serverWriteWaitTemp = serverWriteWait;
+        while(serverWriteWaitTemp!=NULL){
+            if(write(sock, &serverWriteWaitTemp->serverId, sizeof(serverWriteWaitTemp->serverId)) <= 0){
+                goto disconnect;
+            }
+            continuer = serverWriteWaitTemp->clientId;
+            serverWriteWaitTemp = serverWriteWaitTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
 
         while(data==NULL && i!=hashSize){
             data = hashTable[i];
@@ -386,8 +480,6 @@ int rcv_total_replication(int sock){
             goto disconnect;
         } 
 
-
-
         if(read(sock, (void *) &taille, sizeof(taille)) <= 0){ /* taille @ serveur */
             goto disconnect;
         }
@@ -427,8 +519,113 @@ int rcv_total_replication(int sock){
             goto disconnect;
         }
 
+        newData->readAccess = NULL;
+        newData->writeAccess = NULL;
+        newData->readWait = NULL;
+        newData->writeWait = NULL;
+        pthread_mutex_init(&(newData->mutex), NULL);
+        pthread_cond_init(&(newData->readCond), NULL);
+
         /* TODO            *
          * Lock en attente */
+
+        uint16_t continuer;
+        while(readAccessTemp!=NULL){
+            if(write(sock, &readAccessTemp->clientId, sizeof(readAccessTemp->clientId)) <= 0){
+                goto disconnect;
+            }
+            continuer = readAccessTemp->clientId;
+            readAccessTemp = readAccessTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+                goto disconnect;
+        }
+
+
+        struct clientChainRead *readWaitTemp = readWait;
+        while(readWaitTemp!=NULL){
+            if(write(sock, &readWaitTemp->clientId, sizeof(readWaitTemp->clientId)) <= 0){
+                goto disconnect;
+            }
+            continuer = readWaitTemp->clientId;
+            readWaitTemp = readWaitTemp->next;
+        }
+        
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct clientChainWrite *writeAccessTemp = writeAccess;
+        while(writeAccessTemp!=NULL){
+            if(write(sock, &writeAccessTemp->clientId, sizeof(writeAccessTemp->clientId)) <= 0){
+                goto disconnect;
+            }
+            continuer = writeAccessTemp->clientId;
+            writeAccessTemp = writeAccessTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct clientChainWrite *writeWaitTemp = writeWait;
+        while(writeWaitTemp!=NULL){
+            if(write(sock, &writeWaitTemp->clientId, sizeof(writeWaitTemp->clientId)) <= 0){
+                goto disconnect;
+            }
+            continuer = writeWaitTemp->clientId;
+            writeWaitTemp = writeWaitTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct serverChainRead *serverReadAccessTemp = serverReadAccess;
+        while(serverReadAccessTemp!=NULL){
+            if(write(sock, &serverReadAccessTemp->serverId, sizeof(serverReadAccessTemp->serverId)) <= 0){
+                goto disconnect;
+            }
+            continuer = serverReadAccessTemp->clientId;
+            serverReadAccessTemp = serverReadAccessTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct serverChainRead *serverReadWaitTemp = serverReadWait;
+        while(serverReadWaitTemp!=NULL){
+            if(write(sock, &serverReadWaitTemp->serverId, sizeof(serverReadWaitTemp->serverId)) <= 0){
+                goto disconnect;
+            }
+            continuer = serverReadWaitTemp->clientId;
+            serverReadWaitTemp = serverReadWaitTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct serverChainWrite *serverWriteAccessTemp = serverWriteAccess;
+        while(serverWriteAccessTemp!=NULL){
+            if(write(sock, &serverWriteAccessTemp->serverId, sizeof(serverWriteAccessTemp->serverId)) <= 0){
+                goto disconnect;
+            }
+            continuer = serverWriteAccessTemp->clientId;
+            serverWriteAccessTemp = serverWriteAccessTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
+
+        struct serverChainWrite *serverWriteWaitTemp = serverWriteWait;
+        while(serverWriteWaitTemp!=NULL){
+            if(write(sock, &serverWriteWaitTemp->serverId, sizeof(serverWriteWaitTemp->serverId)) <= 0){
+                goto disconnect;
+            }
+            continuer = serverWriteWaitTemp->clientId;
+            serverWriteWaitTemp = serverWriteWaitTemp->next;
+        }
+        if(write(sock, &continuer, sizeof(continuer)) <= 0){
+            goto disconnect;
+        }
 
 
 
