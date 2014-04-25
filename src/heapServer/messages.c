@@ -323,25 +323,15 @@ int snd_total_replication(int sock){
         }
 
 
-        if(write(sock, theHeap + newData->offset, newData->size) <= 0){
+        if(write(sock, theHeap + data->offset, data->size) <= 0){
             goto disconnect;
         }
 
         /* TODO            *
          * Lock en attente */
-
-
-
-        
-
-        newData->next = hashTable[sum];
-        hashTable[sum] = newData;
-
-        offsetSum = newData->offset % parameters.hashSize;
-        newData->nextOffset = hashTableOffset[offsetSum];
-        hashTableOffset[offsetSum] = newData;
-
-
+        if(write(sock, data->readAccess, sizeof(data->)) <= 0){
+            goto disconnect;
+        }
 
 
 
@@ -481,7 +471,7 @@ int snd_partial_replication(struct heapData *data){
                         (DS){tailleNom, data->name},
                         (DS){sizeof(data->offset), &data->offset},
                         (DS){sizeof(data->size), &data->size},
-                        (DS){newData->size, theHeap + newData->offset})<0){
+                        (DS){data->size, theHeap + data->offset})<0){
             goto disconnect;
 
         /* TODO            *
@@ -518,10 +508,46 @@ int rcv_partial_replication(int sock){
     if(data == NULL){/* création de la var */
 #if DEBUG
     printf("[Server %d] Demande creation(replication partielle) de %s\n",
-           pthread_self(), data->name);
+           pthread_self(), nom);
 #endif
+        data = malloc(sizeof(struct heapData));
+        data->name=nom;
+
+        if(read(sock, &data->offset, sizeof(data->offset)) <= 0){
+            goto disconnect;
+        }
+
+        if(read(sock, &data->size, sizeof(data->size)) <= 0){
+            goto disconnect;
+        }
+
+
+        if(read(sock, theHeap + data->offset, data->size) <= 0){
+            goto disconnect;
+        }
+
+        /* TODO            *
+         * Lock en attente */
+
+        pthread_mutex_init(&(data->mutex), NULL);
+        pthread_cond_init(&(data->readCond), NULL);
+
+        int sum = getHashSum(data->name); 
+        int offsetSum = data->offset % parameters.hashSize;
         
-        /* TODO */
+        pthread_mutex_lock(&hashTableMutex);
+
+        data->next = hashTable[sum];
+        hashTable[sum] = data;
+
+        offsetSum = data->offset % parameters.hashSize;
+        data->nextOffset = hashTableOffset[offsetSum];
+        hashTableOffset[offsetSum] = data;
+
+        memset(theHeap + data->offset, 0, size);
+
+        pthread_mutex_unlock(&hashTableMutex);
+
 
     } else {/* mis à jour de la var */
 #if DEBUG
@@ -529,7 +555,22 @@ int rcv_partial_replication(int sock){
            pthread_self(), data->name);
 #endif
 
-        /* TODO */  
+
+        if(read(sock, &data->offset, sizeof(data->offset)) <= 0){
+            goto disconnect;
+        }
+
+        if(read(sock, &data->size, sizeof(data->size)) <= 0){
+            goto disconnect;
+        }
+
+
+        if(read(sock, theHeap + data->offset, data->size) <= 0){
+            goto disconnect;
+        }
+
+        /* TODO            *
+         * Lock en attente */
     
     }
     return 0;
