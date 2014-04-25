@@ -101,6 +101,7 @@ int do_total_replication(int sock);
  * -----------------------------------------------------------------------------
  * MSG_TOTAL_REPLICATION   |             /                 | nombre servers
  *     S <-> S             |             /                 | id serveur
+ *                         |             /                 | taille @ serveur
  *                         |             /                 | @ serveur
  *                         |             /                 | continue (uint8)
  *                         |             /                 | taille nom

@@ -275,7 +275,13 @@ int snd_total_replication(int sock){
             goto disconnect;
         }
 
-        if(write(sock, &servTemp->serverAddress, sizeof(servTemp->serverAddress)) <= 0){
+        tailleNom = strlen(servTemp->serverAddress);
+
+        if(write(sock, &tailleNom, sizeof(tailleNom)) <= 0){
+            goto disconnect;
+        }
+
+        if(write(sock, servTemp->serverAddress, tailleNom) <= 0){
             goto disconnect;
         }
 
@@ -304,7 +310,7 @@ int snd_total_replication(int sock){
             goto disconnect;
         }  
 
-        if(write(sock, &data->name, sizeof(data->name)) <= 0){
+        if(write(sock, data->name, tailleNom) <= 0){
             goto disconnect;
         }        
 
@@ -313,6 +319,11 @@ int snd_total_replication(int sock){
         }
 
         if(write(sock, &data->size, sizeof(data->size)) <= 0){
+            goto disconnect;
+        }
+
+
+        if(write(sock, theHeap + newData->offset, newData->size) <= 0){
             goto disconnect;
         }
 
@@ -381,7 +392,14 @@ int rcv_total_replication(int sock){
         if (read(sock, (void *) &newServer->serverId, sizeof(newServer->serverId)) <= 0) { /* id des serveurs */
             goto disconnect;
         } 
-        if (read(sock, (void *) &newServer->serverAddress, sizeof(newServer->serverAddress)) <= 0) { /* Nombre serveurs */
+
+
+
+        if(read(sock, (void *) &taille, sizeof(taille)) <= 0){ /* taille @ serveur */
+            goto disconnect;
+        }
+
+        if (read(sock, (void *) newServer->serverAddress, taille) <= 0) { /* @ serveur */
             goto disconnect;
         } 
     }
@@ -399,7 +417,7 @@ int rcv_total_replication(int sock){
             goto disconnect;
         }  
 
-        if(read(sock, &newData->name, taille) <= 0){
+        if(read(sock, newData->name, taille) <= 0){
             goto disconnect;
         }        
 
@@ -407,13 +425,20 @@ int rcv_total_replication(int sock){
             goto disconnect;
         }
 
-        if(write(sock, &newData->size, sizeof(newData->size)) <= 0){
+        if(read(sock, &newData->size, sizeof(newData->size)) <= 0){
             goto disconnect;
         }
 
 
+        if(read(sock, theHeap + newData->offset, newData->size) <= 0){
+            goto disconnect;
+        }
+
         /* TODO            *
          * Lock en attente */
+
+
+
         int sum = getHashSum(newData->name); 
         int offsetSum = newData->offset % parameters.hashSize;
         
@@ -444,8 +469,28 @@ int rcv_total_replication(int sock){
 
 }
 
-int snd_partial_replication(int sock){
+int snd_partial_replication(struct heapData *data){
+    struct  serverChain *servTemp = servers;
+    uint8_t tailleNom;
 
+    pthread_mutex_lock(&hashTableMutex);
+    tailleNom = strlen(data->name);
+    for(int i=0; i<serversConnected; i++){
+        if(send_data(servTemp->sock, MSG_PARTIAL_REPLICATION, 5,
+                        (DS){sizeof(tailleNom), &tailleNom},
+                        (DS){tailleNom, data->name},
+                        (DS){sizeof(data->offset), &data->offset},
+                        (DS){sizeof(data->size), &data->size},
+                        (DS){newData->size, theHeap + newData->offset})<0){
+            goto disconnect;
+
+        /* TODO            *
+         * Lock en attente */
+        }
+
+       servTemp=servTemp->next;
+    }
+    pthread_mutex_unlock(&hashTableMutex);
 }
 
 int rcv_partial_replication(int sock){
