@@ -9,11 +9,10 @@ int clientsConnected = 0;
 void *clientThread(void *arg)
 {
     int sock = ((struct clientChain*)arg)->sock;
-    ((struct clientChain*)arg)->clientId = pthread_self();
     uint8_t msgType;
 
 #if DEBUG
-    printf("[Client %d] Connexion\n", pthread_self());
+    printf("[Client id: %d, thread: %d] Connexion\n", ((struct clientChain*)arg)->clientId, pthread_self());
 #endif
 
     do_greetings(sock);

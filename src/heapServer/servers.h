@@ -2,7 +2,8 @@
 #define HEAPSERVER_SERVERS
 
 struct serverChain {
-    pthread_t serverId;
+	uint16_t serverId;
+    pthread_t threadId;
     int sock;
     struct serverChain *next;
     char *serverAddress;

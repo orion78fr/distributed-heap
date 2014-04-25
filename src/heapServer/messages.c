@@ -66,10 +66,12 @@ int do_inquire(int sock){
         newClient = malloc(sizeof(struct clientChain));
         newClient->sock = sock;
         newClient->next = clients;
+        newClient->clientId = numClient;
+        numClient++;
         clients = newClient;
 
         /* Création d'un thread pour traiter les requêtes */
-        pthread_create((pthread_t *) & (newClient->clientId), NULL,
+        pthread_create((pthread_t *) & (newClient->threadId), NULL,
                        clientThread, (void *) newClient);
         clientsConnected++;
         return 1;
@@ -78,9 +80,10 @@ int do_inquire(int sock){
 
         pthread_mutex_lock(&schainlock);
         newServer = malloc(sizeof(struct serverChain));
-        newServer->serverId = serversConnected;
         newServer->sock = sock;
         newServer->next = servers;
+        newServer->serverId = numServer;
+        numServer++;
         servers = newServer;
 
         poll_list=realloc(poll_list,sizeof(struct pollfd)*serversConnected);
@@ -269,7 +272,7 @@ int snd_total_replication(int sock){
         goto disconnect;
     }
 
-    for(int i=0; i<serversConnected; i++){
+    while(servTemp!=NULL){
 
         if(write(sock, &servTemp->serverId, sizeof(servTemp->serverId)) <= 0){
             goto disconnect;

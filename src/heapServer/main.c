@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     int sock;                   /* Socket de connexion */
     int sclient;                /* Socket du client */
     int sserver;                /* Socket du serveur */
+    uint16_t numClient=0, numServer=1;
 
 
     /* Parsing des arguments */
@@ -80,6 +81,10 @@ int main(int argc, char *argv[])
             return ERROR_SERVER_CONNECTION;
         }
 
+        if (write(sserver, , sizeof(msgtype)) <= 0){
+            return ERROR_SERVER_CONNECTION;
+        }
+
         /* Reception du type de message (MSG_HELLO_NEW_SERVER) */          
         if (read(sserver, &msgtype, sizeof(msgtype)) <= 0){
             return ERROR_SERVER_CONNECTION;
@@ -128,13 +133,16 @@ int main(int argc, char *argv[])
     for (;;) {
         struct clientChain *newClient;
         struct serverChain *newServer;
+        char address[14];
+        struct sockaddr *addr;
+        socklen_t *addr_len;
 
 #if DEBUG
         printf("Waiting for clients...\n");
 #endif
 
         /* On accepte la connexion */
-        if ((sclient = accept(sock, NULL, NULL)) == -1) {
+        if ((sclient = accept(sock, addr, addr_len)) == -1) {
             perror("accept");
             exit(EXIT_FAILURE);
         }

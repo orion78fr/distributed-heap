@@ -9,8 +9,6 @@ struct pollfd *poll_list;
  */
 void *serverThread(void *arg)
 {
-    struct serverChain *firstServer=(struct serverChain*)arg;
-    //myself->serverId = pthread_self();
     uint8_t msgType;
 
 
@@ -19,7 +17,7 @@ void *serverThread(void *arg)
     //uint8_t msgType;
 
 #if DEBUG
-    printf("[Server %d] Connexion\n", pthread_self());
+    printf("[Server id: %d] Connexion\n", ((struct serverChain*)arg)->serverId);
 #endif
 
 
@@ -33,7 +31,7 @@ void *serverThread(void *arg)
             return(EXIT_FAILURE);
         }
         if (retval > 0){
-            struct serverChain *server = firstServer;
+            struct serverChain *server = servers;
             for (i=0; i<serversConnected)
                 if((poll_list[i].revents&POLLNVAL)==POLLNVAL){
 #if DEBUG
