@@ -1,95 +1,136 @@
 #include "common.h"
 
-int serversConnected = 1;
-struct pollfd *poll_list;
+int serversConnected = 0;
 
 /**
- * Thread du server
+ * Thread du server en mode clone
  * @param arg Socket de communication du server
  */
-void *serverThread(void *arg)
+void *clientThread(void *arg)
 {
+    int backup = ((struct serverChain*)arg)->backup;
+    int sock = ((struct serverChain*)arg)->sock;
     uint8_t msgType;
 
-
-    //int sock = ((struct clientChain*)arg)->sock;
-    //((struct clientChain*)arg)->clientId = pthread_self();
-    //uint8_t msgType;
-
 #if DEBUG
-    printf("[Server id: %d] Connexion\n", ((struct serverChain*)arg)->serverId);
+    printf("[Server id: %d, thread: %d] Connexion\n", ((struct serverChain*)arg)->serverId, pthread_self());
 #endif
 
+    if(backup){
+        /* Boucle principale */
+        for (;;) {
+            if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+                goto disconnect;
+            }
 
-    /* Boucle principale */
-    for (;;) {
-        int retval, i;
-
-        retval = poll(poll_list, serversConnected, -1);
-        if (retval < 0){
-            perror("poll");
-            return(EXIT_FAILURE);
+            /* Switch pour les différents types de messages */
+            switch (msgType) {
+            case MSG_DATA_REPLICATION: /* Allocation/Modification d'une variable */
+                if(rcv_data_replication(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_RELEASE_REPLICATION: /* Release d'une variable */
+                if(rcv_release_replication(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_FREE_REPLICATION:          /* Désallocation d'une variable */
+                if(rcv_free_replication(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_ADD_CLIENT:          /* Ajout d'un client */
+                if(rcv_new_client(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_RMV_CLIENT:          /* Suppression d'un client */
+                if(rcv_rmv_client(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_MAJ_ACCESS_READ:          /* Maj file access d'une variable */
+                if(rcv_maj_access_read(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_MAJ_ACCESS_WRITE:          /* Maj file access d'une variable */
+                if(rcv_maj_access_write(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_MAJ_WAIT_READ:          /* Maj file wait d'une variable */
+                if(rcv_maj_wait_read(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_MAJ_WAIT_WRITE:          /* Maj file wait d'une variable */
+                if(rcv_maj_wait_read(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_ERROR: /* Message d'erreur */
+            default:                /* Unknown message code, version problem? */
+                goto disconnect;
+            }
         }
-        if (retval > 0){
-            struct serverChain *server = servers;
-            for (i=0; i<serversConnected)
-                if((poll_list[i].revents&POLLNVAL)==POLLNVAL){
-#if DEBUG
-    printf("POLLNVAL, server id = %d\n", server->serverId);
-#endif 
-                    /* traiter la deco server */
-                    continue;
+    }else{
+
+        if(read(sock, &msgType, sizeof(msgType)) <= 0){
+            goto disconnect;
+        }
+
+        if(msgType==MSG_TOTAL_REPLICATION){
+            snd_total_replication(sock);
+        }
+
+        for(;;) {
+            pthread_mutex_lock(&rep->mutex_server);
+            if(rep->data!=NULL)
+            {
+                if(snd_data_replication(rep) <=0){
+                    goto disconnect;
                 }
-                if ((poll_list[i].revents&POLLHUP) == POLLHUP){
-#if DEBUG
-    printf("POLLHUP, server id = %d\n", server->serverId);
-#endif 
-                    /* traiter la deco server */
-                    continue;
+
+                if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+                    goto disconnect;
                 }
-                if ((poll_list[i].revents&POLLIN) == POLLIN){
-                    uint8_t msgtype;
-                    if (read(poll_list[i].fd, &msgtype, sizeof(msgtype)) <= 0){
-                        /* traiter le prob server */
-                        continue;
-                    }
-                    /* Switch pour les différents types de messages */
-                    switch (msgType) {
-                    case MSG_TOTAL_REPLICATION: /* Replication totale */
-                        if(snd_total_replication(poll_list[i].fd) == -1){
-                            goto disconnect;
-                        }
-                        break;
-                    case MSG_PARTIAL_REPLICATION:   /* Replication partielle */
-                        if(do_partial_replication(poll_list[i].fd) == -1){
-                            goto disconnect;
-                        }
-                        break;
-                    case MSG_PING:  /* Ping server */
-                        if(do_ping(poll_list[i].fd) == -1){
-                            goto disconnect;
-                        }
-                        break;
-                    case MSG_ERROR: /* Message d'erreur */
-                    default:                /* Unknown message code, version problem? */
-                        goto disconnect;
-                    }
 
+                if (msgType != MSG_ACK){
+                    goto disconnect;
+                }
 
+                rep->modification= MSG_ACK;
+                pthread_mutex_unlock(&rep->mutex_server);
+                pthread_cond_signal(&rep->cond_server);
+                
+            }else if(rep->clientId!=NULL){
+                if(snd_maj_client(rep) <=0){
+                    goto disconnect;
+                }
 
+                if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+                    goto disconnect;
+                }
 
+                if (msgType != MSG_ACK){
+                    goto disconnect;
+                }
 
-
-
-
-                server = server->next;
+                rep->modification= MSG_ACK;
+                pthread_mutex_unlock(&rep->mutex_server);
+                pthread_cond_signal(&rep->cond_server);
+            }else{
+                pthread_cond_wait(&rep->cond_server, &rep->mutex_server);
+            }
         }
     }
 
 disconnect:
 
 #if DEBUG
-    printf("[Server %d] Déconnexion\n", pthread_self());
+    printf("[Client %d] Déconnexion\n", pthread_self());
 #endif
 
     /* Fermer la connexion */

@@ -20,9 +20,8 @@ int parse_args(int argc, char *argv[])
         {"maxClient", required_argument, 0, 'n'},
         {"heapSize", required_argument, 0, 's'},
         {"hashSize", required_argument, 0, 'h'},
-        {"serverNum", required_argument, 0, 'i'},
         {"mainAddress", no_argument, 0, 'a'},
-        {0, 0, 0, 0, 0, 0}
+        {0, 0, 0, 0, 0}
     };
 
     while ((c =
@@ -43,9 +42,6 @@ int parse_args(int argc, char *argv[])
             break;
         case 'h':
             parameters.hashSize = atoi(optarg);
-            break;
-        case 'i':
-            parameters.serverNum = atoi(optarg);
             break;
         case 'a':
             strcpy(parameters.mainAddress, optarg);

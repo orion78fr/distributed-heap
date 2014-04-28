@@ -87,9 +87,6 @@ int do_inquire(int sock, char* address){
         numServer++;
         servers = newServer;
 
-        poll_list=realloc(poll_list,sizeof(struct pollfd)*serversConnected);
-        poll_list[serversConnected].fd = newServer->sock;
-        poll_list[serversConnected].events = POLLHUP | POLLIN | POLLNVAL;
         serversConnected++;
 
         pthread_mutex_unlock(&schainlock);
@@ -269,29 +266,6 @@ int snd_total_replication(int sock){
     struct heapData *data=NULL;
     uint8_t continuer=0, tailleNom;
 
-    if(write(sock, &serversConnected, sizeof(serversConnected)) <= 0){
-        goto disconnect;
-    }
-
-    while(servTemp!=NULL){
-
-        if(write(sock, &servTemp->serverId, sizeof(servTemp->serverId)) <= 0){
-            goto disconnect;
-        }
-
-        tailleNom = strlen(servTemp->serverAddress);
-
-        if(write(sock, &tailleNom, sizeof(tailleNom)) <= 0){
-            goto disconnect;
-        }
-
-        if(write(sock, servTemp->serverAddress, tailleNom) <= 0){
-            goto disconnect;
-        }
-
-       servTemp=servTemp->next;
-    }
-
     pthread_mutex_lock(&hashTableMutex);
     int i=0;
     while(data==NULL && i!=hashSize){
@@ -302,8 +276,6 @@ int snd_total_replication(int sock){
         continuer=1;
     }
     while(continuer){
-
-
         
         if(write(sock, &continuer, sizeof(continuer)) <= 0){
             goto disconnect;
@@ -450,34 +422,6 @@ int rcv_total_replication(int sock){
     uint64_t varSize;
     struct heapData *data;
     uint8_t continuer;
-
-    /* Replication des serveurs */
-
-
-    if (read(sock, (void *) &serversConnected, sizeof(serversConnected)) <= 0) { /* Nombre serveurs */
-        goto disconnect;
-    }
-
-    /*servAddress = malloc(serversConnected * sizeof(char*));
-    for (int i = 0; i < serversConnected; i++)
-        servAddress[i] = malloc(16);*/
-
-    for(int i=0; i<serversConnected; i++){
-        struct serverChain *newServer;
-        newServer = malloc(sizeof(struct serverChain));
-
-        if (read(sock, (void *) &newServer->serverId, sizeof(newServer->serverId)) <= 0) { /* id des serveurs */
-            goto disconnect;
-        } 
-
-        if(read(sock, (void *) &taille, sizeof(taille)) <= 0){ /* taille @ serveur */
-            goto disconnect;
-        }
-
-        if (read(sock, (void *) newServer->serverAddress, taille) <= 0) { /* @ serveur */
-            goto disconnect;
-        } 
-    }
 
     /* Replication des données */
 
@@ -687,14 +631,13 @@ int rcv_total_replication(int sock){
             goto disconnect;
         }   
     }
-
-
-    /* connexion aux serveurs */
-
-
     /* envoi d'un message pour confirmer la replication totale */
 
+    if(send_data(sock, MSG_ACK, 0)<0){
+        goto disconnect;
+    }
 
+    return 1;
 }
 
 int snd_maj_client(struct replicationData *rep){

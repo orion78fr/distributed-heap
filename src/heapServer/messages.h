@@ -29,7 +29,8 @@ enum msgTypes {
     MSG_MAJ_WAIT_READ,
     MSG_MAJ_WAIT_WRITE,
     MSG_ADD_CLIENT,
-    MSG_RMV_CLIENT
+    MSG_RMV_CLIENT,
+    MSG_ACK
 };
 
 typedef struct dataSend{

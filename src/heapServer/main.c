@@ -28,7 +28,6 @@ int main(int argc, char *argv[])
     printf("Max Clients : %d\n", parameters.maxClients);
     printf("Heap Size : %d\n", parameters.heapSize);
     printf("Hash Size : %d\n", parameters.hashSize);
-    printf("Server Num : %d\n", parameters.serverNum);
     printf("Address : %d\n", parameters.address);
 #endif
 
@@ -74,19 +73,10 @@ int main(int argc, char *argv[])
         newServer->serverAddress=parameters.address;
         servers=newServer;
 
-        /* Ajout du main à la poll_list */
-        poll_list=NULL;
-        poll_list=malloc(sizeof(struct pollfd));
-        poll_list[0].fd = newServer->sock;
-        poll_list[0].events = POLLHUP | POLLIN | POLLNVAL;
 
         /*Mis à jour du tas, des clients, des servers */
         msgtype = MSG_HELLO_NEW_SERVER;
         if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
-            return ERROR_SERVER_CONNECTION;
-        }
-
-        if (write(sserver, , sizeof(msgtype)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
 
@@ -167,16 +157,11 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        int test=do_inquire(sclient, &address);
-
-        /* client detected */
-        if(test=1{
-            /* Ajout d'un client */
-        }else if(test==2){ 
-            /* server detected */  
-        }else{ /* error detected */
-
+        if(do_inquire(sclient, &address)<=0){
+            perror("add new");
+            exit(EXIT_FAILURE);
         }
+
 
         
     }
