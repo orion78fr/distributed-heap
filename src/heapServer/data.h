@@ -7,6 +7,10 @@ enum modification {
     MAJ_WAIT_READ,
     MAJ_WAIT_WRITE,
     MAJ_DATA,
+    FREE_DATA,
+    RELEASE_DATA,
+    ADD_CLIENT,
+    REMOVE_CLIENT,
     MSG_ACK
 }
 

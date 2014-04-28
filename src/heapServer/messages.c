@@ -697,20 +697,25 @@ int rcv_total_replication(int sock){
 
 }
 
-int snd_maj_access(struct heapData *data){
-
-}
-
-int rcv_maj_access(int sock){
-
-}
-
-int snd_maj_wait(int sock, struct heapData *data){
-
-}
-
-int rcv_maj_wait(int sock){
-
+int snd_maj_client(struct replicationData *rep){
+    struct serverChain *servTemp = servers;
+    switch (rep->modification) {
+        case ADD_CLIENT:
+            if(send_data(servTemp->sock, MSG_ADD_CLIENT, 1,
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                goto disconnect;
+            }
+            break;
+        case REMOVE_CLIENT:
+            if(send_data(servTemp->sock, MSG_RMV_CLIENT, 1,
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                goto disconnect;
+            }
+            break;
+        default:
+            return 0;
+    }
+    return 1;
 }
 
 int snd_data_replication(struct replicationData *rep){
@@ -718,30 +723,433 @@ int snd_data_replication(struct replicationData *rep){
     switch (rep->modification) {
         case MAJ_ACCESS_READ:
             tailleNom = strlen(rep->data->name);
-            if(send_data(servTemp->sock, MAJ_ACCESS_READ, ,
+            if(send_data(servTemp->sock, MSG_MAJ_ACCESS_READ, 3,
                             (DS){sizeof(tailleNom),&tailleNom},
                             (DS){tailleNom, rep->data->name},
-                            (DS){sizeof(rep->clientId),&rep->clientId},)<0)
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                goto disconnect;
+            }
             break;
         case MAJ_ACCESS_WRITE:
-            
+            tailleNom = strlen(rep->data->name);
+            if(send_data(servTemp->sock, MSG_MAJ_ACCESS_WRITE, 3,
+                            (DS){sizeof(tailleNom),&tailleNom},
+                            (DS){tailleNom, rep->data->name},
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                goto disconnect;
+            }
             break;
         case MAJ_WAIT_READ:
-            
+            tailleNom = strlen(rep->data->name);
+            if(send_data(servTemp->sock, MSG_MAJ_WAIT_READ, 3,
+                            (DS){sizeof(tailleNom),&tailleNom},
+                            (DS){tailleNom, rep->data->name},
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                goto disconnect;
+            }
             break;
         case MAJ_WAIT_WRITE:
-            
+            tailleNom = strlen(rep->data->name);
+            if(send_data(servTemp->sock, MSG_MAJ_WAIT_WRITE, 3,
+                            (DS){sizeof(tailleNom),&tailleNom},
+                            (DS){tailleNom, rep->data->name},
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                goto disconnect;
+            }
+            break;
+        case FREE_DATA:
+            tailleNom = strlen(rep->data->name);
+            if(send_data(servTemp->sock, MSG_FREE_REPLICATION, 5,
+                            (DS){sizeof(tailleNom), &tailleNom},
+                            (DS){tailleNom, data->name})<0){
+                goto disconnect;
+            }
             break;
         case MAJ_DATA:
-            
+            tailleNom = strlen(rep->data->name);
+            if(send_data(servTemp->sock, MSG_DATA_REPLICATION, 5,
+                            (DS){sizeof(tailleNom), &tailleNom},
+                            (DS){tailleNom, data->name},
+                            (DS){sizeof(data->offset), &data->offset},
+                            (DS){sizeof(data->size), &data->size},
+                            (DS){data->size, theHeap + data->offset})<0){
+                goto disconnect;
+            }
+            break;
+        case RELEASE_DATA:
+            tailleNom = strlen(rep->data->name);
+            if(send_data(servTemp->sock, MSG_RELEASE_REPLICATION, 2,
+                            (DS){sizeof(tailleNom), &tailleNom},
+                            (DS){tailleNom, data->name},
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                goto disconnect;
+            }
             break;
         default:                /* Unknown message code, version problem? */
             return 0;
-        }
+    }
+    return 1;
 }
 
 int rcv_data_replication(int sock){
+    uint8_t taille;
+    char *nom;
+    struct heapData *data;
 
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+    data = get_data(nom);
+
+    if(data == NULL){/* création de la var */
+#if DEBUG
+    printf("[Server %d] Demande creation(replication partielle) de %s\n",
+           pthread_self(), nom);
+#endif
+        data = malloc(sizeof(struct heapData));
+        data->name=nom;
+
+        if(read(sock, &data->offset, sizeof(data->offset)) <= 0){
+            goto disconnect;
+        }
+
+        if(read(sock, &data->size, sizeof(data->size)) <= 0){
+            goto disconnect;
+        }
+
+
+        if(read(sock, theHeap + data->offset, data->size) <= 0){
+            goto disconnect;
+        }
+
+        data->readAccess=NULL;
+        data->writeAccess=NULL;
+        data->readWait=NULL;
+        data->writeWait=NULL;
+
+
+        pthread_mutex_init(&(data->mutex), NULL);
+        pthread_cond_init(&(data->readCond), NULL);
+
+        int sum = getHashSum(data->name); 
+        int offsetSum = data->offset % parameters.hashSize;
+        
+        pthread_mutex_lock(&hashTableMutex);
+
+        data->next = hashTable[sum];
+        hashTable[sum] = data;
+
+        offsetSum = data->offset % parameters.hashSize;
+        data->nextOffset = hashTableOffset[offsetSum];
+        hashTableOffset[offsetSum] = data;
+
+        memset(theHeap + data->offset, 0, size);
+
+        pthread_mutex_unlock(&hashTableMutex);
+
+
+    } else {/* mis à jour de la var */
+#if DEBUG
+    printf("[Server %d] Demande mis a jour(replication partielle) de %s\n",
+           pthread_self(), data->name);
+#endif
+
+
+        if(read(sock, &data->offset, sizeof(data->offset)) <= 0){
+            goto disconnect;
+        }
+
+        if(read(sock, &data->size, sizeof(data->size)) <= 0){
+            goto disconnect;
+        }
+
+
+        if(read(sock, theHeap + data->offset, data->size) <= 0){
+            goto disconnect;
+        }
+
+    
+    }
+    return 0;
+    disconnect:
+    if(nom != NULL){
+        free(nom);
+    }
+    return -1;
+}
+
+int rcv_release_replication(int sock){
+    uint8_t taille;
+    uint16_t id;
+    char *nom;
+    struct heapData *data;
+    struct clientChainWrite *temp=NULL, *prev=NULL;
+
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+    if (read(sock, &id, sizeof(id)) <= 0){
+        goto disconnect;
+    }
+
+    data = get_data(nom);
+
+    if(data->writeAccess!=NULL){
+        free(data->writeAccess);
+    }else{
+        temp=data->readAccess;
+        while(temp->clientId != id){
+            prev=temp;
+            temp=temp->next;
+        }
+        if(temp!=NULL){
+            if(prev!=NULL){
+                prev->next=temp;
+                free(temp);
+            }
+        }
+    }
+
+    return 1;
+}
+
+int rcv_free_replication(int sock){
+    uint8_t taille;
+    char *nom;
+
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+    return remove_data(nom);
+}
+
+int rcv_new_client(int sock){
+    struct clientChain *newClient;
+    /* Ajout du client dans la chaîne de socket (ajout au début pour
+    * éviter le parcours) */
+    newClient = malloc(sizeof(struct clientChain));
+    newClient->sock = NULL;
+    newClient->next = clients;
+
+    if (read(sock, &newClient->clientId, sizeof(newClient->clientId)) <= 0) {
+        goto disconnect;
+    }
+
+    numClient++;
+    clients = newClient;
+    clientsConnected++;
+
+    return 1;
+}
+
+int rcv_rmv_client(int sock){
+    struct clientChain *newClient =  clients;
+    struct clientChain *prev = NULL;
+    uint16_t id;
+
+    if (read(sock, &id, sizeof(id)) <= 0) {
+        goto disconnect;
+    }
+
+    while(strcmp(newClient->clientId, id)!=0){
+        prev = newClient;
+        newClient = newClient->next;
+    }
+
+    if(newClient!=NULL){
+        if(prev==NULL){
+            clients = newClient->next;
+            free(newClient);
+            clientsConnected--;
+        }else{
+            prev->next = newClient->next;
+            free(newClient);
+            clientsConnected--;
+        }
+        return 1;
+    }else{
+        return -1;
+    }
+}
+
+int rcv_maj_access_read(int sock){
+    uint8_t taille;
+    uint16_t id;
+    char *nom;
+    struct heapData *data;
+    struct clientChainWrite *temp;
+
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+
+
+    data = get_data(nom);
+    temp = malloc(sizeof(struct clientChainRead));
+    temp->next = data->readAccess;
+
+    if (read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
+        goto disconnect;
+    }
+
+    data->readAccess = temp;
+    return 1;
+}
+
+int rcv_maj_access_write(int sock){
+    uint8_t taille;
+    uint16_t id;
+    char *nom;
+    struct heapData *data;
+    struct clientChainWrite *temp;
+
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+
+
+    data = get_data(nom);
+    temp = malloc(sizeof(struct clientChainWrite));
+    temp->next = data->writeAccess;
+
+    if (read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
+        goto disconnect;
+    }
+
+    data->writeAccess = temp;
+    return 1;
+}
+
+int rcv_maj_wait_read(int sock){
+    uint8_t taille;
+    uint16_t id;
+    char *nom;
+    struct heapData *data;
+    struct clientChainRead *temp;
+
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+
+
+    data = get_data(nom);
+    temp = malloc(sizeof(struct clientChainRead));
+    temp->next = data->readWait;
+
+    if (read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
+        goto disconnect;
+    }
+
+    data->readWait = temp;
+    return 1;
+}
+
+int rcv_maj_wait_write(int sock){
+    uint8_t taille;
+    uint16_t id;
+    char *nom;
+    struct heapData *data;
+    struct clientChainWrite *temp;
+
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+
+
+    data = get_data(nom);
+    temp = malloc(sizeof(struct clientChainWrite));
+    temp->next = data->writeWait;
+
+    if (read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
+        goto disconnect;
+    }
+
+    data->writeWait = temp;
+    return 1;
 }
 
 int snd_partial_replication(struct heapData *data){

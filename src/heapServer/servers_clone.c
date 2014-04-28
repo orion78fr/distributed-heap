@@ -30,6 +30,11 @@ void *clientThread(void *arg)
                     goto disconnect;
                 }
                 break;
+            case MSG_RELEASE_REPLICATION: /* Release d'une variable */
+                if(rcv_release_replication(sock) == -1){
+                    goto disconnect;
+                }
+                break;
             case MSG_FREE_REPLICATION:          /* Désallocation d'une variable */
                 if(rcv_free_replication(sock) == -1){
                     goto disconnect;
@@ -40,18 +45,28 @@ void *clientThread(void *arg)
                     goto disconnect;
                 }
                 break;
-            case MSG_REMOVE_CLIENT:          /* Suppression d'un client */
+            case MSG_RMV_CLIENT:          /* Suppression d'un client */
                 if(rcv_rmv_client(sock) == -1){
                     goto disconnect;
                 }
                 break;
-            case MSG_MAJ_ACCESS:          /* Maj file access d'une variable */
-                if(rcv_maj_access(sock) == -1){
+            case MSG_MAJ_ACCESS_READ:          /* Maj file access d'une variable */
+                if(rcv_maj_access_read(sock) == -1){
                     goto disconnect;
                 }
                 break;
-            case MSG_MAJ_WAIT:          /* Maj file wait d'une variable */
-                if(rcv_maj_wait(sock) == -1){
+            case MSG_MAJ_ACCESS_WRITE:          /* Maj file access d'une variable */
+                if(rcv_maj_access_write(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_MAJ_WAIT_READ:          /* Maj file wait d'une variable */
+                if(rcv_maj_wait_read(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_MAJ_WAIT_WRITE:          /* Maj file wait d'une variable */
+                if(rcv_maj_wait_read(sock) == -1){
                     goto disconnect;
                 }
                 break;
@@ -81,9 +96,23 @@ void *clientThread(void *arg)
                 pthread_mutex_unlock(&rep->mutex_server);
                 pthread_cond_signal(&rep->cond_server);
                 
-            }
-            else
-            {
+            }else if(rep->clientId!=NULL){
+                if(snd_maj_client(rep) <=0){
+                    goto disconnect;
+                }
+
+                if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+                    goto disconnect;
+                }
+
+                if (msgType != MSG_ACK){
+                    goto disconnect;
+                }
+
+                rep->modification= MSG_ACK;
+                pthread_mutex_unlock(&rep->mutex_server);
+                pthread_cond_signal(&rep->cond_server);
+            }else{
                 pthread_cond_wait(&rep->cond_server, &rep->mutex_server);
             }
         }
