@@ -52,55 +52,6 @@ int send_error(int sock, uint8_t errType){
     return send_data(sock, MSG_ERROR, 1, (DS){sizeof(errType), &errType});
 }
 
-int do_inquire(int sock, char* address){
-    uint8_t msgType;
-
-    if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
-        goto disconnect;
-    }
-
-    if(msgType == MSG_HELLO_NEW_CLIENT){
-
-        /* Ajout du client dans la chaîne de socket (ajout au début pour
-         * éviter le parcours) */
-        newClient = malloc(sizeof(struct clientChain));
-        newClient->sock = sock;
-        newClient->next = clients;
-        newClient->clientId = numClient;
-        numClient++;
-        clients = newClient;
-
-        /* Création d'un thread pour traiter les requêtes */
-        pthread_create((pthread_t *) & (newClient->threadId), NULL,
-                       clientThread, (void *) newClient);
-        clientsConnected++;
-        return 1;
-
-    }else if(msgType == MSG_HELLO_NEW_SERVER){
-
-        pthread_mutex_lock(&schainlock);
-        newServer = malloc(sizeof(struct serverChain));
-        newServer->sock = sock;
-        newServer->next = servers;
-        newServer->serverAddress = address;
-        newServer->serverId = numServer;
-        numServer++;
-        servers = newServer;
-
-        serversConnected++;
-
-        pthread_mutex_unlock(&schainlock);
-
-        if(send_data(sock, MSG_HELLO_NEW_SERVER, 3,
-                        (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
-                        (DS){sizeof(newServer->serverId), &(newServer->serverId)})<0){
-            goto disconnect;
-        }
-        return 2;
-    }
-    return -1;
-}
-
 /* TODO ajouter l'envoi des @ des autres serveurs et leurs id */
 int do_greetings(int sock){
     uint8_t msgType;
@@ -108,7 +59,7 @@ int do_greetings(int sock){
 
     
     clientId = sock;
-    if(send_data(sock, MSG_HELLO_NEW, 3,
+    if(send_data(sock, MSG_HELLO_NEW_CLIENT, 3,
                 (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
                 (DS){sizeof(clientId), &(clientId)},
                 (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
@@ -197,7 +148,7 @@ int do_release(int sock){
            data->name);
 #endif
 
-    if(data->writeAccess != NULL && (pthread_equal(data->writeAccess->clientId, pthread_getspecific(id)) != 0)){
+    if((data->writeAccess != NULL) && (data->writeAccess->clientId == pthread_getspecific(id))){
         /* Lock en write */
         if (read(sock, theHeap+offset, data->size) <= 0) {        /* Contenu */
             goto disconnect;
@@ -205,7 +156,7 @@ int do_release(int sock){
         release_write_lock(data);
     } else {
         struct clientChainRead *temp = data->readAccess;
-        while(temp != NULL && (pthread_equal(pthread_getspecific(id), temp->clientId) ==0)){
+        while(temp != NULL && (pthread_getspecific(id) != temp->clientId)){
             temp = temp->next;
         }
         if(temp == NULL){
@@ -277,8 +228,8 @@ int snd_total_replication(int sock){
 
     pthread_mutex_lock(&hashTableMutex);
     int i=0;
-    while(data==NULL && i!=hashSize){
-        data = hashTable[i]
+    while(data==NULL && i!=parameters.hashSize){
+        data = hashTable[i];
         i++;
     }
     if(data!=NULL){
@@ -318,8 +269,8 @@ int snd_total_replication(int sock){
         if(write(sock, &data->readAccessSize, sizeof(data->readAccessSize)) <= 0){
                 goto disconnect;
         }
-        struct clientChainRead *readAccessTemp = readAccess;
-        for(i=0; i<readAccessSize; i++){
+        struct clientChainRead *readAccessTemp = data->readAccess;
+        for(i=0; i<data->readAccessSize; i++){
             if(write(sock, &readAccessTemp->clientId, sizeof(readAccessTemp->clientId)) <= 0){
                 goto disconnect;
             }   
@@ -329,8 +280,8 @@ int snd_total_replication(int sock){
         if(write(sock, &data->readWaitSize, sizeof(data->readWaitSize)) <= 0){
                 goto disconnect;
         }
-        struct clientChainRead *readWaitTemp = readWait;
-        for(i=0; i<readWaitSize; i++){
+        struct clientChainRead *readWaitTemp = data->readWait;
+        for(i=0; i<data->readWaitSize; i++){
             if(write(sock, &readWaitTemp->clientId, sizeof(readWaitTemp->clientId)) <= 0){
                 goto disconnect;
             }
@@ -340,8 +291,8 @@ int snd_total_replication(int sock){
         if(write(sock, &data->writeAccessSize, sizeof(data->writeAccessSize)) <= 0){
                 goto disconnect;
         }
-        struct clientChainWrite *writeAccessTemp = writeAccess;
-        for(i=0; i<writeAccessSize; i++){
+        struct clientChainWrite *writeAccessTemp = data->writeAccess;
+        for(i=0; i<data->writeAccessSize; i++){
             if(write(sock, &writeAccessTemp->clientId, sizeof(writeAccessTemp->clientId)) <= 0){
                 goto disconnect;
             }
@@ -351,8 +302,8 @@ int snd_total_replication(int sock){
         if(write(sock, &data->writeWaitSize, sizeof(data->writeWaitSize)) <= 0){
                 goto disconnect;
         }
-        struct clientChainWrite *writeWaitTemp = writeWait;
-        for(i=0; i<writeWaitSize; i++){
+        struct clientChainWrite *writeWaitTemp = data->writeWait;
+        for(i=0; i<data->writeWaitSize; i++){
             if(write(sock, &writeWaitTemp->clientId, sizeof(writeWaitTemp->clientId)) <= 0){
                 goto disconnect;
             }
@@ -360,51 +311,7 @@ int snd_total_replication(int sock){
             writeWaitTemp = writeWaitTemp->next;
         }
 
-        if(write(sock, &data->serverReadAccessSize, sizeof(data->serverReadAccessSize)) <= 0){
-                goto disconnect;
-        }
-        struct serverChainRead *serverReadAccessTemp = serverReadAccess;
-        for(i=0; i<serverReadAccessSize; i++){
-            if(write(sock, &serverReadAccessTemp->serverId, sizeof(serverReadAccessTemp->serverId)) <= 0){
-                goto disconnect;
-            }
-            serverReadAccessTemp = serverReadAccessTemp->next;
-        }
-
-        if(write(sock, &data->serverReadWaitSize, sizeof(data->serverReadWaitSize)) <= 0){
-                goto disconnect;
-        }
-        struct serverChainRead *serverReadWaitTemp = serverReadWait;
-        for(i=0; i<serverReadWaitSize; i++){
-            if(write(sock, &serverReadWaitTemp->serverId, sizeof(serverReadWaitTemp->serverId)) <= 0){
-                goto disconnect;
-            }
-            serverReadWaitTemp = serverReadWaitTemp->next;
-        }
-        
-        if(write(sock, &data->serverWriteAccessSize, sizeof(data->serverWriteAccessSize)) <= 0){
-                goto disconnect;
-        }
-        struct serverChainWrite *serverWriteAccessTemp = serverWriteAccess;
-        for(i=0; i<serverWriteAccessSize; i++){
-            if(write(sock, &serverWriteAccessTemp->serverId, sizeof(serverWriteAccessTemp->serverId)) <= 0){
-                goto disconnect;
-            }
-            serverWriteAccessTemp = serverWriteAccessTemp->next;
-        }
-        
-        if(write(sock, &data->serverWriteWaitSize, sizeof(data->serverWriteWaitSize)) <= 0){
-                goto disconnect;
-        }
-        struct serverChainWrite *serverWriteWaitTemp = serverWriteWait;
-        for(i=0; i<serverWriteWaitSize; i++){
-            if(write(sock, &serverWriteWaitTemp->serverId, sizeof(serverWriteWaitTemp->serverId)) <= 0){
-                goto disconnect;
-            }
-            serverWriteWaitTemp = serverWriteWaitTemp->next;
-        }
-
-        while(data==NULL && i!=hashSize){
+        while(data==NULL && i!=parameters.hashSize){
             data = hashTable[i];
             i++;
         }
@@ -418,6 +325,9 @@ int snd_total_replication(int sock){
     if(write(sock, &continuer, sizeof(continuer)) <= 0){
         goto disconnect;
     }
+
+    disconnect:
+    return -1;
 
 
 }
@@ -484,7 +394,7 @@ int rcv_total_replication(int sock){
         struct clientChainRead *prevRead;
         for(i=0; i<newData->readAccessSize; i++){
             struct clientChainRead *temp;
-            temp = malloc(sizeof(clientChainRead));
+            temp = malloc(sizeof(struct clientChainRead));
             if(read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
                 goto disconnect;
             }
@@ -501,7 +411,7 @@ int rcv_total_replication(int sock){
         prevRead=NULL;
         for(i=0; i<newData->readWaitSize; i++){
             struct clientChainRead *temp;
-            temp = malloc(sizeof(clientChainRead));
+            temp = malloc(sizeof(struct clientChainRead));
             if(read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
                 goto disconnect;
             }
@@ -518,7 +428,7 @@ int rcv_total_replication(int sock){
         struct clientChainWrite *prevWrite;
         for(i=0; i<newData->writeAccessSize; i++){
             struct clientChainWrite *temp;
-            temp = malloc(sizeof(clientChainWrite));
+            temp = malloc(sizeof(struct clientChainWrite));
             if(read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
                 goto disconnect;
             }
@@ -537,7 +447,7 @@ int rcv_total_replication(int sock){
         prevWrite=NULL;
         for(i=0; i<newData->writeWaitSize; i++){
             struct clientChainWrite *temp;
-            temp = malloc(sizeof(clientChainWrite));            
+            temp = malloc(sizeof(struct clientChainWrite));            
             if(read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
                 goto disconnect;
             }
@@ -547,77 +457,6 @@ int rcv_total_replication(int sock){
             }
             prevWrite=temp;
         }
-
-        if(read(sock, &newData->serverReadAccessSize, sizeof(newData->readAccessSize)) <= 0){
-                goto disconnect;
-        }
-        int i;
-        struct serverChainRead *prevSRead;
-        for(i=0; i<newData->serverReadAccessSize; i++){
-            struct serverChainRead *temp;
-            temp = malloc(sizeof(serverChainRead));
-            if(read(sock, &temp->serverId, sizeof(temp->serverId)) <= 0){
-                goto disconnect;
-            }
-            if(i!=0){
-                prevSRead->next=temp;
-            }
-            prevSRead=temp;
-        }
-
-        if(read(sock, &newData->serverReadWaitSize, sizeof(newData->readWaitSize)) <= 0){
-                goto disconnect;
-        }
-
-        prevSRead=NULL;
-        for(i=0; i<newData->readWaitSize; i++){
-            struct serverChainRead *temp;
-            temp = malloc(sizeof(serverChainRead));
-            if(read(sock, &temp->serverId, sizeof(temp->serverId)) <= 0){
-                goto disconnect;
-            }
-            if(i!=0){
-                prevSRead->next=temp;
-            }
-            prevSRead=temp;
-        }
-        
-        if(read(sock, &newData->serverWriteAccessSize, sizeof(newData->writeAccessSize)) <= 0){
-                goto disconnect;
-        }
-
-        struct serverChainWrite *prevSWrite;
-        for(i=0; i<newData->serverWriteAccessSize; i++){
-            struct serverChainWrite *temp;
-            temp = malloc(sizeof(serverChainWrite));
-            if(read(sock, &temp->serverId, sizeof(temp->serverId)) <= 0){
-                goto disconnect;
-            }
-            pthread_cond_init(&(temp->cond), NULL);
-            if(i!=0){
-                prevSWrite->next=temp;
-            }
-            prevSWrite=temp;
-        }
-
-        if(read(sock, &newData->serverWriteWaitSize, sizeof(newData->writeWaitSize)) <= 0){
-                goto disconnect;
-        }
-
-        prevSWrite=NULL;
-        for(i=0; i<newData->serverWriteWaitSize; i++){
-            struct serverChainWrite *temp;
-            temp = malloc(sizeof(serverChainWrite));            
-            if(read(sock, &temp->serverId, sizeof(temp->serverId)) <= 0){
-                goto disconnect;
-            }
-            pthread_cond_init(&(temp->cond), NULL);
-            if(i!=0){
-                prevSWrite->next=temp;
-            }
-            prevSWrite=temp;
-        }
-
 
 
         int sum = getHashSum(newData->name); 
@@ -632,7 +471,7 @@ int rcv_total_replication(int sock){
         newData->nextOffset = hashTableOffset[offsetSum];
         hashTableOffset[offsetSum] = newData;
 
-        memset(theHeap + newData->offset, 0, size);
+        memset(theHeap + newData->offset, 0, newData->size);
 
         pthread_mutex_unlock(&hashTableMutex);
 
@@ -647,6 +486,8 @@ int rcv_total_replication(int sock){
     }
 
     return 1;
+    disconnect:
+    return -1;
 }
 
 int snd_maj_client(struct replicationData *rep){
@@ -668,10 +509,13 @@ int snd_maj_client(struct replicationData *rep){
             return 0;
     }
     return 1;
+    disconnect:
+    return -1;
 }
 
 int snd_data_replication(struct replicationData *rep){
     struct serverChain *servTemp = servers;
+    char *tailleNom;
     switch (rep->modification) {
         case MAJ_ACCESS_READ:
             tailleNom = strlen(rep->data->name);
@@ -713,7 +557,7 @@ int snd_data_replication(struct replicationData *rep){
             tailleNom = strlen(rep->data->name);
             if(send_data(servTemp->sock, MSG_FREE_REPLICATION, 5,
                             (DS){sizeof(tailleNom), &tailleNom},
-                            (DS){tailleNom, data->name})<0){
+                            (DS){tailleNom, rep->data->name})<0){
                 goto disconnect;
             }
             break;
@@ -721,10 +565,10 @@ int snd_data_replication(struct replicationData *rep){
             tailleNom = strlen(rep->data->name);
             if(send_data(servTemp->sock, MSG_DATA_REPLICATION, 5,
                             (DS){sizeof(tailleNom), &tailleNom},
-                            (DS){tailleNom, data->name},
-                            (DS){sizeof(data->offset), &data->offset},
-                            (DS){sizeof(data->size), &data->size},
-                            (DS){data->size, theHeap + data->offset})<0){
+                            (DS){tailleNom, rep->data->name},
+                            (DS){sizeof(rep->data->offset), &rep->data->offset},
+                            (DS){sizeof(rep->data->size), &rep->data->size},
+                            (DS){rep->data->size, theHeap + rep->data->offset})<0){
                 goto disconnect;
             }
             break;
@@ -732,7 +576,7 @@ int snd_data_replication(struct replicationData *rep){
             tailleNom = strlen(rep->data->name);
             if(send_data(servTemp->sock, MSG_RELEASE_REPLICATION, 2,
                             (DS){sizeof(tailleNom), &tailleNom},
-                            (DS){tailleNom, data->name},
+                            (DS){tailleNom, rep->data->name},
                             (DS){sizeof(rep->clientId),&rep->clientId})<0){
                 goto disconnect;
             }
@@ -741,6 +585,8 @@ int snd_data_replication(struct replicationData *rep){
             return 0;
     }
     return 1;
+    disconnect:
+    return -1;
 }
 
 int rcv_data_replication(int sock){
@@ -811,7 +657,7 @@ int rcv_data_replication(int sock){
         data->nextOffset = hashTableOffset[offsetSum];
         hashTableOffset[offsetSum] = data;
 
-        memset(theHeap + data->offset, 0, size);
+        memset(theHeap + data->offset, 0, data->size);
 
         pthread_mutex_unlock(&hashTableMutex);
 
@@ -842,6 +688,9 @@ int rcv_data_replication(int sock){
     disconnect:
     if(nom != NULL){
         free(nom);
+    }
+    if(data != NULL){
+        free(data);
     }
     return -1;
 }
@@ -896,6 +745,11 @@ int rcv_release_replication(int sock){
     }
 
     return 1;
+    disconnect:
+    if(nom!=NULL){
+        free(nom);
+    }
+    return -1;
 }
 
 int rcv_free_replication(int sock){
@@ -918,6 +772,11 @@ int rcv_free_replication(int sock){
     }
 
     return remove_data(nom);
+    disconnect:
+    if(nom!=NULL){
+        free(nom);
+    }
+    return -1;
 }
 
 int rcv_new_client(int sock){
@@ -937,6 +796,11 @@ int rcv_new_client(int sock){
     clientsConnected++;
 
     return 1;
+    disconnect:
+    if(newClient!=NULL){
+        free(newClient);
+    }
+    return -1;
 }
 
 int rcv_rmv_client(int sock){
@@ -948,7 +812,7 @@ int rcv_rmv_client(int sock){
         goto disconnect;
     }
 
-    while(strcmp(newClient->clientId, id)!=0){
+    while(newClient->clientId != id){
         prev = newClient;
         newClient = newClient->next;
     }
@@ -964,9 +828,9 @@ int rcv_rmv_client(int sock){
             clientsConnected--;
         }
         return 1;
-    }else{
-        return -1;
     }
+    disconnect:
+    return -1;
 }
 
 int rcv_maj_access_read(int sock){
@@ -1004,6 +868,14 @@ int rcv_maj_access_read(int sock){
     data->readAccess = temp;
     data->readAccessSize++;
     return 1;
+    disconnect:
+    if(nom!=NULL){
+        free(nom);
+    }
+    if(temp!=NULL){
+        free(temp);
+    }
+    return -1;
 }
 
 int rcv_maj_access_write(int sock){
@@ -1041,6 +913,14 @@ int rcv_maj_access_write(int sock){
     data->writeAccess = temp;
     data->writeAccessSize++;
     return 1;
+    disconnect:
+    if(nom!=NULL){
+        free(nom);
+    }
+    if(temp!=NULL){
+        free(temp);
+    }
+    return -1;
 }
 
 int rcv_maj_wait_read(int sock){
@@ -1078,6 +958,14 @@ int rcv_maj_wait_read(int sock){
     data->readWait = temp;
     data->readWaitSize++;
     return 1;
+    disconnect:
+    if(nom!=NULL){
+        free(nom);
+    }
+    if(temp!=NULL){
+        free(temp);
+    }
+    return -1;
 }
 
 int rcv_maj_wait_write(int sock){
@@ -1115,15 +1003,23 @@ int rcv_maj_wait_write(int sock){
     data->writeWait = temp;
     data->writeWaitSize++;
     return 1;
+    disconnect:
+    if(nom!=NULL){
+        free(nom);
+    }
+    if(temp!=NULL){
+        free(temp);
+    }
+    return -1;
 }
 
 int snd_partial_replication(struct heapData *data){
     struct  serverChain *servTemp = servers;
     uint8_t tailleNom;
-
+    int i;
     pthread_mutex_lock(&hashTableMutex);
     tailleNom = strlen(data->name);
-    for(int i=0; i<serversConnected; i++){
+    for(i=0; i<serversConnected; i++){
         if(send_data(servTemp->sock, MSG_PARTIAL_REPLICATION, 5,
                         (DS){sizeof(tailleNom), &tailleNom},
                         (DS){tailleNom, data->name},
@@ -1139,6 +1035,8 @@ int snd_partial_replication(struct heapData *data){
        servTemp=servTemp->next;
     }
     pthread_mutex_unlock(&hashTableMutex);
+    disconnect:
+    return -1;
 }
 
 int rcv_partial_replication(int sock){
@@ -1202,7 +1100,7 @@ int rcv_partial_replication(int sock){
         data->nextOffset = hashTableOffset[offsetSum];
         hashTableOffset[offsetSum] = data;
 
-        memset(theHeap + data->offset, 0, size);
+        memset(theHeap + data->offset, 0, data->size);
 
         pthread_mutex_unlock(&hashTableMutex);
 

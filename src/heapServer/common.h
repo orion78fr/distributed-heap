@@ -26,6 +26,7 @@
 #include "data.h"
 #include "parameters.h"
 #include "clients.h"
+#include "servers.h"
 #include "messages.h"
 #include "error.h"
 #include "freelist.h"

@@ -38,7 +38,10 @@ typedef struct dataSend{
     void *data;
 } DS;
 
-
+extern int numClient;
+extern struct replicationData *rep;
+extern struct replicationAck *ack;
+extern pthread_key_t id;
 extern struct clientChain *clients;
 
 int send_data(int sock, uint8_t msgType, int nb, ...);
@@ -58,12 +61,17 @@ int snd_total_replication(int sock);
 int rcv_total_replication(int sock);
 int snd_partial_replication(struct heapData *data);
 int rcv_partial_replication(int sock);
-int snd_data_replication(struct heapData *data);
+int snd_data_replication(struct replicationData *rep);
 int rcv_data_replication(int sock);
-int snd_maj_access(struct heapData *data);
-int rcv_maj_access(int sock);
-int snd_maj_wait(struct heapData *data);
-int rcv_maj_wait(int sock);
+int rcv_release_replication(int sock);
+int rcv_free_replication(int sock);
+int rcv_new_client(int sock);
+int rcv_rmv_client(int sock);
+int rcv_maj_access_read(int sock);
+int rcv_maj_access_write(int sock);
+int rcv_maj_wait_read(int sock);
+int rcv_maj_wait_write(int sock);
+
 
 /*
  * Chaque échange commence par le type de message (uint8)

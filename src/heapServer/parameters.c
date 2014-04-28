@@ -68,5 +68,5 @@ void set_defaults()
     parameters.heapSize = HEAPSIZE;
     parameters.hashSize = HASHSIZE;
     parameters.serverNum = 0;
-    parameters.address = "";
+    parameters.mainAddress = "";
 }

@@ -1,8 +1,11 @@
 #include "common.h"
 
+
+pthread_key_t id;
 struct replicationData *rep;
 struct replicationAck *ack;
-static pthread_key_t id;
+uint16_t numClient, numServer;
+
 
 int main(int argc, char *argv[])
 {
@@ -12,14 +15,19 @@ int main(int argc, char *argv[])
     int sserver;                /* Socket du serveur */
     uint16_t numClient=0, numServer=1;
     pthread_key_create(&id, NULL);
-    
+    uint8_t msgType;
+    numClient=0; numServer=1;
     rep = malloc(sizeof(struct replicationData));
     rep->data = NULL;
-    rep->mutex_server = PTHREAD_MUTEX_INITIALIZER;
-    rep->cond_server = PTHREAD_COND_INITIALIZER;
+    pthread_mutex_init(&rep->mutex_server, NULL);
+    pthread_cond_init(&rep->cond_server, NULL);
+    //rep->mutex_server = PTHREAD_MUTEX_INITIALIZER;
+    //rep->cond_server = PTHREAD_COND_INITIALIZER;
     ack = malloc(sizeof(struct replicationAck));
-    ack->mutex_server = PTHREAD_MUTEX_INITIALIZER;
-    ack->cond_server = PTHREAD_COND_INITIALIZER;
+    pthread_mutex_init(&ack->mutex_server, NULL);
+    pthread_cond_init(&ack->cond_server, NULL);
+    //ack->mutex_server = PTHREAD_MUTEX_INITIALIZER;
+    //ack->cond_server = PTHREAD_COND_INITIALIZER;
 
 
 
@@ -56,16 +64,16 @@ int main(int argc, char *argv[])
 
 
     /* Connexion au server principal */
-    if(parameters.address!=""){
+    if(strcmp(parameters.mainAddress,"")!=0){
         struct serverChain *newServer;
         uint8_t msgtype = MSG_HELLO_NEW_SERVER;
 
-        sin.sin_addr.s_addr=inet_addr(parameters.address);
+        sin.sin_addr.s_addr=inet_addr(parameters.mainAddress);
 
 #if DEBUG
         printf("Connecting to Main Server...\n");
 #endif
-        if(connect(sserver, (struct sockaddr *)&sin, sizeof(sin)) == -1){
+        if(connect(sserver, &sin, sizeof(sin)) == -1){
             return ERROR_SERVER_CONNECTION;
         }
 
@@ -76,7 +84,7 @@ int main(int argc, char *argv[])
         newServer = malloc(sizeof(struct serverChain));
         newServer->sock=sserver;
         newServer->next=servers;
-        newServer->serverAddress=parameters.address;
+        strcpy(newServer->serverAddress, parameters.mainAddress);
         servers=newServer;
 
 
@@ -134,15 +142,15 @@ int main(int argc, char *argv[])
     for (;;) {
         struct clientChain *newClient;
         struct serverChain *newServer;
-        char address[14];
-        struct sockaddr addr;
+        char *address;
+        struct sockaddr_in addr;
 
 #if DEBUG
         printf("Waiting for clients...\n");
 #endif
 
         /* On accepte la connexion */
-        if ((sclient = accept(sock, (struct sockaddr*)&addr, sizeof(addr))) == -1) {
+        if ((sclient = accept(sock, (struct sockaddr_in*)&addr, sizeof(addr))) == -1) {
             perror("accept");
             exit(EXIT_FAILURE);
         }
@@ -163,9 +171,46 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        if(do_inquire(sclient, &address)<=0){
-            perror("add new");
-            exit(EXIT_FAILURE);
+        
+
+        if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+            return EXIT_FAILURE;
+        }
+
+        if(msgType == MSG_HELLO_NEW_CLIENT){
+
+            /* Ajout du client dans la chaîne de socket (ajout au début pour
+             * éviter le parcours) */
+            newClient = malloc(sizeof(struct clientChain));
+            newClient->sock = sock;
+            newClient->next = clients;
+            newClient->clientId = numClient;
+            numClient++;
+            clients = newClient;
+
+            /* Création d'un thread pour traiter les requêtes */
+            pthread_create((pthread_t *) & (newClient->threadId), NULL,
+                           clientThread, (void *) newClient);
+            clientsConnected++;
+
+        }else if(msgType == MSG_HELLO_NEW_SERVER){
+
+            newServer = malloc(sizeof(struct serverChain));
+            newServer->sock = sock;
+            newServer->next = servers;
+            newServer->serverAddress = address;
+            newServer->serverId = numServer;
+            numServer++;
+            servers = newServer;
+
+            serversConnected++;
+
+            if(send_data(sock, MSG_HELLO_NEW_SERVER, 3,
+                            (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
+                            (DS){sizeof(newServer->serverId), &(newServer->serverId)})<0){
+                return EXIT_FAILURE;
+            }
+            
         }
 
 
@@ -187,7 +232,7 @@ int main(int argc, char *argv[])
     }
     */
 
-    pthread_join(serverId,0);
+    pthread_join(servers->serverId,0);
 
     shutdown(sock, 2);
     close(sock);

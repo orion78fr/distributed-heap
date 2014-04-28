@@ -7,10 +7,14 @@ struct serverChain {
     pthread_t threadId;
     int sock;
     char *serverAddress;
+    struct serverChain *next;
 };
 
 extern int serversConnected;
 extern struct serverChain *servers;
+extern struct replicationData *rep;
+extern struct replicationAck *ack;
+extern pthread_key_t id;
 
 void *serverThread(void *arg);
 

@@ -10,7 +10,7 @@ void *clientThread(void *arg)
 {
     int sock = ((struct clientChain*)arg)->sock;
     uint8_t msgType;
-    pthread_setspecific(id, ((struct clientChain*)arg)->clientId);
+    pthread_setspecific(id, (const void *)((struct clientChain*)arg)->clientId);
 
 #if DEBUG
     printf("[Client id: %d, thread: %d] Connexion\n", ((struct clientChain*)arg)->clientId, pthread_self());

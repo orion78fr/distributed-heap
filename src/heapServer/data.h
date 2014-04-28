@@ -11,8 +11,8 @@ enum modification {
     RELEASE_DATA,
     ADD_CLIENT,
     REMOVE_CLIENT,
-    MSG_ACK
-}
+    ACK
+};
 
 struct replicationData {
     uint8_t modification;
@@ -88,6 +88,9 @@ extern struct heapData **hashTable;
 extern struct heapData **hashTableOffset;
 extern pthread_mutex_t hashTableMutex;
 extern void *theHeap;
+extern struct replicationData *rep;
+extern struct replicationAck *ack;
+extern pthread_key_t id;
 
 struct heapData *get_data(char *name);
 struct heapData *get_data_by_offset(uint64_t offset);

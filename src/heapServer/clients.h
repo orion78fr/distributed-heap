@@ -10,6 +10,9 @@ struct clientChain {
 
 extern int clientsConnected;
 extern struct clientChain *clients;
+extern struct replicationData *rep;
+extern struct replicationAck *ack;
+extern pthread_key_t id;
 
 void *clientThread(void *arg);
 
