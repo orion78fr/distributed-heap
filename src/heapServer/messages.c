@@ -146,7 +146,7 @@ int do_alloc(int sock){
 
 #if DEBUG
     printf("[Client %d] Allocation de %s de taille %d\n",
-           pthread_self(), nom, varSize);
+           pthread_getspecific(id), nom, varSize);
 #endif
 
     if ((err = add_data(nom, varSize)) != 0) {
@@ -162,7 +162,7 @@ int do_alloc(int sock){
         }
     } else {
 
-        
+
 
         /* OK */
         nom = NULL; /* Le nom est stocké dans la structure et ne doit pas être free, même en cas d'erreur d'envoi */
@@ -193,11 +193,11 @@ int do_release(int sock){
     }
 
 #if DEBUG
-        printf("[Client %d] Libération de %s\n", pthread_self(),
+        printf("[Client %d] Libération de %s\n", pthread_getspecific(id),
            data->name);
 #endif
 
-    if(data->writeAccess != NULL && (pthread_equal(data->writeAccess->clientId, pthread_self()) != 0)){
+    if(data->writeAccess != NULL && (pthread_equal(data->writeAccess->clientId, pthread_getspecific(id)) != 0)){
         /* Lock en write */
         if (read(sock, theHeap+offset, data->size) <= 0) {        /* Contenu */
             goto disconnect;
@@ -205,7 +205,7 @@ int do_release(int sock){
         release_write_lock(data);
     } else {
         struct clientChainRead *temp = data->readAccess;
-        while(temp != NULL && (pthread_equal(pthread_self(), temp->clientId) ==0)){
+        while(temp != NULL && (pthread_equal(pthread_getspecific(id), temp->clientId) ==0)){
             temp = temp->next;
         }
         if(temp == NULL){
@@ -216,6 +216,11 @@ int do_release(int sock){
             release_read_lock(data);
         }
     }
+
+
+    
+
+
     if(send_data(sock, MSG_RELEASE, 0)<0){
         goto disconnect;
     }
@@ -245,7 +250,7 @@ int do_free(int sock){
     }
 
 #if DEBUG
-    printf("[Client %d] Désallocation de %s\n", pthread_self(),
+    printf("[Client %d] Désallocation de %s\n", pthread_getspecific(id),
            nom);
 #endif
 
@@ -253,6 +258,7 @@ int do_free(int sock){
         /* ERREUR */
         goto disconnect;
     } else {
+
         /* OK */
         if(send_data(sock, MSG_FREE, 0)<0){
             goto disconnect;
@@ -762,7 +768,7 @@ int rcv_data_replication(int sock){
     if(data == NULL){/* création de la var */
 #if DEBUG
     printf("[Server %d] Demande creation(replication partielle) de %s\n",
-           pthread_self(), nom);
+           pthread_getspecific(id), nom);
 #endif
         data = malloc(sizeof(struct heapData));
         data->name=nom;
@@ -813,7 +819,7 @@ int rcv_data_replication(int sock){
     } else {/* mis à jour de la var */
 #if DEBUG
     printf("[Server %d] Demande mis a jour(replication partielle) de %s\n",
-           pthread_self(), data->name);
+           pthread_getspecific(id), data->name);
 #endif
 
 
@@ -1160,7 +1166,7 @@ int rcv_partial_replication(int sock){
     if(data == NULL){/* création de la var */
 #if DEBUG
     printf("[Server %d] Demande creation(replication partielle) de %s\n",
-           pthread_self(), nom);
+           pthread_getspecific(id), nom);
 #endif
         data = malloc(sizeof(struct heapData));
         data->name=nom;
@@ -1204,7 +1210,7 @@ int rcv_partial_replication(int sock){
     } else {/* mis à jour de la var */
 #if DEBUG
     printf("[Server %d] Demande mis a jour(replication partielle) de %s\n",
-           pthread_self(), data->name);
+           pthread_getspecific(id), data->name);
 #endif
 
 

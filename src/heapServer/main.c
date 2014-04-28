@@ -2,7 +2,7 @@
 
 struct replicationData *rep;
 struct replicationAck *ack;
-(void) pthread_key_create(&key, NULL);
+static pthread_key_t id;
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
     int sclient;                /* Socket du client */
     int sserver;                /* Socket du serveur */
     uint16_t numClient=0, numServer=1;
+    pthread_key_create(&id, NULL);
     
     rep = malloc(sizeof(struct replicationData));
     rep->data = NULL;
