@@ -22,6 +22,12 @@ struct replicationData {
     pthread_cond_t cond_server;
 };
 
+struct replicationAck {
+    uint8_t modification;
+    pthread_mutex_t mutex_server;
+    pthread_cond_t cond_server;
+};
+
 struct clientChainRead {
     uint16_t clientId;
     struct clientChainRead *next;

@@ -130,13 +130,13 @@ void *clientThread(void *arg)
 disconnect:
 
 #if DEBUG
-    printf("[Client %d] Déconnexion\n", pthread_self());
+    printf("[Server %d] Déconnexion\n", pthread_self());
 #endif
 
     /* Fermer la connexion */
     shutdown(sock, 2);
     close(sock);
-    clientsConnected--;
+    serversConnected--;
     pthread_exit(NULL);
     return NULL;
 }

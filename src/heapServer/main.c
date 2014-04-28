@@ -1,6 +1,8 @@
 #include "common.h"
 
 struct replicationData *rep;
+struct replicationAck *ack;
+(void) pthread_key_create(&key, NULL);
 
 int main(int argc, char *argv[])
 {
@@ -14,6 +16,9 @@ int main(int argc, char *argv[])
     rep->data = NULL;
     rep->mutex_server = PTHREAD_MUTEX_INITIALIZER;
     rep->cond_server = PTHREAD_COND_INITIALIZER;
+    ack = malloc(sizeof(struct replicationAck));
+    ack->mutex_server = PTHREAD_MUTEX_INITIALIZER;
+    ack->cond_server = PTHREAD_COND_INITIALIZER;
 
 
 

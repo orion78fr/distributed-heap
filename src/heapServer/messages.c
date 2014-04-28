@@ -161,6 +161,9 @@ int do_alloc(int sock){
             }
         }
     } else {
+
+        
+
         /* OK */
         nom = NULL; /* Le nom est stocké dans la structure et ne doit pas être free, même en cas d'erreur d'envoi */
         if(send_data(sock, MSG_ALLOC, 0)<0){
@@ -777,6 +780,10 @@ int rcv_data_replication(int sock){
             goto disconnect;
         }
 
+        data->readAccessSize=NULL;
+        data->readWaitSize=NULL;
+        data->writeAccessSize=NULL;
+        data->writeWaitSize=NULL;
         data->readAccess=NULL;
         data->writeAccess=NULL;
         data->readWait=NULL;
@@ -862,6 +869,7 @@ int rcv_release_replication(int sock){
     data = get_data(nom);
 
     if(data->writeAccess!=NULL){
+        data->writeAccessSize--;
         free(data->writeAccess);
     }else{
         temp=data->readAccess;
@@ -871,9 +879,13 @@ int rcv_release_replication(int sock){
         }
         if(temp!=NULL){
             if(prev!=NULL){
-                prev->next=temp;
+                prev->next=temp->next;
+                free(temp);
+            }else{
+                data->readAccess= temp->next;
                 free(temp);
             }
+            data->readAccessSize--;
         }
     }
 
@@ -984,6 +996,7 @@ int rcv_maj_access_read(int sock){
     }
 
     data->readAccess = temp;
+    data->readAccessSize++;
     return 1;
 }
 
@@ -1020,6 +1033,7 @@ int rcv_maj_access_write(int sock){
     }
 
     data->writeAccess = temp;
+    data->writeAccessSize++;
     return 1;
 }
 
@@ -1056,6 +1070,7 @@ int rcv_maj_wait_read(int sock){
     }
 
     data->readWait = temp;
+    data->readWaitSize++;
     return 1;
 }
 
@@ -1092,6 +1107,7 @@ int rcv_maj_wait_write(int sock){
     }
 
     data->writeWait = temp;
+    data->writeWaitSize++;
     return 1;
 }
 
