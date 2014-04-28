@@ -1,6 +1,23 @@
 #ifndef HEAPSERVER_DATA
 #define HEAPSERVER_DATA
 
+enum modification {
+    MAJ_ACCESS_READ,
+    MAJ_ACCESS_WRITE,
+    MAJ_WAIT_READ,
+    MAJ_WAIT_WRITE,
+    MAJ_DATA,
+    MSG_ACK
+}
+
+struct replicationData {
+    uint8_t modification;
+    uint16_t clientId;
+    struct heapData *data;
+    pthread_mutex_t mutex_server;
+    pthread_cond_t cond_server;
+};
+
 struct clientChainRead {
     uint16_t clientId;
     struct clientChainRead *next;

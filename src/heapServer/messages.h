@@ -3,7 +3,7 @@
 
 enum msgTypes {
     MSG_HELLO_NEW_CLIENT,
-    MSG_HELLO_NEW_SERVER;
+    MSG_HELLO_NEW_SERVER,
     MSG_HELLO_NOT_NEW,
     MSG_ALLOC,
     MSG_ACCESS_READ,
@@ -19,7 +19,12 @@ enum msgTypes {
     MSG_PING,
     MSG_ADD_SERVER,
     MSG_REMOVE_SERVER,
-    MSG_TOTAL_REPLICATION
+    MSG_TOTAL_REPLICATION,
+    MSG_PARTIAL_REPLICATION,
+    MSG_DATA_REPLICATION,
+    MSG_FREE_REPLICATION,
+    MSG_MAJ_ACCESS,
+    MSG_MAJ_WAIT
 };
 
 typedef struct dataSend{
@@ -43,7 +48,16 @@ int do_access_write_by_offset(int sock);
 int do_access_write_common(int sock, struct heapData *data);
 int do_release(int sock);
 int do_free(int sock);
-int do_total_replication(int sock);
+int snd_total_replication(int sock);
+int rcv_total_replication(int sock);
+int snd_partial_replication(struct heapData *data);
+int rcv_partial_replication(int sock);
+int snd_data_replication(struct heapData *data);
+int rcv_data_replication(int sock);
+int snd_maj_access(struct heapData *data);
+int rcv_maj_access(int sock);
+int snd_maj_wait(struct heapData *data);
+int rcv_maj_wait(int sock);
 
 /*
  * Chaque échange commence par le type de message (uint8)
@@ -111,6 +125,21 @@ int do_total_replication(int sock);
  *                         |             /                 | lock en attente
  * -----------------------------------------------------------------------------
  * MSG_PARTIAL_REPLICATION |  taille du nom (uint8)        |          /
+ *     S <-> S             |  nom (taille*char8)           |          /
+ *                         |  offset (uint64)              |          /
+ *                         |  taille (uint64)              |          /
+ *                         |  contenu (taille*char8)       |          /
+ *                         |  lock en attente              |          /
+ * -----------------------------------------------------------------------------
+ * MSG_MAJ_ACCESS          |  taille du nom (uint8)        |          /
+ *     S <-> S             |  nom (taille*char8)           |          /
+ *                         |  lock en read ou write        |          /
+ * -----------------------------------------------------------------------------
+ * MSG_MAJ_WAIT            |  taille du nom (uint8)        |          /
+ *     S <-> S             |  nom (taille*char8)           |          /
+ *                         |  wait en read ou write        |          /
+ * -----------------------------------------------------------------------------
+ * MSG_DATA_REPLICATION    |  taille du nom (uint8)        |          /
  *     S <-> S             |  nom (taille*char8)           |          /
  *                         |  offset (uint64)              |          /
  *                         |  taille (uint64)              |          /

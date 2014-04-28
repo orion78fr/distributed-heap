@@ -1,7 +1,6 @@
 #include "common.h"
 
-
-extern pthread_mutex_t schainlock = PTHREAD_MUTEX_INITIALIZER;
+struct replicationData *rep;
 
 int main(int argc, char *argv[])
 {
@@ -10,6 +9,12 @@ int main(int argc, char *argv[])
     int sclient;                /* Socket du client */
     int sserver;                /* Socket du serveur */
     uint16_t numClient=0, numServer=1;
+    
+    rep = malloc(sizeof(struct replicationData));
+    rep->data = NULL;
+    rep->mutex_server = PTHREAD_MUTEX_INITIALIZER;
+    rep->cond_server = PTHREAD_COND_INITIALIZER;
+
 
 
     /* Parsing des arguments */

@@ -697,6 +697,53 @@ int rcv_total_replication(int sock){
 
 }
 
+int snd_maj_access(struct heapData *data){
+
+}
+
+int rcv_maj_access(int sock){
+
+}
+
+int snd_maj_wait(int sock, struct heapData *data){
+
+}
+
+int rcv_maj_wait(int sock){
+
+}
+
+int snd_data_replication(struct replicationData *rep){
+    struct serverChain *servTemp = servers;
+    switch (rep->modification) {
+        case MAJ_ACCESS_READ:
+            tailleNom = strlen(rep->data->name);
+            if(send_data(servTemp->sock, MAJ_ACCESS_READ, ,
+                            (DS){sizeof(tailleNom),&tailleNom},
+                            (DS){tailleNom, rep->data->name},
+                            (DS){sizeof(rep->clientId),&rep->clientId},)<0)
+            break;
+        case MAJ_ACCESS_WRITE:
+            
+            break;
+        case MAJ_WAIT_READ:
+            
+            break;
+        case MAJ_WAIT_WRITE:
+            
+            break;
+        case MAJ_DATA:
+            
+            break;
+        default:                /* Unknown message code, version problem? */
+            return 0;
+        }
+}
+
+int rcv_data_replication(int sock){
+
+}
+
 int snd_partial_replication(struct heapData *data){
     struct  serverChain *servTemp = servers;
     uint8_t tailleNom;
