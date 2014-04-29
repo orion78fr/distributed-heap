@@ -10,6 +10,7 @@ struct serverChain {
     struct serverChain *next;
 };
 
+extern int numServer;
 extern int serversConnected;
 extern struct serverChain *servers;
 extern struct replicationData *rep;

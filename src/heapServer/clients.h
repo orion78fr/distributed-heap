@@ -8,6 +8,7 @@ struct clientChain {
     struct clientChain *next;
 };
 
+extern int numClient;
 extern int clientsConnected;
 extern struct clientChain *clients;
 extern struct replicationData *rep;

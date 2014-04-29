@@ -791,7 +791,7 @@ int rcv_new_client(int sock){
         goto disconnect;
     }
 
-    numClient++;
+    //numClient++;
     clients = newClient;
     clientsConnected++;
 
