@@ -114,14 +114,22 @@ int main(int argc, char *argv[])
         servers=NULL;
     }
 
+#if DEBUG
+        printf("Creation thread server...\n");
+#endif
+
     /* Création d'un thread pour traiter les requêtes servers */
     pthread_create((pthread_t *) & (parameters.serverNum), NULL,
                     serverThread, (void *) servers);
 
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
 
+
+#if DEBUG
+        printf("lien et écoute socket\n");
+#endif
     /* Lien et écoute de la socket */
-    if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
+    if ((sock, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
         perror("bind");
         exit(EXIT_FAILURE);
     }
@@ -145,6 +153,10 @@ int main(int argc, char *argv[])
             perror("accept");
             exit(EXIT_FAILURE);
         }
+
+#if DEBUG
+        printf("connection detecte...\n");
+#endif
 
         address = inet_ntoa(addr.sin_addr); // ?? le warning
         port = ntohs(addr.sin_port);

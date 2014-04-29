@@ -496,7 +496,7 @@ int snd_server_to_clients(char *address, uint16_t port){
     uint8_t taille = strlen(address);
 
     while(client!=NULL){
-        pthread_mutex_lock(client->mutex_sock);
+        pthread_mutex_lock(&client->mutex_sock);
 
         if(send_data(client->sock, msgType, 4,
                     (DS){sizeof(servers->serverId),&servers->serverId},
@@ -506,7 +506,7 @@ int snd_server_to_clients(char *address, uint16_t port){
             goto disconnect;
         }
 
-        pthread_mutex_unlock(client->mutex_sock);
+        pthread_mutex_unlock(&client->mutex_sock);
         client=client->next;
     }
     disconnect:
@@ -540,12 +540,21 @@ int snd_data_replication(struct replicationData *rep){
     struct serverChain *servTemp = servers;
     uint8_t tailleNom;
     switch (rep->modification) {
+        case DEFRAG:
+            tailleNom = strlen(rep->data->name);
+            if(send_data(servTemp->sock, MSG_DEFRAG_REPLICATION, 3,
+                            (DS){sizeof(tailleNom),&tailleNom},
+                            (DS){tailleNom, rep->data->name},
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                goto disconnect;
+            }
+            break;
         case MAJ_ACCESS_READ:
             tailleNom = strlen(rep->data->name);
             if(send_data(servTemp->sock, MSG_MAJ_ACCESS_READ, 3,
                             (DS){sizeof(tailleNom),&tailleNom},
                             (DS){tailleNom, rep->data->name},
-                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                            (DS){sizeof(rep->data->offset),&rep->data->offset})<0){
                 goto disconnect;
             }
             break;
@@ -1058,6 +1067,95 @@ int rcv_maj_wait_write(int sock){
     }
     if(temp!=NULL){
         free(temp);
+    }
+    return -1;
+}
+
+int rcv_defrag_replication(int sock){
+    uint8_t taille;
+    char *nom;
+    struct heapData *data, *prevData;
+    struct freeListChain *tempFreeList;
+    uint16_t oldOffset, newOffset;
+
+    pthread_mutex_lock(&freeListMutex);
+
+    if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
+        goto disconnect;
+    }
+
+    nom = malloc((taille + 1) * sizeof(char));
+    if(nom == NULL){
+        goto disconnect;
+    }
+
+    nom[taille] = '\0';
+
+    if (read(sock, nom, taille) <= 0) {        /* Name */
+        goto disconnect;
+    }
+
+    data = get_data(nom);
+
+    if (read(sock, (void *) &newOffset, sizeof(newOffset)) <= 0) { /* new offset */
+        goto disconnect;
+    }
+
+    tempFreeList=freeList;
+    while(tempFreeList->startOffset != (data->offset - tempFreeList->size) ){
+        tempFreeList = tempFreeList->next;
+    }
+
+    acquire_write_lock(data);
+    pthread_mutex_lock(&(data->mutex));
+    memmove(theHeap+newOffset, theHeap+data->offset, data->size);
+    oldOffset = data->offset;
+    /* mis à jour du nouvel offset */
+    data->offset=newOffset;
+
+    /* mis à jour hashtable */
+    pthread_mutex_lock(&hashTableMutex);
+    prevData = NULL;
+    data = hashTableOffset[oldOffset%parameters.hashSize];
+
+    while(data != NULL && data->offset != newOffset){
+        prevData = data;
+        data = data->nextOffset;
+    }
+    if(data == NULL){
+        /* WHAT ???!!!??? */
+        return -42;
+    }
+    /* On retire de l'ancienne */
+    if(prevData == NULL){
+        hashTableOffset[oldOffset%parameters.hashSize] = data->nextOffset;
+    } else {
+        prevData->nextOffset = data->nextOffset;
+    }
+    /* On met dans la nouvelle */
+    data->nextOffset = hashTableOffset[newOffset%parameters.hashSize];
+    hashTableOffset[newOffset%parameters.hashSize] = data;
+
+    pthread_mutex_unlock(&hashTableMutex);
+    pthread_mutex_unlock(&(data->mutex));
+    release_write_lock(data);
+    
+    if((tempFreeList->startOffset + tempFreeList->size) == tempFreeList->next->startOffset){
+        /* On fusionne */
+        tempFreeList->size += tempFreeList->next->size;
+        tempFreeList->next = tempFreeList->next->next;
+        free(tempFreeList->next);
+    }
+
+    pthread_mutex_unlock(&freeListMutex);
+
+    return 0;
+    disconnect:
+    if(nom != NULL){
+        free(nom);
+    }
+    if(data != NULL){
+        free(data);
     }
     return -1;
 }

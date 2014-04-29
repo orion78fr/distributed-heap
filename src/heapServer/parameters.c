@@ -20,12 +20,12 @@ int parse_args(int argc, char *argv[])
         {"maxClient", required_argument, 0, 'n'},
         {"heapSize", required_argument, 0, 's'},
         {"hashSize", required_argument, 0, 'h'},
-        {"mainAddress", no_argument, 0, 'a'},
+        {"mainAddress", required_argument, 0, 'a'},
         {0, 0, 0, 0}
     };
 
     while ((c =
-            getopt_long(argc, argv, "p:n:s:h:i:a", long_options,
+            getopt_long(argc, argv, "p:n:s:h:a:", long_options,
                         &option_index)) != -1) {
         switch (c) {
         case 0:
@@ -44,7 +44,8 @@ int parse_args(int argc, char *argv[])
             parameters.hashSize = atoi(optarg);
             break;
         case 'a':
-            strcpy(parameters.mainAddress, optarg);
+            parameters.mainAddress = optarg;
+            //strcpy(parameters.mainAddress, optarg);
             break;
         case '?':
             /* Erreur, déjà affiché par getopt */

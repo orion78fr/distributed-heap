@@ -70,9 +70,18 @@ void *serverThread(void *arg)
                     goto disconnect;
                 }
                 break;
+            case MSG_DEFRAG_REPLICATION:          /* Defragmentation */
+                if(rcv_defrag_replication(sock) == -1){
+                    goto disconnect;
+                }
+                break;
             case MSG_ERROR: /* Message d'erreur */
             default:                /* Unknown message code, version problem? */
                 goto disconnect;
+            }
+            msgType = MSG_ACK;
+            if (write(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+                    goto disconnect;
             }
         }
     }else{
@@ -93,7 +102,7 @@ void *serverThread(void *arg)
             goto disconnect;
         }
 
-        if(snd_server_to_clients(((struct serverChain*)arg)->address, ((struct serverChain*)arg)->port) <= 0){
+        if(snd_server_to_clients(((struct serverChain*)arg)->serverAddress, ((struct serverChain*)arg)->serverPort) <= 0){
             goto disconnect;
         }
 
@@ -113,7 +122,7 @@ void *serverThread(void *arg)
                     goto disconnect;
                 }
 
-                rep->modification= MSG_ACK;
+                
                 pthread_mutex_unlock(&rep->mutex_server);
                 pthread_cond_signal(&rep->cond_server);
 

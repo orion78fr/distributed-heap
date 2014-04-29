@@ -31,7 +31,8 @@ enum msgTypes {
     MSG_MAJ_WAIT_WRITE,
     MSG_ADD_CLIENT,
     MSG_RMV_CLIENT,
-    MSG_ACK
+    MSG_ACK,
+    MSG_DEFRAG_REPLICATION
 };
 
 typedef struct dataSend{
@@ -71,7 +72,9 @@ int rcv_maj_access_read(int sock);
 int rcv_maj_access_write(int sock);
 int rcv_maj_wait_read(int sock);
 int rcv_maj_wait_write(int sock);
-int snd_server_to_clients(char *address, uint8_t port);
+int snd_server_to_clients(char *address, uint16_t port);
+int snd_defrag_replication(struct replicationData *rep);
+int rcv_defrag_replication(int sock);
 
 
 /*
@@ -162,6 +165,10 @@ int snd_server_to_clients(char *address, uint8_t port);
  * -----------------------------------------------------------------------------
  * MSG_RETRY               | Le message à réessayer        |          /
  *     C -> S              |                               |
+ * -----------------------------------------------------------------------------
+ * MSG_DEFRAG_REPLICATION  |  taille du nom (uint8)        |          /
+ *     S <-> S             |  nom (taille*char8)           |          /
+ *                         |  nouvel offset (uint64)       |          /
  * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int

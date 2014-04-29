@@ -11,7 +11,8 @@ enum modification {
     RELEASE_DATA,
     ADD_CLIENT,
     REMOVE_CLIENT,
-    ACK
+    ACK,
+    DEFRAG
 };
 
 struct replicationAddress {
