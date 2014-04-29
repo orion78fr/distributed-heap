@@ -38,6 +38,7 @@ typedef struct dataSend{
     void *data;
 } DS;
 
+extern int numServer;
 extern int numClient;
 extern struct replicationData *rep;
 extern struct replicationAck *ack;

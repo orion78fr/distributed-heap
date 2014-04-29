@@ -4,7 +4,6 @@
 pthread_key_t id;
 struct replicationData *rep;
 struct replicationAck *ack;
-uint16_t numClient, numServer;
 
 
 int main(int argc, char *argv[])

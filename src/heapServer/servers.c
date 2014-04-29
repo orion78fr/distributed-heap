@@ -6,7 +6,7 @@ int serversConnected = 0;
  * Thread du server en mode clone
  * @param arg Socket de communication du server
  */
-void *clientThread(void *arg)
+void *serverThread(void *arg)
 {
     int backup = ((struct serverChain*)arg)->backup;
     int sock = ((struct serverChain*)arg)->sock;

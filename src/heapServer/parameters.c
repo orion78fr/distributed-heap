@@ -21,7 +21,7 @@ int parse_args(int argc, char *argv[])
         {"heapSize", required_argument, 0, 's'},
         {"hashSize", required_argument, 0, 'h'},
         {"mainAddress", no_argument, 0, 'a'},
-        {0, 0, 0, 0, 0}
+        {0, 0, 0, 0}
     };
 
     while ((c =
