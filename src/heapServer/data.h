@@ -87,6 +87,7 @@ struct heapData {
 extern struct heapData **hashTable;
 extern struct heapData **hashTableOffset;
 extern pthread_mutex_t hashTableMutex;
+extern pthread_mutex_t addDataMutex;
 extern void *theHeap;
 extern struct replicationData *rep;
 extern struct replicationAck *ack;

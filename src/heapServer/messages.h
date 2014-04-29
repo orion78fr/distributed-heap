@@ -19,6 +19,7 @@ enum msgTypes {
     MSG_PING,
     MSG_ADD_SERVER,
     MSG_REMOVE_SERVER,
+    MSG_RETRY,
     MSG_TOTAL_REPLICATION,
     MSG_PARTIAL_REPLICATION,
     MSG_DATA_REPLICATION,
@@ -116,7 +117,7 @@ int rcv_maj_wait_write(int sock);
  *     S <-> C             |                               |
  * -----------------------------------------------------------------------------
  * MSG_ADD_SERVER          | id du serveur (uint8)         |          /
- *     S -> C              | taille de l'adresse (uint8)   | 
+ *     S -> C              | taille de l'adresse (uint8)   |
  *                         | adresse (taille*char8)        |
  *                         | port (uint16)                 |
  * -----------------------------------------------------------------------------
@@ -157,6 +158,9 @@ int rcv_maj_wait_write(int sock);
  *                         |  offset (uint64)              |          /
  *                         |  taille (uint64)              |          /
  *                         |  contenu (taille*char8)       |          /
+ * -----------------------------------------------------------------------------
+ * MSG_RETRY               | Le message à réessayer        |          /
+ *     C -> S              |                               |
  * -----------------------------------------------------------------------------
  *
  * ATTENTION, on risque d'avoir des problèmes en utilisant des types genre int

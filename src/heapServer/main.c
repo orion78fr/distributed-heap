@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in sin;     /* Nom de la socket de connexion */
     int sock;                   /* Socket de connexion */
     int sclient;                /* Socket du client */
+    int temp = 1;
     int sserver;                /* Socket du serveur */
     uint8_t msgType;
 
@@ -21,15 +22,10 @@ int main(int argc, char *argv[])
     rep->data = NULL;
     pthread_mutex_init(&rep->mutex_server, NULL);
     pthread_cond_init(&rep->cond_server, NULL);
-    //rep->mutex_server = PTHREAD_MUTEX_INITIALIZER;
-    //rep->cond_server = PTHREAD_COND_INITIALIZER;
+
     ack = malloc(sizeof(struct replicationAck));
     pthread_mutex_init(&ack->mutex_server, NULL);
     pthread_cond_init(&ack->cond_server, NULL);
-    //ack->mutex_server = PTHREAD_MUTEX_INITIALIZER;
-    //ack->cond_server = PTHREAD_COND_INITIALIZER;
-
-
 
     /* Parsing des arguments */
     if (parse_args(argc, argv)) {
@@ -57,11 +53,8 @@ int main(int argc, char *argv[])
     sin.sin_port = htons(parameters.port);
     sin.sin_family = AF_INET;
 
-    /* setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
-     * GTU : Est-ce nécessaire? */
-
-
-
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &temp, sizeof(int));
+     /* GTU : Est-ce nécessaire? */
 
     /* Connexion au server principal */
     if(strcmp(parameters.mainAddress,"")!=0){
@@ -76,8 +69,6 @@ int main(int argc, char *argv[])
         if(connect(sserver, (struct sockaddr *)&sin, sizeof(sin)) == -1){
             return ERROR_SERVER_CONNECTION;
         }
-
-
 
         /* Ajout du server dans la chaîne de socket (ajout au début pour
          * éviter le parcours) */
@@ -118,9 +109,7 @@ int main(int argc, char *argv[])
         if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
-
         rcv_total_replication(sserver);
-
     }else{
         servers=NULL;
     }
@@ -179,7 +168,6 @@ int main(int argc, char *argv[])
         }
 
         if(msgType == MSG_HELLO_NEW_CLIENT){
-
             /* Ajout du client dans la chaîne de socket (ajout au début pour
              * éviter le parcours) */
             newClient = malloc(sizeof(struct clientChain));
@@ -193,7 +181,6 @@ int main(int argc, char *argv[])
             pthread_create((pthread_t *) & (newClient->threadId), NULL,
                            clientThread, (void *) newClient);
             clientsConnected++;
-
         }else if(msgType == MSG_HELLO_NEW_SERVER){
 
             newServer = malloc(sizeof(struct serverChain));
@@ -211,11 +198,7 @@ int main(int argc, char *argv[])
                             (DS){sizeof(newServer->serverId), &(newServer->serverId)})<0){
                 return EXIT_FAILURE;
             }
-
         }
-
-
-
     }
 
     /* GTU : Et comment on sort de là? Signaux puis envoi d'un END
