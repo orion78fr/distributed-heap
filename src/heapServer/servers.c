@@ -104,8 +104,8 @@ void *serverThread(void *arg)
                 rep->modification= MSG_ACK;
                 pthread_mutex_unlock(&rep->mutex_server);
                 pthread_cond_signal(&rep->cond_server);
-                
-            }else if(rep->clientId!=NULL){
+
+            }else if(rep->clientId!=0){
                 if(snd_maj_client(rep) <=0){
                     goto disconnect;
                 }

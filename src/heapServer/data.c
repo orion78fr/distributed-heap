@@ -115,7 +115,7 @@ int add_data(char *name, uint64_t size)
 
         rep->modification = MAJ_DATA;
         rep->data = newData;
-        rep->clientId = NULL;
+        rep->clientId = 0;
 
         pthread_mutex_unlock(&rep->mutex_server);
         pthread_mutex_lock(&ack->mutex_server);
@@ -202,7 +202,7 @@ int remove_data(char *name)
 
     rep->modification = FREE_DATA;
     rep->data = data;
-    rep->clientId = NULL;
+    rep->clientId = 0;
 
     pthread_mutex_unlock(&rep->mutex_server);
     pthread_mutex_lock(&ack->mutex_server);
@@ -223,7 +223,7 @@ int acquire_read_lock(struct heapData *data)
     pthread_mutex_lock(&(data->mutex));
 
     me = malloc(sizeof(struct clientChainRead));
-    me->clientId = pthread_getspecific(id);
+    me->clientId = *(int*)pthread_getspecific(id);
 
     if (data->readAccess != NULL) {
         /* On est en mode read... */
@@ -312,7 +312,7 @@ int acquire_write_lock(struct heapData *data)
     pthread_mutex_lock(&(data->mutex));
 
     me = malloc(sizeof(struct clientChainWrite));
-    me->clientId = pthread_getspecific(id);
+    me->clientId = *(int*)pthread_getspecific(id);
     pthread_cond_init(&(me->cond), NULL);
 
     if (data->readAccess != NULL || data->writeAccess != NULL) {
@@ -388,7 +388,7 @@ void acquire_write_sleep(struct heapData *data,
 int release_read_lock(struct heapData *data)
 {
     struct clientChainRead *me, *prevMe;
-    pthread_t myPid;
+    int myId;
 
     pthread_mutex_lock(&(data->mutex));
 
@@ -396,12 +396,12 @@ int release_read_lock(struct heapData *data)
     if ((prevMe = data->readAccess) == NULL) {
         return -2;
     }
-    myPid = pthread_getspecific(id);
-    if (prevMe->clientId == myPid) {
+    myId = *(int*)pthread_getspecific(id);
+    if (prevMe->clientId == myId) {
         data->readAccess = prevMe->next;
         free(prevMe);
     } else {
-        while (prevMe->next != NULL && prevMe->next->clientId != myPid) {
+        while (prevMe->next != NULL && prevMe->next->clientId != myId) {
             prevMe = prevMe->next;
         }
         if ((me = prevMe->next) == NULL) {
@@ -415,7 +415,7 @@ int release_read_lock(struct heapData *data)
 
     rep->modification = RELEASE_DATA;
     rep->data = data;
-    rep->clientId = myPid;
+    rep->clientId = myId;
     pthread_mutex_unlock(&rep->mutex_server);
     pthread_mutex_lock(&ack->mutex_server);
     pthread_cond_signal(&rep->cond_server);
@@ -449,7 +449,7 @@ int release_write_lock(struct heapData *data)
     pthread_mutex_lock(&(data->mutex));
 
     if (data->writeAccess == NULL
-        || data->writeAccess->clientId != pthread_getspecific(id)) {
+        || data->writeAccess->clientId != *(int*)pthread_getspecific(id)) {
         return -2;
     }
     free(data->writeAccess);
@@ -459,7 +459,7 @@ int release_write_lock(struct heapData *data)
 
     rep->modification = RELEASE_DATA;
     rep->data = data;
-    rep->clientId = pthread_getspecific(id);
+    rep->clientId = *(int*)pthread_getspecific(id);
     pthread_mutex_unlock(&rep->mutex_server);
     pthread_mutex_lock(&ack->mutex_server);
     pthread_cond_signal(&rep->cond_server);

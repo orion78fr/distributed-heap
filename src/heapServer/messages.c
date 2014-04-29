@@ -57,7 +57,7 @@ int do_greetings(int sock){
     uint8_t msgType;
     uint16_t clientId;
 
-    
+
     clientId = sock;
     if(send_data(sock, MSG_HELLO_NEW_CLIENT, 3,
                 (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
@@ -144,11 +144,11 @@ int do_release(int sock){
     }
 
 #if DEBUG
-        printf("[Client %d] Libération de %s\n", pthread_getspecific(id),
+        printf("[Client %d] Libération de %s\n", *(int*)pthread_getspecific(id),
            data->name);
 #endif
 
-    if((data->writeAccess != NULL) && (data->writeAccess->clientId == pthread_getspecific(id))){
+    if((data->writeAccess != NULL) && (data->writeAccess->clientId == *(int*)pthread_getspecific(id))){
         /* Lock en write */
         if (read(sock, theHeap+offset, data->size) <= 0) {        /* Contenu */
             goto disconnect;
@@ -156,7 +156,7 @@ int do_release(int sock){
         release_write_lock(data);
     } else {
         struct clientChainRead *temp = data->readAccess;
-        while(temp != NULL && (pthread_getspecific(id) != temp->clientId)){
+        while(temp != NULL && (*(int*)pthread_getspecific(id) != temp->clientId)){
             temp = temp->next;
         }
         if(temp == NULL){
@@ -169,7 +169,7 @@ int do_release(int sock){
     }
 
 
-    
+
 
 
     if(send_data(sock, MSG_RELEASE, 0)<0){
@@ -236,7 +236,7 @@ int snd_total_replication(int sock){
         continuer=1;
     }
     while(continuer){
-        
+
         if(write(sock, &continuer, sizeof(continuer)) <= 0){
             goto disconnect;
         }
@@ -244,11 +244,11 @@ int snd_total_replication(int sock){
         tailleNom = strlen(data->name);
         if(write(sock, &tailleNom, sizeof(tailleNom)) <= 0){
             goto disconnect;
-        }  
+        }
 
         if(write(sock, data->name, tailleNom) <= 0){
             goto disconnect;
-        }        
+        }
 
         if(write(sock, &data->offset, sizeof(data->offset)) <= 0){
             goto disconnect;
@@ -273,7 +273,7 @@ int snd_total_replication(int sock){
         for(i=0; i<data->readAccessSize; i++){
             if(write(sock, &readAccessTemp->clientId, sizeof(readAccessTemp->clientId)) <= 0){
                 goto disconnect;
-            }   
+            }
             readAccessTemp = readAccessTemp->next;
         }
 
@@ -287,7 +287,7 @@ int snd_total_replication(int sock){
             }
             readWaitTemp = readWaitTemp->next;
         }
-        
+
         if(write(sock, &data->writeAccessSize, sizeof(data->writeAccessSize)) <= 0){
                 goto disconnect;
         }
@@ -353,11 +353,11 @@ int rcv_total_replication(int sock){
 
         if(read(sock, (void *) &taille, sizeof(taille)) <= 0){
             goto disconnect;
-        }  
+        }
 
         if(read(sock, newData->name, taille) <= 0){
             goto disconnect;
-        }        
+        }
 
         if(read(sock, &newData->offset, sizeof(newData->offset)) <= 0){
             goto disconnect;
@@ -420,7 +420,7 @@ int rcv_total_replication(int sock){
             }
             prevRead=temp;
         }
-        
+
         if(read(sock, &newData->writeAccessSize, sizeof(newData->writeAccessSize)) <= 0){
                 goto disconnect;
         }
@@ -447,7 +447,7 @@ int rcv_total_replication(int sock){
         prevWrite=NULL;
         for(i=0; i<newData->writeWaitSize; i++){
             struct clientChainWrite *temp;
-            temp = malloc(sizeof(struct clientChainWrite));            
+            temp = malloc(sizeof(struct clientChainWrite));
             if(read(sock, &temp->clientId, sizeof(temp->clientId)) <= 0){
                 goto disconnect;
             }
@@ -459,9 +459,9 @@ int rcv_total_replication(int sock){
         }
 
 
-        int sum = getHashSum(newData->name); 
+        int sum = getHashSum(newData->name);
         int offsetSum = newData->offset % parameters.hashSize;
-        
+
         pthread_mutex_lock(&hashTableMutex);
 
         newData->next = hashTable[sum];
@@ -477,7 +477,7 @@ int rcv_total_replication(int sock){
 
         if (read(sock, (void *) &continuer, sizeof(continuer)) <= 0) { /* nouvelle donnee a recevoir */
             goto disconnect;
-        }   
+        }
     }
     /* envoi d'un message pour confirmer la replication totale */
 
@@ -515,7 +515,7 @@ int snd_maj_client(struct replicationData *rep){
 
 int snd_data_replication(struct replicationData *rep){
     struct serverChain *servTemp = servers;
-    char *tailleNom;
+    uint8_t tailleNom;
     switch (rep->modification) {
         case MAJ_ACCESS_READ:
             tailleNom = strlen(rep->data->name);
@@ -632,10 +632,10 @@ int rcv_data_replication(int sock){
             goto disconnect;
         }
 
-        data->readAccessSize=NULL;
-        data->readWaitSize=NULL;
-        data->writeAccessSize=NULL;
-        data->writeWaitSize=NULL;
+        data->readAccessSize=0;
+        data->readWaitSize=0;
+        data->writeAccessSize=0;
+        data->writeWaitSize=0;
         data->readAccess=NULL;
         data->writeAccess=NULL;
         data->readWait=NULL;
@@ -645,9 +645,9 @@ int rcv_data_replication(int sock){
         pthread_mutex_init(&(data->mutex), NULL);
         pthread_cond_init(&(data->readCond), NULL);
 
-        int sum = getHashSum(data->name); 
+        int sum = getHashSum(data->name);
         int offsetSum = data->offset % parameters.hashSize;
-        
+
         pthread_mutex_lock(&hashTableMutex);
 
         data->next = hashTable[sum];
@@ -682,7 +682,7 @@ int rcv_data_replication(int sock){
             goto disconnect;
         }
 
-    
+
     }
     return 0;
     disconnect:
@@ -700,7 +700,7 @@ int rcv_release_replication(int sock){
     uint16_t id;
     char *nom;
     struct heapData *data;
-    struct clientChainWrite *temp=NULL, *prev=NULL;
+    struct clientChainRead *temp=NULL, *prev=NULL;
 
     if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
         goto disconnect;
@@ -784,7 +784,7 @@ int rcv_new_client(int sock){
     /* Ajout du client dans la chaîne de socket (ajout au début pour
     * éviter le parcours) */
     newClient = malloc(sizeof(struct clientChain));
-    newClient->sock = NULL;
+    newClient->sock = 0;
     newClient->next = clients;
 
     if (read(sock, &newClient->clientId, sizeof(newClient->clientId)) <= 0) {
@@ -838,7 +838,7 @@ int rcv_maj_access_read(int sock){
     uint16_t id;
     char *nom;
     struct heapData *data;
-    struct clientChainWrite *temp;
+    struct clientChainRead *temp;
 
     if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
         goto disconnect;
@@ -1088,9 +1088,9 @@ int rcv_partial_replication(int sock){
         pthread_mutex_init(&(data->mutex), NULL);
         pthread_cond_init(&(data->readCond), NULL);
 
-        int sum = getHashSum(data->name); 
+        int sum = getHashSum(data->name);
         int offsetSum = data->offset % parameters.hashSize;
-        
+
         pthread_mutex_lock(&hashTableMutex);
 
         data->next = hashTable[sum];
@@ -1127,7 +1127,7 @@ int rcv_partial_replication(int sock){
 
         /* TODO            *
          * Lock en attente */
-    
+
     }
     return 0;
     disconnect:

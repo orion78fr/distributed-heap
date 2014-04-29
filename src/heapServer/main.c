@@ -4,7 +4,8 @@
 pthread_key_t id;
 struct replicationData *rep;
 struct replicationAck *ack;
-
+uint16_t numClient=1;
+uint8_t numServer=1;
 
 int main(int argc, char *argv[])
 {
@@ -12,10 +13,10 @@ int main(int argc, char *argv[])
     int sock;                   /* Socket de connexion */
     int sclient;                /* Socket du client */
     int sserver;                /* Socket du serveur */
-    uint16_t numClient=0, numServer=1;
-    pthread_key_create(&id, NULL);
     uint8_t msgType;
-    numClient=0; numServer=1;
+
+    pthread_key_create(&id, NULL);
+
     rep = malloc(sizeof(struct replicationData));
     rep->data = NULL;
     pthread_mutex_init(&rep->mutex_server, NULL);
@@ -41,7 +42,7 @@ int main(int argc, char *argv[])
     printf("Max Clients : %d\n", parameters.maxClients);
     printf("Heap Size : %d\n", parameters.heapSize);
     printf("Hash Size : %d\n", parameters.hashSize);
-    printf("Address : %d\n", parameters.address);
+    printf("Address : %s\n", parameters.mainAddress);
 #endif
 
     init_data();
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
 #if DEBUG
         printf("Connecting to Main Server...\n");
 #endif
-        if(connect(sserver, &sin, sizeof(sin)) == -1){
+        if(connect(sserver, (struct sockaddr *)&sin, sizeof(sin)) == -1){
             return ERROR_SERVER_CONNECTION;
         }
 
@@ -93,7 +94,7 @@ int main(int argc, char *argv[])
             return ERROR_SERVER_CONNECTION;
         }
 
-        /* Reception du type de message (MSG_HELLO_NEW_SERVER) */          
+        /* Reception du type de message (MSG_HELLO_NEW_SERVER) */
         if (read(sserver, &msgtype, sizeof(msgtype)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
@@ -143,18 +144,19 @@ int main(int argc, char *argv[])
         struct serverChain *newServer;
         char *address;
         struct sockaddr_in addr;
+        socklen_t len = sizeof(struct sockaddr_in);
 
 #if DEBUG
         printf("Waiting for clients...\n");
 #endif
 
         /* On accepte la connexion */
-        if ((sclient = accept(sock, (struct sockaddr_in*)&addr, sizeof(addr))) == -1) {
+        if ((sclient = accept(sock, (struct sockaddr *)&addr, &len)) == -1) {
             perror("accept");
             exit(EXIT_FAILURE);
         }
 
-        address = inet_ntoa (addr.sin_addr);
+        address = inet_ntoa(addr.sin_addr); // ?? le warning
 
 #if DEBUG
         printf("New Client...\n");
@@ -170,7 +172,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        
+
 
         if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
             return EXIT_FAILURE;
@@ -209,11 +211,11 @@ int main(int argc, char *argv[])
                             (DS){sizeof(newServer->serverId), &(newServer->serverId)})<0){
                 return EXIT_FAILURE;
             }
-            
+
         }
 
 
-        
+
     }
 
     /* GTU : Et comment on sort de là? Signaux puis envoi d'un END
