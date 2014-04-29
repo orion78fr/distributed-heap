@@ -6,6 +6,7 @@ struct clientChain {
     pthread_t threadId;
     int sock;
     struct clientChain *next;
+    pthread_mutex_t mutex_sock;
 };
 
 extern uint16_t numClient;

@@ -85,6 +85,18 @@ void *serverThread(void *arg)
             snd_total_replication(sock);
         }
 
+        if(read(sock, &msgType, sizeof(msgType)) <= 0){
+            goto disconnect;
+        }
+
+        if(msgType!=MSG_ACK){
+            goto disconnect;
+        }
+
+        if(snd_server_to_clients(((struct serverChain*)arg)->address, ((struct serverChain*)arg)->port) <= 0){
+            goto disconnect;
+        }
+
         for(;;) {
             pthread_mutex_lock(&rep->mutex_server);
             if(rep->data!=NULL)

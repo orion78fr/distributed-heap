@@ -14,6 +14,13 @@ enum modification {
     ACK
 };
 
+struct replicationAddress {
+    uint8_t serverId;
+    char *address;
+    pthread_mutex_t mutex_address;
+    pthread_cond_t cond_address;
+};
+
 struct replicationData {
     uint8_t modification;
     uint16_t clientId;

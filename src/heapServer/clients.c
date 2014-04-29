@@ -8,6 +8,7 @@ int clientsConnected = 0;
  */
 void *clientThread(void *arg)
 {
+    pthread_mutex_t mutex = ((struct clientChain*)arg)->mutex_sock;
     int sock = ((struct clientChain*)arg)->sock;
     uint8_t msgType;
     pthread_setspecific(id, (void *) ( &((struct clientChain*)arg)->clientId ));
@@ -20,6 +21,8 @@ void *clientThread(void *arg)
 
     /* Boucle principale */
     for (;;) {
+        pthread_mutex_lock(&mutex);
+
         if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
             goto disconnect;
         }
@@ -65,6 +68,8 @@ void *clientThread(void *arg)
         default:                /* Unknown message code, version problem? */
             goto disconnect;
         }
+
+        pthread_mutex_unlock(&mutex);
     }
 
 disconnect:

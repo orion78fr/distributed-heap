@@ -71,6 +71,7 @@ int rcv_maj_access_read(int sock);
 int rcv_maj_access_write(int sock);
 int rcv_maj_wait_read(int sock);
 int rcv_maj_wait_write(int sock);
+int snd_server_to_clients(char *address, uint8_t port);
 
 
 /*

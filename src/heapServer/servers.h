@@ -7,6 +7,7 @@ struct serverChain {
     pthread_t threadId;
     int sock;
     char *serverAddress;
+    uint16_t port;
     struct serverChain *next;
 };
 

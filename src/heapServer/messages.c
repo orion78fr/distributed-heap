@@ -490,6 +490,29 @@ int rcv_total_replication(int sock){
     return -1;
 }
 
+int snd_server_to_clients(char *address, uint16_t port){
+    struct clientChain *client = clients;
+    uint8_t msgType = MSG_ADD_SERVER;
+    uint8_t taille = strlen(address);
+
+    while(client!=NULL){
+        pthread_mutex_lock(client->mutex_sock);
+
+        if(send_data(client->sock, msgType, 4,
+                    (DS){sizeof(servers->serverId),&servers->serverId},
+                    (DS){sizeof(taille),&taille},
+                    (DS){taille,address},
+                    (DS){sizeof(port),&port})<0){
+            goto disconnect;
+        }
+
+        pthread_mutex_unlock(client->mutex_sock);
+        client=client->next;
+    }
+    disconnect:
+    return -1;
+}
+
 int snd_maj_client(struct replicationData *rep){
     struct serverChain *servTemp = servers;
     switch (rep->modification) {
@@ -612,6 +635,9 @@ int rcv_data_replication(int sock){
     data = get_data(nom);
 
     if(data == NULL){/* création de la var */
+        struct freeListChain *tempFreeList;
+        struct freeListChain *prevFreeList = NULL;
+
 #if DEBUG
     printf("[Server %d] Demande creation(replication partielle) de %s\n",
            pthread_getspecific(id), nom);
@@ -631,6 +657,29 @@ int rcv_data_replication(int sock){
         if(read(sock, theHeap + data->offset, data->size) <= 0){
             goto disconnect;
         }
+
+        pthread_mutex_lock(&freeListMutex);
+        tempFreeList = freeList;
+        while(tempFreeList->startOffset != data->offset){
+            prevFreeList = tempFreeList;
+            tempFreeList = tempFreeList->next;
+        }
+        if(tempFreeList->startOffset != data->offset){
+            goto disconnect;
+        }else{
+            tempFreeList->startOffset += data->size;
+            tempFreeList->size -= data->size;
+            if(tempFreeList->size == 0){
+                if(prevFreeList != NULL){
+                    prevFreeList->next = tempFreeList->next;
+                } else {
+                    freeList = tempFreeList->next;
+                }
+                free(tempFreeList);
+            }
+        }
+
+        pthread_mutex_unlock(&freeListMutex);
 
         data->readAccessSize=0;
         data->readWaitSize=0;

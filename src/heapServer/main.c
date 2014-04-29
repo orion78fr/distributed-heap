@@ -134,6 +134,7 @@ int main(int argc, char *argv[])
         char *address;
         struct sockaddr_in addr;
         socklen_t len = sizeof(struct sockaddr_in);
+        uint16_t port;
 
 #if DEBUG
         printf("Waiting for clients...\n");
@@ -146,7 +147,7 @@ int main(int argc, char *argv[])
         }
 
         address = inet_ntoa(addr.sin_addr); // ?? le warning
-
+        port = ntohs(addr.sin_port);
 #if DEBUG
         printf("New Client...\n");
         /* GTU : Ajouter des getname etc... pour le debug (savoir
@@ -175,6 +176,7 @@ int main(int argc, char *argv[])
             newClient->next = clients;
             newClient->clientId = numClient;
             numClient++;
+            pthread_mutex_init(&newClient->mutex_sock, NULL);
             clients = newClient;
 
             /* Création d'un thread pour traiter les requêtes */
@@ -187,6 +189,7 @@ int main(int argc, char *argv[])
             newServer->sock = sock;
             newServer->next = servers;
             newServer->serverAddress = address;
+            newServer->serverPort = port;
             newServer->serverId = numServer;
             numServer++;
             servers = newServer;
