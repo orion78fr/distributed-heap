@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <errno.h>
 #include <sys/resource.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -21,6 +22,7 @@
 #include <getopt.h>
 #include <stdarg.h>
 #include <inttypes.h>
+#include <arpa/inet.h>
 
 /* Headers perso */
 #include "data.h"

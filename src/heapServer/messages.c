@@ -344,11 +344,16 @@ int rcv_total_replication(int sock){
 
     /* Replication des données */
 
+    printf("debut rcv total rep\n");
+
     if (read(sock, (void *) &continuer, sizeof(continuer)) <= 0) { /* nouvelle donnee a recevoir */
         goto disconnect;
     }
 
+    printf("continuer %d\n",continuer);
+
     while(continuer!=0){
+        printf("continuer %d\n",continuer);
         struct heapData *newData = malloc(sizeof(struct heapData));
 
         if(read(sock, (void *) &taille, sizeof(taille)) <= 0){

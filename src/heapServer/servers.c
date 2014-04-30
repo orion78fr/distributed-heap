@@ -13,15 +13,22 @@ void *serverThread(void *arg)
     uint8_t msgType;
 
 #if DEBUG
-    printf("[Server id: %d, thread: %d] Connexion\n", ((struct serverChain*)arg)->serverId, pthread_self());
+    printf("[sock: %d, serverNum: %d, serverId: %d, backup: %d] Connexion\n",sock, parameters.serverNum, ((struct serverChain*)arg)->serverId, backup);
 #endif
 
     if(backup){
+#if DEBUG
+    printf("[backup: %d]\n",backup);
+#endif
         /* Boucle principale */
         for (;;) {
             if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
                 goto disconnect;
             }
+
+#if DEBUG
+    printf("[msgType: %d]\n",msgType);
+#endif
 
             /* Switch pour les différents types de messages */
             switch (msgType) {
@@ -86,25 +93,6 @@ void *serverThread(void *arg)
         }
     }else{
 
-        if(read(sock, &msgType, sizeof(msgType)) <= 0){
-            goto disconnect;
-        }
-
-        if(msgType==MSG_TOTAL_REPLICATION){
-            snd_total_replication(sock);
-        }
-
-        if(read(sock, &msgType, sizeof(msgType)) <= 0){
-            goto disconnect;
-        }
-
-        if(msgType!=MSG_ACK){
-            goto disconnect;
-        }
-
-        if(snd_server_to_clients(((struct serverChain*)arg)->serverAddress, ((struct serverChain*)arg)->serverPort) <= 0){
-            goto disconnect;
-        }
 
         for(;;) {
             pthread_mutex_lock(&rep->mutex_server);

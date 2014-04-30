@@ -14,6 +14,7 @@ struct parameters {
     int hashSize;
     uint8_t serverNum;
     char *mainAddress;
+    int mainPort;
 };
 
 extern struct parameters parameters;
