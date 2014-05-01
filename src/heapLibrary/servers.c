@@ -62,9 +62,9 @@ void reconnectServers(){
         tmp = tmp->next;
     }
 
-    buildPollList();
-
     pthread_mutex_unlock(&polllock);
+
+    buildPollList();
 }
 
 /**
