@@ -50,7 +50,7 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
 
-    printf("//sleep(4)");
+    printf("//sleep(4)\n");
     /* sleep(4); */
 
     printf("t_access(read('i', (void*) j))\n");

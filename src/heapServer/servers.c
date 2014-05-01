@@ -156,7 +156,7 @@ void *serverThread(void *arg)
 disconnect:
 
 #if DEBUG
-    printf("[Server %d] Déconnexion\n", pthread_self());
+    printf("[Server %d] Déconnexion\n", parameters.serverNum);
 #endif
 
     /* Fermer la connexion */

@@ -15,6 +15,7 @@ int addserver(uint8_t id, char *address, int port){
     newServer = malloc(sizeof(struct dheapServer));
 
     newServer->id = id;
+    newServer->address=malloc(addlen);
     strncpy(newServer->address, address, addlen);
     newServer->port = port;
     newServer->next = NULL;
@@ -62,10 +63,11 @@ void reconnectServers(){
         tmp = tmp->next;
     }
 
-    buildPollList();
-
     pthread_mutex_unlock(&polllock);
+
+    buildPollList();
 }
+ 
 
 /**
  * Appelé quand le serveur est connecté, et envoie le client id qu'on

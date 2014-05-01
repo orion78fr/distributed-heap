@@ -304,6 +304,10 @@ int main(int argc, char *argv[])
             printf("reception de l'id client %d\n",newClient->clientId);
 #endif
 
+            if (write(sclient, &msgType, sizeof(msgType)) <= 0){
+                return EXIT_FAILURE;
+            }
+
             numClient++;
             pthread_mutex_init(&newClient->mutex_sock, NULL);
             clients = newClient;

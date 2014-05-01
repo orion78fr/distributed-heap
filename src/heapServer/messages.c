@@ -159,11 +159,11 @@ int do_release(int sock){
     }
 
 #if DEBUG
-        printf("[Client %d] Libération de %s\n", *(int*)pthread_getspecific(id),
+        printf("[Client %d] Libération de %s\n", pthread_getspecific(id),
            data->name);
 #endif
 
-    if((data->writeAccess != NULL) && (data->writeAccess->clientId == *(int*)pthread_getspecific(id))){
+    if((data->writeAccess != NULL) && (data->writeAccess->clientId == pthread_getspecific(id))){
         /* Lock en write */
         if (read(sock, theHeap+offset, data->size) <= 0) {        /* Contenu */
             goto disconnect;
@@ -171,7 +171,7 @@ int do_release(int sock){
         release_write_lock(data);
     } else {
         struct clientChainRead *temp = data->readAccess;
-        while(temp != NULL && (*(int*)pthread_getspecific(id) != temp->clientId)){
+        while(temp != NULL && (pthread_getspecific(id) != temp->clientId)){
             temp = temp->next;
         }
         if(temp == NULL){
@@ -632,7 +632,7 @@ int snd_data_replication(struct replicationData *rep){
             if(send_data(servTemp->sock, MSG_DEFRAG_REPLICATION, 3,
                             (DS){sizeof(tailleNom),&tailleNom},
                             (DS){tailleNom, rep->data->name},
-                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
+                            (DS){sizeof(rep->data->offset),&rep->data->offset})<0){
                 goto disconnect;
             }
             break;
@@ -641,7 +641,7 @@ int snd_data_replication(struct replicationData *rep){
             if(send_data(servTemp->sock, MSG_MAJ_ACCESS_READ, 3,
                             (DS){sizeof(tailleNom),&tailleNom},
                             (DS){tailleNom, rep->data->name},
-                            (DS){sizeof(rep->data->offset),&rep->data->offset})<0){
+                            (DS){sizeof(rep->clientId),&rep->clientId})<0){
                 goto disconnect;
             }
             break;
@@ -674,7 +674,7 @@ int snd_data_replication(struct replicationData *rep){
             break;
         case FREE_DATA:
             tailleNom = strlen(rep->data->name);
-            if(send_data(servTemp->sock, MSG_FREE_REPLICATION, 5,
+            if(send_data(servTemp->sock, MSG_FREE_REPLICATION, 2,
                             (DS){sizeof(tailleNom), &tailleNom},
                             (DS){tailleNom, rep->data->name})<0){
                 goto disconnect;
@@ -693,7 +693,7 @@ int snd_data_replication(struct replicationData *rep){
             break;
         case RELEASE_DATA:
             tailleNom = strlen(rep->data->name);
-            if(send_data(servTemp->sock, MSG_RELEASE_REPLICATION, 2,
+            if(send_data(servTemp->sock, MSG_RELEASE_REPLICATION, 3,
                             (DS){sizeof(tailleNom), &tailleNom},
                             (DS){tailleNom, rep->data->name},
                             (DS){sizeof(rep->clientId),&rep->clientId})<0){

@@ -36,7 +36,7 @@ void *clientThread(void *arg)
         }
 
 #if DEBUG
-    printf("[msgType reçu: %d\n", msgType);
+    printf("[msgType reçu: %d\n]", msgType);
 #endif        
 
         /* Switch pour les différents types de messages */
@@ -87,7 +87,7 @@ void *clientThread(void *arg)
 disconnect:
 
 #if DEBUG
-    printf("[Client %d] Déconnexion\n", pthread_self());
+    printf("[Client %d] Déconnexion\n", pthread_getspecific(id));
 #endif
 
     /* Fermer la connexion */

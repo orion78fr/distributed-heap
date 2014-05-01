@@ -67,7 +67,7 @@ int do_access_read_by_offset(int sock){
 int do_access_read_common(int sock, struct heapData *data){
 #if DEBUG
     printf("[Client %d] Demande d'accès en lecture de %s\n",
-           pthread_self(), data->name);
+           pthread_getspecific(id), data->name);
 #endif
 
     if(acquire_read_lock(data) != 0) {
@@ -156,7 +156,7 @@ int do_access_write_by_offset(int sock){
 int do_access_write_common(int sock, struct heapData *data){
 #if DEBUG
     printf("[Client %d] Demande d'accès en écriture de %s\n",
-           pthread_self(), data->name);
+           pthread_getspecific(id), data->name);
 #endif
 
     if(acquire_write_lock(data) != 0) {
