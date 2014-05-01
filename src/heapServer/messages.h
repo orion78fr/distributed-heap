@@ -2,7 +2,7 @@
 #define HEAPSERVER_MESSAGES
 
 enum msgTypes {
-    MSG_HELLO_NEW_CLIENT,
+    MSG_HELLO_NEW,
     MSG_HELLO_NEW_SERVER,
     MSG_HELLO_NOT_NEW,
     MSG_ALLOC,
@@ -16,6 +16,7 @@ enum msgTypes {
     MSG_FREE,
     MSG_ERROR,
     MSG_DISCONNECT,
+    MSG_DISCONNECT_RELEASE_ALL,
     MSG_PING,
     MSG_ADD_SERVER,
     MSG_REMOVE_SERVER,
@@ -32,7 +33,8 @@ enum msgTypes {
     MSG_ADD_CLIENT,
     MSG_RMV_CLIENT,
     MSG_ACK,
-    MSG_DEFRAG_REPLICATION
+    MSG_DEFRAG_REPLICATION,
+    MSG_TYPE_NULL /* Utilisé entre le thread de la librairie et le thread client */
 };
 
 typedef struct dataSend{
@@ -48,7 +50,7 @@ extern struct clientChain *clients;
 int send_data(int sock, uint8_t msgType, int nb, ...);
 int send_error(int sock, uint8_t errType);
 
-int do_greetings(int sock);
+int do_greetings(int sock, uint16_t clientId);
 int do_alloc(int sock);
 int do_access_read(int sock);
 int do_access_read_by_offset(int sock);
@@ -72,7 +74,7 @@ int rcv_maj_access_read(int sock);
 int rcv_maj_access_write(int sock);
 int rcv_maj_wait_read(int sock);
 int rcv_maj_wait_write(int sock);
-int snd_server_to_clients(char *address, uint16_t port);
+int snd_server_to_clients(char *address, uint16_t port, uint16_t serverId);
 int snd_defrag_replication(struct replicationData *rep);
 int rcv_defrag_replication(int sock);
 

@@ -7,6 +7,7 @@ struct clientChain {
     int sock;
     struct clientChain *next;
     pthread_mutex_t mutex_sock;
+    int newC;
 };
 
 extern uint16_t numClient;

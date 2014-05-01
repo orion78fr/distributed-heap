@@ -1,5 +1,11 @@
 #include "distributedHeap.h"
 
+/**
+ * Ajoute un serveur à la liste de serveurs, puis lance la connexion,
+ * et rebuild la poll list pour le prendre en compte.
+ * @param id du nouveau serveur, adresse, port
+ * @return toujours 0
+ */
 int addserver(uint8_t id, char *address, int port){
     struct dheapServer *newServer, *tmp;
     int addlen;
@@ -13,23 +19,59 @@ int addserver(uint8_t id, char *address, int port){
     newServer->port = port;
     newServer->next = NULL;
     newServer->status = 0;
+    newServer->lastMsgTime = 0;
+    newServer->lastPing = 0;
 
     tmp = dheapServers;
+    pthread_mutex_lock(&polllock);
     while (tmp->next != NULL)
         tmp = tmp->next;
     tmp->next = newServer;
+    tmp->lastConnect = time(NULL);
 
     /* Connexion au serveur */
     if ((newServer->sock = connectToServer(newServer->address, newServer->port, 0)) == -1){
         return 0;
     }
     newServer->status = 2;
+    pthread_mutex_unlock(&polllock);
     
     buildPollList();
     
     return 0;
 }
 
+/**
+ * Lance la reconnexion aux serveurs qui ne sont pas connectés,
+ * seulement si la dernière tentative est plus ancienne que la durée
+ * du timeout du pong
+ */
+void reconnectServers(){
+    struct dheapServer *tmp;
+
+    pthread_mutex_lock(&polllock); /* TODO: peut etre que ce lock n'est pas necessaire */
+    
+    tmp = dheapServers;
+    while (tmp != NULL){
+        if (tmp->status == 0 && tmp->lastConnect < (time(NULL)-PONG_TIMEOUT)){
+            tmp->lastConnect = time(NULL);
+            if ((tmp->sock = connectToServer(tmp->address, tmp->port, 0)) != -1){
+                tmp->status = 2;
+            }
+        }
+        tmp = tmp->next;
+    }
+
+    buildPollList();
+
+    pthread_mutex_unlock(&polllock);
+}
+
+/**
+ * Appelé quand le serveur est connecté, et envoie le client id qu'on
+ * a reçu lors de la connexion au serveur main au moment de l'init_dat()
+ * @param serveur id 
+ */
 void helloNotNew(uint8_t sid){
     /* Déclaration au serveur */
     uint8_t msgtype;
@@ -38,7 +80,9 @@ void helloNotNew(uint8_t sid){
 
     ds = getServerById(sid);
 
+    pthread_mutex_lock(&polllock);
     ds->status = 1;
+    pthread_mutex_unlock(&polllock);
 
     /* on remet la socket en bloquante */
     sockflags = fcntl(ds->sock, F_GETFL);
@@ -68,82 +112,11 @@ void helloNotNew(uint8_t sid){
     buildPollList();
 }
 
-void setServerDown(uint8_t id){
-    struct dheapServer *tmp;
-
-    tmp = dheapServers;
-    while (tmp->id != id && tmp != NULL)
-        tmp = tmp->next;
-
-    if (tmp == NULL)
-        exit(EXIT_FAILURE);
-
-    close(tmp->sock);
-    tmp->sock = -1;
-    tmp->status = 0;
-
-    buildPollList();
-}
-
-void buildPollList(){
-    struct pollfd *old, *new;
-    struct dheapServer *ds;
-    int j = 0;
-
-#if DEBUG
-    printf("Appel de buildPollList()\n");
-#endif 
-
-    old = poll_list;
-
-    countServersOnline = 0;
-    ds = dheapServers;
-    while (ds != NULL){
-        if ((ds->status == 1 || ds->status == 2) && ds->sock != -1)
-            countServersOnline++;
-        ds = ds->next;
-    }
-
-    if (countServersOnline == 0){
-#if DEBUG
-        printf("ERROR: 0 servers online\n");
-#endif 
-        free(old);
-        exit_data_thread(DHEAP_ERROR_CONNECTION);
-        return;
-    }
-
-    new = malloc(sizeof(struct pollfd)*countServersOnline);
-    ds = dheapServers;
-    while(ds != NULL){
-        if (j > countServersOnline){
-            exit(EXIT_FAILURE);
-        }
-        if (ds->status == 1 && ds->sock != -1){
-            new[j].fd = ds->sock;
-            new[j].events = POLLHUP | POLLIN | POLLNVAL;
-            j++;
-        } else if (ds->status == 2 && ds->sock != -1){
-            new[j].fd = ds->sock;
-            new[j].events = POLLOUT | POLLHUP | POLLNVAL;
-            j++;
-        }
-        ds = ds->next;
-    }
-
-    poll_list = new;
-    free(old);
-
-#if DEBUG
-    printf("Fin de buildPollList(), %d servers online\n", countServersOnline);
-#endif 
-}
-
-int switchMain(){
-    /* Remplace le sock de heapInfo et le mainId */
-    return 0;
-}
-
+/**
+ * Ferme toutes les connexions aux serveurs, envoie un RELEASE ALL
+ * au main pour être sur de libérer les accès en cours,
+ * puis free l'espace alloué pour les structures des serveurs
+ */
 void cleanServers(){
     struct dheapServer *tmp, *tofree;
 
@@ -152,8 +125,14 @@ void cleanServers(){
     while (tmp != NULL){
         tofree = tmp;
         if (tmp->sock != -1){
-            /* TODO: envoyer un msg_disconnect ? */
-            close(tmp->sock); /* TODO: vérifier erreur? */
+            uint8_t msgtype;
+            if (tmp->id == heapInfo->mainId)
+                msgtype = MSG_DISCONNECT_RELEASE_ALL;
+            else
+                msgtype = MSG_DISCONNECT;
+            /* Pas de vérification d'erreur nécessaire pour le write */
+            write(tmp->sock, &msgtype, sizeof(msgtype));
+            close(tmp->sock);
         }
         free(tmp->address);
         tmp = tmp->next;
@@ -161,8 +140,11 @@ void cleanServers(){
     }    
 }
 
-/* retourne un socket ou -1 */
-/* block: 0: not blocking, 1: blocking */
+/**
+ * Se connecte à un serveur et retourne une socket
+ * @param adresse du serveur, port, block=0 -> connexion non bloquante, =1->bloquant
+ * @return socket ou -1
+ */
 int connectToServer(char *address, int port, int block){
     struct sockaddr_in servaddr;
     /* struct addrinfo hints, *result; */
@@ -200,47 +182,4 @@ int connectToServer(char *address, int port, int block){
     }
 
     return sock;
-}
-
-
-uint8_t getServerIdBySock(int sock){
-    struct dheapServer *tmp;
-
-    tmp = dheapServers;
-
-    while (tmp->sock != sock && tmp != NULL)
-        tmp = tmp->next;
-
-    if (tmp == NULL)
-        exit(EXIT_FAILURE);
-
-    return tmp->id;
-}
-
-struct dheapServer* getServerBySock(int sock){
-    struct dheapServer *tmp;
-
-    tmp = dheapServers;
-
-    while (tmp->sock != sock && tmp != NULL)
-        tmp = tmp->next;
-
-    if (tmp == NULL)
-        exit(EXIT_FAILURE);
-
-    return tmp;
-}
-
-struct dheapServer* getServerById(uint8_t sid){
-    struct dheapServer *tmp;
-
-    tmp = dheapServers;
-
-    while (tmp->id != sid && tmp != NULL)
-        tmp = tmp->next;
-
-    if (tmp == NULL)
-        exit(EXIT_FAILURE);
-
-    return tmp;
 }

@@ -7,7 +7,10 @@ uint8_t msgtypeClient, *dheapErrorNumber;
 int countServersOnline;
 struct pollfd *poll_list;
 pthread_mutex_t readlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t writelock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mainlock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t readylock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t polllock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t readcond = PTHREAD_COND_INITIALIZER;
 
 /**
@@ -38,6 +41,7 @@ int init_data(char *address, int port){
     strncpy(dheapServers->address, address, strlen(address));
     dheapServers->port = port;
     dheapServers->next = NULL;
+    dheapServers->lastConnect = time(NULL);
     poll_list = NULL;
 
     dheapErrorNumber = NULL;
@@ -50,7 +54,7 @@ int init_data(char *address, int port){
     dheapServers->sock = heapInfo->sock;
 
     /* on indique au serveur qu'on est nouveau dans le système */
-    msgtype = MSG_HELLO_NEW_CLIENT;
+    msgtype = MSG_HELLO_NEW;
     if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
@@ -60,7 +64,7 @@ int init_data(char *address, int port){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    if (msgtype != MSG_HELLO_NEW_CLIENT){
+    if (msgtype != MSG_HELLO_NEW){
         return DHEAP_ERROR_UNEXPECTED_MSG;
     }
 
@@ -79,6 +83,9 @@ int init_data(char *address, int port){
     if (read(heapInfo->sock,&(heapInfo->heapSize),sizeof(heapInfo->heapSize)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
+
+    dheapServers->lastMsgTime = time(NULL);
+    dheapServers->lastPing = 0;
 
 #if DEBUG
     printf("HeapSize: %" PRIu64 "\n", heapInfo->heapSize);
@@ -128,21 +135,23 @@ int close_data(){
 
 #if DEBUG
     printf("Appel close_data()\n");
-#endif 
+#endif
 
     /* Fermeture du thread client */
-    if (pthread_cancel(*dheap_tid) != 0){
-        perror("pthread_cancel"); 
-        exit(EXIT_FAILURE);
+    if (dheap_tid != NULL){
+        if (pthread_cancel(*dheap_tid) != 0){
+            perror("pthread_cancel"); 
+            exit(EXIT_FAILURE);
+        }
+        if (pthread_join(*dheap_tid, (void**) &threadStatus) != 0){
+            perror("pthread_join");
+            exit(EXIT_FAILURE);
+        }
+        if (threadStatus != PTHREAD_CANCELED){
+            exit(EXIT_FAILURE); /* TODO: erreur à revoir */
+        }
+        free(dheap_tid);
     }
-    if (pthread_join(*dheap_tid, (void**) &threadStatus) != 0){
-        perror("pthread_join");
-        exit(EXIT_FAILURE);
-    }
-    if (threadStatus != PTHREAD_CANCELED){
-        exit(EXIT_FAILURE); /* TODO: erreur à revoir */
-    }
-    free(dheap_tid);
 
     /* Fermeture des connexions */
     cleanServers();
@@ -158,7 +167,7 @@ int close_data(){
     free_hashtable();
 
     /* On vide le numero d'erreur */
-    if (dheapErrorNumber != NULL){
+    if (dheapErrorNumber != NULL && msgtypeClient != MSG_DISCONNECT_RELEASE_ALL){
         free(dheapErrorNumber);
         dheapErrorNumber = NULL;
     }

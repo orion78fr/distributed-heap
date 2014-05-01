@@ -11,13 +11,21 @@ void *clientThread(void *arg)
     pthread_mutex_t mutex = ((struct clientChain*)arg)->mutex_sock;
     int sock = ((struct clientChain*)arg)->sock;
     uint8_t msgType;
-    pthread_setspecific(id, (void *) ( &((struct clientChain*)arg)->clientId ));
+    pthread_setspecific(id, ((struct clientChain*)arg)->clientId);
 
 #if DEBUG
-    printf("[Client id: %d, thread: %d] Connexion\n", ((struct clientChain*)arg)->clientId, pthread_self());
+    printf("[Client id: %d, thread: %d] Connexion\n", pthread_getspecific(id), pthread_self());
 #endif
 
-    do_greetings(sock);
+    if(((struct clientChain*)arg)->newC){
+        do_greetings(sock, ((struct clientChain*)arg)->clientId);
+
+        if(servers!=NULL){
+            snd_server_to_client(sock, ((struct clientChain*)arg));
+        }
+    }
+
+
 
     /* Boucle principale */
     for (;;) {
@@ -26,6 +34,10 @@ void *clientThread(void *arg)
         if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
             goto disconnect;
         }
+
+#if DEBUG
+    printf("[msgType reçu: %d\n", msgType);
+#endif        
 
         /* Switch pour les différents types de messages */
         switch (msgType) {

@@ -11,6 +11,7 @@ void *serverThread(void *arg)
     int backup = ((struct serverChain*)arg)->backup;
     int sock = ((struct serverChain*)arg)->sock;
     uint8_t msgType;
+    servers = ((struct serverChain*)arg);
 
 #if DEBUG
     printf("[sock: %d, serverNum: %d, serverId: %d, backup: %d] Connexion\n",sock, parameters.serverNum, ((struct serverChain*)arg)->serverId, backup);
@@ -22,6 +23,10 @@ void *serverThread(void *arg)
 #endif
         /* Boucle principale */
         for (;;) {
+
+#if DEBUG
+    printf("[attente msgMaj]\n");
+#endif
             if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
                 goto disconnect;
             }
@@ -92,12 +97,24 @@ void *serverThread(void *arg)
             }
         }
     }else{
-
+#if DEBUG
+    printf("[backup: %d]\n",backup);
+#endif
 
         for(;;) {
             pthread_mutex_lock(&rep->mutex_server);
+            if(rep->data==NULL && rep->clientId == 0){
+#if DEBUG
+    printf("[wait rep]\n");
+#endif
+                pthread_cond_wait(&rep->cond_server, &rep->mutex_server);
+            }
             if(rep->data!=NULL)
             {
+
+#if DEBUG
+    printf("[reveil et data !=NULL]\n");
+#endif
                 if(snd_data_replication(rep) <=0){
                     goto disconnect;
                 }
@@ -112,9 +129,12 @@ void *serverThread(void *arg)
 
                 
                 pthread_mutex_unlock(&rep->mutex_server);
-                pthread_cond_signal(&rep->cond_server);
+                pthread_cond_signal(&ack->cond_server);
 
             }else if(rep->clientId!=0){
+#if DEBUG
+    printf("[reveil et clientId !=0]\n");
+#endif
                 if(snd_maj_client(rep) <=0){
                     goto disconnect;
                 }
@@ -127,11 +147,8 @@ void *serverThread(void *arg)
                     goto disconnect;
                 }
 
-                rep->modification= MSG_ACK;
                 pthread_mutex_unlock(&rep->mutex_server);
-                pthread_cond_signal(&rep->cond_server);
-            }else{
-                pthread_cond_wait(&rep->cond_server, &rep->mutex_server);
+                pthread_cond_signal(&ack->cond_server);
             }
         }
     }

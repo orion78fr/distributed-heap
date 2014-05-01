@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
 
     pthread_key_create(&id, NULL);
 
+
     rep = malloc(sizeof(struct replicationData));
     rep->data = NULL;
     pthread_mutex_init(&rep->mutex_server, NULL);
@@ -60,7 +61,7 @@ int main(int argc, char *argv[])
     /* Connexion au server principal */
     if(strcmp(parameters.mainAddress,"")!=0){
         struct serverChain *newServer;
-        uint8_t msgtype = MSG_HELLO_NEW_SERVER;
+        //uint8_t msgtype = MSG_HELLO_NEW_SERVER;
 
         /* Creation de la socket */
         if ((sserver = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -96,34 +97,61 @@ int main(int argc, char *argv[])
         newServer->serverAddress = malloc(strlen(parameters.mainAddress));
         strcpy(newServer->serverAddress, parameters.mainAddress);
         servers=newServer;
-
-
-
-        /*Mis à jour du tas, des clients, des servers */
-        msgtype = MSG_HELLO_NEW_SERVER;
-
-#if DEBUG
-        printf("ecriture %d\n",msgtype);
-#endif
-
+/*
         if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
+
+#if DEBUG
+        printf("1 envoi du type MSG_HELLO_NEW_SERVER %d\n",msgtype);
+#endif
+*/
+        msgType=MSG_HELLO_NEW_SERVER;
+        if (write(sserver, &msgType, sizeof(msgType)) <= 0){
+            return ERROR_SERVER_CONNECTION;
+        }
+
+#if DEBUG
+        printf("1 envoi du type  %d\n",msgType);
+        printf("size  %d\n",sizeof(msgType));
+#endif
 
         if (write(sserver, &parameters.port, sizeof(parameters.port)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
 
+#if DEBUG
+        printf("2 envoi du port %d\n",parameters.port);
+        printf("size  %d\n",sizeof(parameters.port));
+#endif
+
+
+
         /* Reception du type de message (MSG_HELLO_NEW_SERVER) */
+        /*
         if (read(sserver, &msgtype, sizeof(msgtype)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
 
 #if DEBUG
-        printf("reception %d\n",msgtype);
+        printf("1 reception du msgType %d\n",msgtype);
+        printf("sizeof msgType %d\n",sizeof(msgtype));
 #endif
+        */
 
-        if (msgtype != MSG_HELLO_NEW_SERVER){
+        /* Reception du type de message (MSG_HELLO_NEW_SERVER) */
+        if (read(sserver, &msgType, sizeof(msgType)) <= 0){
+            return ERROR_SERVER_CONNECTION;
+        }
+
+#if DEBUG
+        printf("1 reception du msgType %d\n",msgType);
+        printf("sizeof msgType %d\n",sizeof(msgType));
+#endif        
+
+
+
+        if (msgType != MSG_HELLO_NEW_SERVER){
             return ERROR_UNEXPECTED_MSG;
         }
 
@@ -132,52 +160,39 @@ int main(int argc, char *argv[])
         if (read(sserver, &(newServer->serverId), sizeof(newServer->serverId)) <= 0){
             return ERROR_BACKUP_INIT;
         }
+
 #if DEBUG
-        printf("id du main %d\n",newServer->serverId);
+        printf("2 reception id du main %d\n",newServer->serverId);
+        printf("sizeof id du main %d\n",sizeof(newServer->serverId));
 #endif
+
 
         /* Réception de notre id server */
         if (read(sserver, &(parameters.serverNum), sizeof(parameters.serverNum)) <= 0){
             return ERROR_BACKUP_INIT;
         }
+
 #if DEBUG
-        printf("notre id %d\n",parameters.serverNum);
+        printf("3 reception notre id %d\n",parameters.serverNum);
+        printf("sizeof notre id %d\n",sizeof(parameters.serverNum));
 #endif
-        /*
+        
         if(send_data(sserver, MSG_TOTAL_REPLICATION, 0)<0){
             return EXIT_FAILURE;
         }
-        */
-        msgtype = MSG_TOTAL_REPLICATION;
 
-        printf("%d\n",sserver);
-
-        if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
-            return ERROR_SERVER_CONNECTION;
-        }
-
-
-
-        printf("%d\n",msgtype);
-
-        /* demande de mis à jour du tas et des locks et du nombre de serveur */
-        /*
-        msgtype = MSG_TOTAL_REPLICATION;
-        printf("%d\n",msgtype);
-        if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
-            return ERROR_SERVER_CONNECTION;
-        }
-        */
 #if DEBUG
-        printf("total replication demandé\n");
+        printf("3 demande replication totale \n");
 #endif
-        printf("%d\n",rcv_total_replication(sserver));
+
+        if(rcv_total_replication(sserver)<=0){
+            return EXIT_FAILURE;
+        }
 
         /* Création d'un thread pour traiter les requêtes servers */
         pthread_create((pthread_t *) & (servers->threadId), NULL,
                         serverThread, (void *) servers);
 
-        pthread_join(servers->threadId, 0);
     }
 
 #if DEBUG
@@ -237,14 +252,21 @@ int main(int argc, char *argv[])
         }
 
 #if DEBUG
-        printf("on a de la place et on attend un msg hello new...\n");
+        printf("on a de la place et on attend un msg hello new...%d\n",msgType);
 #endif
+
+
 
         if (read(sclient,  &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
             return EXIT_FAILURE;
         }
 
-        if(msgType == MSG_HELLO_NEW_CLIENT){
+#if DEBUG
+        printf("1 reception du msgType %d\n",msgType);
+        printf("size %d\n",sizeof(msgType));
+#endif
+
+        if(msgType == MSG_HELLO_NEW){
 #if DEBUG        
             printf("new client\n");
 #endif            
@@ -254,6 +276,7 @@ int main(int argc, char *argv[])
             newClient->sock = sclient;
             newClient->next = clients;
             newClient->clientId = numClient;
+            newClient->newC = 1;
             numClient++;
             pthread_mutex_init(&newClient->mutex_sock, NULL);
             clients = newClient;
@@ -262,20 +285,57 @@ int main(int argc, char *argv[])
             pthread_create((pthread_t *) & (newClient->threadId), NULL,
                            clientThread, (void *) newClient);
             clientsConnected++;
+        }else if(msgType == MSG_HELLO_NOT_NEW){
+
+#if DEBUG        
+            printf("new client sur le backup\n");
+#endif            
+            /* Ajout du client dans la chaîne de socket (ajout au début pour
+             * éviter le parcours) */
+            newClient = malloc(sizeof(struct clientChain));
+            newClient->sock = sclient;
+            newClient->next = clients;
+            newClient->newC = 0;
+
+            if (read(sclient,  &newClient->clientId, sizeof(newClient->clientId)) <= 0) {
+                return EXIT_FAILURE;
+            }
+#if DEBUG
+            printf("reception de l'id client %d\n",newClient->clientId);
+#endif
+
+            numClient++;
+            pthread_mutex_init(&newClient->mutex_sock, NULL);
+            clients = newClient;
+
+            /* Création d'un thread pour traiter les requêtes */
+            pthread_create((pthread_t *) & (newClient->threadId), NULL,
+                           clientThread, (void *) newClient);
+            clientsConnected++;
+
         }else if(msgType == MSG_HELLO_NEW_SERVER){
 #if DEBUG            
             printf("new server\n");
 #endif
+
             newServer = malloc(sizeof(struct serverChain));
 
-            if (read(sclient,  &newServer->serverPort, sizeof(newServer->serverPort)) <= 0) {       /* Msg type */
+            if (read(sclient,  &newServer->serverPort, sizeof(newServer->serverPort)) <= 0) {
                 return EXIT_FAILURE;
             }
 #if DEBUG
+            printf("2 reception du port %d\n",newServer->serverPort);
+            printf("size %d\n",sizeof(newServer->serverPort));
             printf("port backup %d\n",newServer->serverPort);
 #endif
             newServer->backup = 0;
             newServer->sock = sclient;
+
+#if DEBUG
+        printf("sclient %d\n",sclient);
+        printf("newServer->sock %d\n",newServer->sock);
+#endif
+
             newServer->next = servers;
             newServer->serverAddress = malloc(strlen(address));
             strcpy(newServer->serverAddress, address);
@@ -284,47 +344,75 @@ int main(int argc, char *argv[])
             servers = newServer;
 
             serversConnected++;
-
-
+/*
+#if DEBUG
+            printf("1 envoi du msgType\n");
+            printf("2 envoi du mainId\n");
+            printf("3 envoi du backupId\n");
+#endif
+            
             if(send_data(newServer->sock, MSG_HELLO_NEW_SERVER, 2,
                             (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
                             (DS){sizeof(newServer->serverId), &(newServer->serverId)})<0){
                 return EXIT_FAILURE;
-            }
+            }*/
 #if DEBUG
-            printf("send data done\n");
+        printf("1 envoi du msgType %d\n",msgType);
+        printf("size %d\n",sizeof(msgType));
 #endif
-#if DEBUG
-    printf("[msgType: %d]\n",msgType);
-#endif
-
-            if (read(sclient,  &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+            if (write(sclient, &msgType, sizeof(msgType)) <= 0){
                 return EXIT_FAILURE;
             }
 
 #if DEBUG
-    printf("[msgType: %d]\n",msgType);
+        printf("2 envoi du servNum %d\n",parameters.serverNum);
+        printf("size %d\n",sizeof(parameters.serverNum));
 #endif
+            if (write(sclient, &parameters.serverNum, sizeof(parameters.serverNum)) <= 0){
+                return EXIT_FAILURE;
+            }
+
+#if DEBUG
+        printf("3 envoi du serverId %d\n",newServer->serverId);
+        printf("size %d\n",sizeof(newServer->serverId));
+#endif
+            if (write(sclient, &newServer->serverId, sizeof(newServer->serverId)) <= 0){
+                return EXIT_FAILURE;
+            }
+
+            msgType = MSG_TOTAL_REPLICATION;
+
+
+            if (read(sclient,  &msgType, sizeof(msgType)) <= 0) {       
+                return EXIT_FAILURE;
+            }
+
+#if DEBUG
+            printf("3 reception du msgType %d\n",msgType);
+#endif
+
 
             if(msgType==MSG_TOTAL_REPLICATION){
-                snd_total_replication(sock);
+                if(snd_total_replication(sclient)<=0){
+                    return EXIT_FAILURE;
+                }
             }
 
 
-
-            if(read(newServer->sock, &msgType, sizeof(msgType)) <= 0){
+            if(read(sclient, &msgType, sizeof(msgType)) <= 0){
                 return EXIT_FAILURE;
             }
 
 #if DEBUG
     printf("[msgType: %d]\n",msgType);
+    printf("size %d\n",sizeof(msgType));
 #endif
 
             if(msgType!=MSG_ACK){
                 return EXIT_FAILURE;
             }
 
-            if(snd_server_to_clients(newServer->serverAddress, newServer->serverPort) <= 0){
+            if(snd_server_to_clients(servers->serverAddress, servers->serverPort, servers->serverId) <= 0){
                 return EXIT_FAILURE;
             }
 
@@ -349,7 +437,9 @@ int main(int argc, char *argv[])
     }
     */
 
-    pthread_join(servers->serverId,0);
+    if(servers!=NULL){
+        pthread_join(servers->serverId,0);
+    }
 
     shutdown(sock, 2);
     close(sock);

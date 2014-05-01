@@ -53,13 +53,11 @@ int send_error(int sock, uint8_t errType){
 }
 
 /* TODO ajouter l'envoi des @ des autres serveurs et leurs id */
-int do_greetings(int sock){
+int do_greetings(int sock, uint16_t clientId){
     uint8_t msgType;
-    uint16_t clientId;
 
 
-    clientId = sock;
-    if(send_data(sock, MSG_HELLO_NEW_CLIENT, 3,
+    if(send_data(sock, MSG_HELLO_NEW, 3,
                 (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
                 (DS){sizeof(clientId), &(clientId)},
                 (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
@@ -76,9 +74,18 @@ int do_alloc(int sock){
     uint64_t varSize;
     int err;
 
+#if DEBUG
+    printf("[Client %d] demande Allocation\n",
+           pthread_getspecific(id));
+#endif
+
     if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
         goto disconnect;
     }
+
+#if DEBUG
+    printf("taille nom %d\n",taille);
+#endif
 
     nom = malloc((taille + 1) * sizeof(char));
     if(nom == NULL){
@@ -91,14 +98,19 @@ int do_alloc(int sock){
         goto disconnect;
     }
 
+#if DEBUG
+    printf("nom %s\n",nom);
+#endif
+
     if (read(sock, (void *) &varSize, sizeof(varSize)) <= 0) { /* Var size */
         goto disconnect;
     }
 
 #if DEBUG
-    printf("[Client %d] Allocation de %s de taille %d\n",
-           pthread_getspecific(id), nom, varSize);
+    printf("size %d\n",varSize);
 #endif
+
+
 
     if ((err = add_data(nom, varSize)) != 0) {
         /* ERREUR */
@@ -113,7 +125,10 @@ int do_alloc(int sock){
         }
     } else {
 
-
+#if DEBUG
+    printf("[Client %d] Allocation réussi de %s de taille %d\n",
+           pthread_getspecific(id), nom, varSize);
+#endif
 
         /* OK */
         nom = NULL; /* Le nom est stocké dans la structure et ne doit pas être free, même en cas d'erreur d'envoi */
@@ -225,7 +240,9 @@ int snd_total_replication(int sock){
     struct  serverChain *servTemp = servers;
     struct heapData *data=NULL;
     uint8_t continuer=0, tailleNom;
-
+#if DEBUG
+    printf("debut snd total rep\n");
+#endif
     pthread_mutex_lock(&hashTableMutex);
     int i=0;
     while(data==NULL && i!=parameters.hashSize){
@@ -235,8 +252,16 @@ int snd_total_replication(int sock){
     if(data!=NULL){
         continuer=1;
     }
+
+#if DEBUG
+    printf("continuer %d\n",continuer);
+#endif
+
     while(continuer){
 
+#if DEBUG
+    printf("continuer %d\n",continuer);
+#endif
         if(write(sock, &continuer, sizeof(continuer)) <= 0){
             goto disconnect;
         }
@@ -326,6 +351,12 @@ int snd_total_replication(int sock){
         goto disconnect;
     }
 
+#if DEBUG
+    printf("continuer %d\n",continuer);
+    printf("fin snd_total_replication\n");
+#endif
+
+    return 1;
     disconnect:
     return -1;
 
@@ -341,19 +372,22 @@ int rcv_total_replication(int sock){
     uint64_t varSize;
     struct heapData *data;
     uint8_t continuer;
+    uint8_t msgType;
 
     /* Replication des données */
-
+#if DEBUG
     printf("debut rcv total rep\n");
-
+#endif
     if (read(sock, (void *) &continuer, sizeof(continuer)) <= 0) { /* nouvelle donnee a recevoir */
         goto disconnect;
     }
-
+#if DEBUG
     printf("continuer %d\n",continuer);
-
+#endif
     while(continuer!=0){
-        printf("continuer %d\n",continuer);
+#if DEBUG
+    printf("continuer %d\n",continuer);
+#endif
         struct heapData *newData = malloc(sizeof(struct heapData));
 
         if(read(sock, (void *) &taille, sizeof(taille)) <= 0){
@@ -490,21 +524,61 @@ int rcv_total_replication(int sock){
         goto disconnect;
     }
 
+#if DEBUG
+    printf("fin rcv_total_replication\n");
+#endif
+
     return 1;
     disconnect:
     return -1;
 }
 
-int snd_server_to_clients(char *address, uint16_t port){
+int snd_server_to_client(int sock, struct clientChain *client){
+    uint8_t msgType = MSG_ADD_SERVER;
+    uint8_t taille = strlen(servers->serverAddress);
+
+#if DEBUG
+    printf("debut snd server %d, @: %s, port: %d to clients\n",servers->serverId,servers->serverAddress,servers->serverPort);
+#endif
+
+        pthread_mutex_lock(&client->mutex_sock);
+
+        if(send_data(client->sock, msgType, 4,
+                    (DS){sizeof(servers->serverId),&servers->serverId},
+                    (DS){sizeof(taille),&taille},
+                    (DS){taille,servers->serverAddress},
+                    (DS){sizeof(servers->serverPort),&servers->serverPort})<0){
+            goto disconnect;
+        }
+
+        pthread_mutex_unlock(&client->mutex_sock);
+
+
+#if DEBUG
+    printf("fin snd server to clients\n");
+#endif
+
+    return 1;
+    disconnect:
+    return -1;
+
+}
+
+int snd_server_to_clients(char *address, uint16_t port, uint16_t serverId){
     struct clientChain *client = clients;
     uint8_t msgType = MSG_ADD_SERVER;
     uint8_t taille = strlen(address);
+
+#if DEBUG
+    printf("debut snd server %d, @: %s, port: %d to clients\n",serverId,address,port);
+#endif
+
 
     while(client!=NULL){
         pthread_mutex_lock(&client->mutex_sock);
 
         if(send_data(client->sock, msgType, 4,
-                    (DS){sizeof(servers->serverId),&servers->serverId},
+                    (DS){sizeof(serverId),&serverId},
                     (DS){sizeof(taille),&taille},
                     (DS){taille,address},
                     (DS){sizeof(port),&port})<0){
@@ -514,6 +588,12 @@ int snd_server_to_clients(char *address, uint16_t port){
         pthread_mutex_unlock(&client->mutex_sock);
         client=client->next;
     }
+
+#if DEBUG
+    printf("fin snd server to clients\n");
+#endif
+
+    return 1;
     disconnect:
     return -1;
 }
@@ -536,6 +616,8 @@ int snd_maj_client(struct replicationData *rep){
         default:
             return 0;
     }
+    rep->data=NULL;
+    rep->clientId=0;
     return 1;
     disconnect:
     return -1;
@@ -621,6 +703,8 @@ int snd_data_replication(struct replicationData *rep){
         default:                /* Unknown message code, version problem? */
             return 0;
     }
+    rep->data=NULL;
+    rep->clientId=0;
     return 1;
     disconnect:
     return -1;
@@ -747,7 +831,10 @@ int rcv_data_replication(int sock){
 
 
     }
-    return 0;
+#if DEBUG
+    printf("fin rcv_data_replication\n");
+#endif
+    return 1;
     disconnect:
     if(nom != NULL){
         free(nom);
@@ -892,6 +979,7 @@ int rcv_rmv_client(int sock){
         }
         return 1;
     }
+    return 0;
     disconnect:
     return -1;
 }
@@ -1154,7 +1242,7 @@ int rcv_defrag_replication(int sock){
 
     pthread_mutex_unlock(&freeListMutex);
 
-    return 0;
+    return 1;
     disconnect:
     if(nom != NULL){
         free(nom);
@@ -1187,6 +1275,7 @@ int snd_partial_replication(struct heapData *data){
        servTemp=servTemp->next;
     }
     pthread_mutex_unlock(&hashTableMutex);
+    return 1;
     disconnect:
     return -1;
 }
@@ -1281,7 +1370,7 @@ int rcv_partial_replication(int sock){
          * Lock en attente */
 
     }
-    return 0;
+    return 1;
     disconnect:
     if(nom != NULL){
         free(nom);

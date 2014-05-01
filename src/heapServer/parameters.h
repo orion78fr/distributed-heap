@@ -8,13 +8,13 @@
 #define HASHSIZE 257
 
 struct parameters {
-    int port;
+    uint16_t port;
     int maxClients;
     uint64_t heapSize;
     int hashSize;
     uint8_t serverNum;
     char *mainAddress;
-    int mainPort;
+    uint16_t mainPort;
 };
 
 extern struct parameters parameters;

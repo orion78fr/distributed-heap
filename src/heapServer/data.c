@@ -118,20 +118,27 @@ int add_data(char *name, uint64_t size)
 
         memset(theHeap + newData->offset, 0, size);
 
-        pthread_mutex_lock(&rep->mutex_server);
-
-        rep->modification = MAJ_DATA;
-        rep->data = newData;
-        rep->clientId = 0;
-
-        pthread_mutex_unlock(&rep->mutex_server);
-        pthread_mutex_lock(&ack->mutex_server);
-        pthread_cond_signal(&rep->cond_server);
-        pthread_cond_wait(&ack->cond_server, &ack->mutex_server);
-        pthread_mutex_unlock(&ack->mutex_server);
 #if DEBUG
-    printf("ADD_DATA, replication done");
+    printf("ADD_DATA, debut replication\n");
 #endif
+
+        if(servers!=NULL){
+
+            pthread_mutex_lock(&rep->mutex_server);
+
+            rep->modification = MAJ_DATA;
+            rep->data = newData;
+            rep->clientId = 0;
+
+            pthread_mutex_unlock(&rep->mutex_server);
+            pthread_mutex_lock(&ack->mutex_server);
+            pthread_cond_signal(&rep->cond_server);
+            pthread_cond_wait(&ack->cond_server, &ack->mutex_server);
+            pthread_mutex_unlock(&ack->mutex_server);
+#if DEBUG
+    printf("ADD_DATA, replication done\n");
+#endif
+        }
         pthread_mutex_unlock(&hashTableMutex);
     }
     pthread_mutex_unlock(&addDataMutex);
