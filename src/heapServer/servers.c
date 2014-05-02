@@ -164,6 +164,15 @@ disconnect:
     printf("[Server %d] Déconnexion\n", parameters.serverNum);
 #endif
 
+
+
+
+    free(servers->serverAddress);
+    free(servers);
+    servers=NULL;
+    pthread_mutex_unlock(&rep->mutex_server);
+    pthread_cond_signal(&ack->cond_server);
+
     /* Fermer la connexion */
     shutdown(sock, 2);
     close(sock);
