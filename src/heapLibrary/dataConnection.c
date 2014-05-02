@@ -50,6 +50,16 @@ int init_data(char *address, int port){
     if ((heapInfo->sock = connectToServer(address, port, 1)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
+    
+    /* Reception du type de message (MSG_HELLO) */			
+    if (read(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
+        return DHEAP_ERROR_CONNECTION;
+    }
+    if (msgtype != MSG_HELLO){
+        close_data();
+        return DHEAP_ERROR_CONNECTION;
+    }
+
     dheapServers->status = 1;
     dheapServers->sock = heapInfo->sock;
 

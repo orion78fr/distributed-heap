@@ -147,9 +147,9 @@ void *data_thread(void *arg){
 #if DEBUG
                     printf("POLLOUT, id = %d\n", ds->id);
 #endif
-                    helloNotNew(ds->id); /* TODO: risque de blocage sur le read du ack */
+                    /* helloNotNew(ds->id); TODO: risque de blocage sur le read du ack
                     setTime(ds->id);
-                    break; 
+                    break; */
                 }
                 if ((poll_list[i].revents&POLLIN) == POLLIN){
                     uint8_t msgtype;
@@ -171,6 +171,13 @@ void *data_thread(void *arg){
                         pthread_cond_wait(&readcond, &readlock);
                         pthread_mutex_unlock(&readylock);
                         continue;
+                    } else if (msgtype == MSG_HELLO){
+#if DEBUG
+                        printf("HELLO, id = %d\n", ds->id);
+#endif
+                        helloNotNew(ds->id); /* TODO: risque de blocage sur le read du ack */
+                        setTime(ds->id);
+                        break;
                     } else if (msgtype == MSG_DISCONNECT){
 #if DEBUG
                         printf("DISCONNECT, id = %d\n", ds->id);

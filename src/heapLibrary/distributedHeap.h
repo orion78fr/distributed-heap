@@ -88,6 +88,7 @@ enum errorCodes {
 
 /* TODO: enum partagé avec le serveur */
 enum msgTypes {
+    MSG_HELLO,
     MSG_HELLO_NEW,
     MSG_HELLO_NEW_SERVER,
     MSG_HELLO_NOT_NEW,
