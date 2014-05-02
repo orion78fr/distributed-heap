@@ -6,9 +6,6 @@
  * @return enum errorCodes
  */
 int receiveAck(uint8_t msgtype){
-#if DEBUG
-    printf("receiveAck %d\n",msgtype);
-#endif 
     return receiveAckPointer(&msgtype);
 }
 
@@ -17,7 +14,7 @@ int receiveAckPointer(uint8_t *msgtypeP){
     uint8_t msgtypeReponse;
 
 #if DEBUG
-    printf("Appel receiveAck()\n");
+    printf("Appel receiveAck(%" PRIu8 ")\n", *msgtypeP);
 #endif 
 
     msgtype = *msgtypeP;

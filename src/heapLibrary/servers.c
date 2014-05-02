@@ -13,6 +13,7 @@ int addserver(uint8_t id, char *address, int port){
     addlen = strlen(address);
 
     newServer = malloc(sizeof(struct dheapServer));
+    newServer->address = malloc(sizeof(char)*strlen(address));
 
     newServer->id = id;
     newServer->address=malloc(addlen);
@@ -67,7 +68,6 @@ void reconnectServers(){
 
     buildPollList();
 }
- 
 
 /**
  * Appelé quand le serveur est connecté, et envoie le client id qu'on
