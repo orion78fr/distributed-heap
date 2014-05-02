@@ -27,6 +27,9 @@ int t_malloc(uint64_t size, char *name){
 
         if (done == -1){
             msgtype = MSG_RETRY;
+#if DEBUG
+            printf("Envoie de MSG RETRY -> %" PRIu8 "\n", heapInfo->mainId);
+#endif
             if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;
@@ -108,6 +111,9 @@ int t_free(char *name){
 
         if (done == -1){
             msgtype = MSG_RETRY;
+#if DEBUG
+            printf("Envoie de MSG RETRY -> %" PRIu8 "\n", heapInfo->mainId);
+#endif
             if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;

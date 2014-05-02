@@ -27,6 +27,9 @@ int t_access_common(uint8_t msgtype, char *name, void **p, uint64_t offset){
         
         if (done == -1){
             msgtype = MSG_RETRY;
+#if DEBUG
+            printf("Envoie de MSG RETRY -> %" PRIu8 "\n", heapInfo->mainId);
+#endif
             if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;
@@ -227,6 +230,9 @@ int t_release(void *p){
 
         if (done == -1){
             msgtype = MSG_RETRY;
+#if DEBUG
+            printf("Envoie de MSG RETRY -> %" PRIu8 "\n", heapInfo->mainId);
+#endif
             if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;

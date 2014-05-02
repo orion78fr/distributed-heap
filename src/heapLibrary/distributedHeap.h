@@ -23,8 +23,8 @@
 #include "dheapHashtable.h"
 
 #define DH_SERVER_RETRY 3
-#define PONG_TIMEOUT 5
-#define TIMEOUT_BEFORE_PING 10
+#define PONG_TIMEOUT 2
+#define TIMEOUT_BEFORE_PING 4
 
 
 struct heapInfo {

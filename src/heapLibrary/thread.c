@@ -83,6 +83,10 @@ void *data_thread(void *arg){
                 dstmp->lastPing = time(NULL);
             }
 
+            if (dstmp->status == 2 && dstmp->lastConnect < (time(NULL) - PONG_TIMEOUT)){
+                setServerDownNoRebuild(dstmp->id);
+            }
+
             dstmp = dstmp->next;
         }
 

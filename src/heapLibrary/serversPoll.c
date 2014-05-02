@@ -121,6 +121,9 @@ int switchMain(){
         if (ds->status == 1){
             heapInfo->mainId = ds->id;
             heapInfo->sock = ds->sock;
+#if DEBUG
+            printf("New main: %" PRIu8 "\n", ds->id);
+#endif 
             return 0;
         }
         ds = ds->next;
