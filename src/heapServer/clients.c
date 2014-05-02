@@ -1,6 +1,7 @@
 #include "common.h"
 
 int clientsConnected = 0;
+int retry = 0;
 
 /**
  * Thread du client
@@ -13,6 +14,7 @@ void *clientThread(void *arg)
     int sock = ((struct clientChain*)arg)->sock;
     uint8_t msgType;
     pthread_setspecific(id, ((struct clientChain*)arg)->clientId);
+    
 
 #if DEBUG
     printf("[Client id: %d, thread: %d] Connexion\n", pthread_getspecific(id), pthread_self());
@@ -39,6 +41,13 @@ void *clientThread(void *arg)
 #if DEBUG
     printf("[msgType reçu: %d\n]", msgType);
 #endif        
+
+        if(msgType == MSG_RETRY){
+            retry = 1;
+            if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+                goto disconnect;
+            }
+        }
 
         /* Switch pour les différents types de messages */
         switch (msgType) {
@@ -86,7 +95,7 @@ void *clientThread(void *arg)
         default:                /* Unknown message code, version problem? */
             goto disconnect;
         }
-
+        retry = 0;
         pthread_mutex_unlock(&mutex);
     }
 

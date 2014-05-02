@@ -70,6 +70,33 @@ int do_access_read_common(int sock, struct heapData *data){
            pthread_getspecific(id), data->name);
 #endif
 
+    if(retry){
+        struct clientChainRead *temp = data->readAccess;
+        while(temp!=NULL){
+            if(temp->clientId==pthread_getspecific(id)){
+                if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
+                        (DS){sizeof(data->offset), &data->offset},
+                        (DS){sizeof(data->size), &data->size},
+                        (DS){data->size, theHeap + data->offset})<0){
+                    goto disconnect;
+                }
+                return 0;
+            }
+        }
+        temp = data->readWait;
+        while(temp!=NULL){
+            if(temp->clientId==pthread_getspecific(id)){
+                if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
+                        (DS){sizeof(data->offset), &data->offset},
+                        (DS){sizeof(data->size), &data->size},
+                        (DS){data->size, theHeap + data->offset})<0){
+                    goto disconnect;
+                }
+                return 0;
+            }
+        }
+    }
+
     if(acquire_read_lock(data) != 0) {
         /* ERREUR */
         if(send_error(sock, ERROR_VAR_DOESNT_EXIST)<0){
@@ -158,6 +185,33 @@ int do_access_write_common(int sock, struct heapData *data){
     printf("[Client %d] Demande d'accès en écriture de %s\n",
            pthread_getspecific(id), data->name);
 #endif
+
+    if(retry){
+        struct clientChainWrite *temp = data->writeAccess;
+        while(temp!=NULL){
+            if(temp->clientId==pthread_getspecific(id)){
+                if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
+                        (DS){sizeof(data->offset), &data->offset},
+                        (DS){sizeof(data->size), &data->size},
+                        (DS){data->size, theHeap + data->offset})<0){
+                    goto disconnect;
+                }
+                return 0;
+            }
+        }
+        temp = data->writeWait;
+        while(temp!=NULL){
+            if(temp->clientId==pthread_getspecific(id)){
+                if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
+                        (DS){sizeof(data->offset), &data->offset},
+                        (DS){sizeof(data->size), &data->size},
+                        (DS){data->size, theHeap + data->offset})<0){
+                    goto disconnect;
+                }
+                return 0;
+            }
+        }
+    }
 
     if(acquire_write_lock(data) != 0) {
         /* ERREUR */

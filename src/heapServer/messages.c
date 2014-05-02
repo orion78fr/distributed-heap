@@ -115,6 +115,13 @@ int do_alloc(int sock){
     if ((err = add_data(nom, varSize)) != 0) {
         /* ERREUR */
         if(err == -1){
+            if(retry){
+                nom = NULL; /* Le nom est stocké dans la structure et ne doit pas être free, même en cas d'erreur d'envoi */
+                if(send_data(sock, MSG_ALLOC, 0)<0){
+                    goto disconnect;
+                }
+                return 0;
+            }
             if(send_error(sock, ERROR_VAR_NAME_EXIST)<0){
                 goto disconnect;
             }
@@ -163,11 +170,54 @@ int do_release(int sock){
            data->name);
 #endif
 
+    if(retry){
+        int testRead=0, testWrite=0;
+        struct clientChainRead *temp = data->readAccess;
+        while(temp != NULL && (pthread_getspecific(id) != temp->clientId)){
+            temp = temp->next;
+        }
+        if(temp == NULL){
+            testRead = 1;
+        }
+        if(data->writeAccess == NULL){
+            testWrite = 1;
+        }else if(data->writeAccess->clientId != pthread_getspecific(id)){
+            testWrite = 1;
+        }
+
+        if(testRead && testWrite){
+            if(send_data(sock, MSG_RELEASE, 0)<0){
+                goto disconnect;
+            }
+            return 0;
+        }
+    }
+
     if((data->writeAccess != NULL) && (data->writeAccess->clientId == pthread_getspecific(id))){
         /* Lock en write */
         if (read(sock, theHeap+offset, data->size) <= 0) {        /* Contenu */
             goto disconnect;
         }
+
+        if(servers!=NULL && !servers->backup){
+            pthread_mutex_lock(&rep->mutex_server);
+
+            rep->modification = MAJ_DATA;
+            rep->data = data;
+            rep->clientId = 0;
+
+            pthread_mutex_unlock(&rep->mutex_server);
+            pthread_mutex_lock(&ack->mutex_server);
+            pthread_cond_signal(&rep->cond_server);
+            pthread_cond_wait(&ack->cond_server, &ack->mutex_server);
+            pthread_mutex_unlock(&ack->mutex_server);
+
+#if DEBUG
+    printf("MAJ_WAIT_READ, replication done\n");
+#endif
+        }
+
+
         release_write_lock(data);
     } else {
         struct clientChainRead *temp = data->readAccess;
@@ -221,6 +271,11 @@ int do_free(int sock){
 #endif
 
     if(remove_data(nom) != 0){
+        if(retry){
+            if(send_data(sock, MSG_FREE, 0)<0){
+                goto disconnect;
+            }
+        }
         /* ERREUR */
         goto disconnect;
     } else {

@@ -16,6 +16,7 @@ extern struct clientChain *clients;
 extern struct replicationData *rep;
 extern struct replicationAck *ack;
 extern pthread_key_t id;
+extern int retry;
 
 void *clientThread(void *arg);
 
