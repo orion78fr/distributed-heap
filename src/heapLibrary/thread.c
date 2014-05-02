@@ -84,6 +84,9 @@ void *data_thread(void *arg){
             }
 
             if (dstmp->status == 2 && dstmp->lastConnect < (time(NULL) - PONG_TIMEOUT)){
+#if DEBUG
+                printf("Cant reconnect to id = %" PRIu8 "\n", dstmp->id);
+#endif
                 setServerDownNoRebuild(dstmp->id);
             }
 

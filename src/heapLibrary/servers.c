@@ -60,6 +60,9 @@ void reconnectServers(){
     tmp = dheapServers;
     while (tmp != NULL){
         if (tmp->status == 0 && tmp->lastConnect < (time(NULL)-PONG_TIMEOUT)){
+#if DEBUG
+            printf("Reconnect To id = %" PRIu8 "\n", tmp->id);
+#endif
             tmp->lastConnect = time(NULL);
             if ((tmp->sock = connectToServer(tmp->address, tmp->port, 0)) != -1){
                 tmp->status = 2;
