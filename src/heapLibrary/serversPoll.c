@@ -117,7 +117,7 @@ int switchMain(){
         printf("Appel de switchMain()\n");
 #endif 
     ds = dheapServers;
-    while (ds != NULL && ds->status != 1){
+    while (ds != NULL){
         if (ds->status == 1){
             heapInfo->mainId = ds->id;
             heapInfo->sock = ds->sock;
