@@ -6,7 +6,7 @@
  * @return enum errorCodes
  */
 int t_access_common(uint8_t msgtype, char *name, void **p, uint64_t offset){
-    uint8_t namelen, retack;
+    uint8_t namelen, retack, retrymsg;
     int ret;
     int done = 0;
 
@@ -14,8 +14,11 @@ int t_access_common(uint8_t msgtype, char *name, void **p, uint64_t offset){
     printf("Appel t_access_common(%d, %s, p)\n", msgtype, name);
 #endif
 
+    if (heapInfo == NULL)
+        return DHEAP_ERROR_CONNECTION;
+
+    pthread_mutex_lock(&mainlock);
     while (done <= 0){
-        pthread_mutex_lock(&mainlock);
         pthread_mutex_lock(&writelock);
         
         /* On traite une erreur venant du thread de la librairie */
@@ -26,11 +29,11 @@ int t_access_common(uint8_t msgtype, char *name, void **p, uint64_t offset){
         }
         
         if (done == -1){
-            msgtype = MSG_RETRY;
+            retrymsg = MSG_RETRY;
 #if DEBUG
             printf("Envoie de MSG RETRY -> %" PRIu8 "\n", heapInfo->mainId);
 #endif
-            if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+            if (write(heapInfo->sock, &retrymsg, sizeof(retrymsg)) == -1){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;
                 continue;
@@ -207,7 +210,7 @@ int t_access_write_byoffset(uint64_t offset, void **p){
  * @return enum errorCodes
  */
 int t_release(void *p){
-    uint8_t msgtype;
+    uint8_t msgtype, retrymsg;
     uint64_t offset = 0;
     struct dheapVar *dv;
     int ret;
@@ -217,8 +220,11 @@ int t_release(void *p){
     printf("Appel t_release()\n");
 #endif 
 
+    if (heapInfo == NULL)
+        return DHEAP_ERROR_CONNECTION;
+
+    pthread_mutex_lock(&mainlock);
     while (done <= 0){
-        pthread_mutex_lock(&mainlock);
         pthread_mutex_lock(&writelock);
 
         /* On traite une erreur venant du thread de la librairie */
@@ -229,11 +235,11 @@ int t_release(void *p){
         }
 
         if (done == -1){
-            msgtype = MSG_RETRY;
+            retrymsg = MSG_RETRY;
 #if DEBUG
             printf("Envoie de MSG RETRY -> %" PRIu8 "\n", heapInfo->mainId);
 #endif
-            if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+            if (write(heapInfo->sock, &retrymsg, sizeof(retrymsg)) == -1){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;
                 continue;

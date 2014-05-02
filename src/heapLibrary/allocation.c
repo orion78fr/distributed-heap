@@ -6,13 +6,16 @@
  * @return enum errorCodes
  */
 int t_malloc(uint64_t size, char *name){
-    uint8_t msgtype, namelen;
+    uint8_t msgtype, namelen, retrymsg;
     int ret;
     int done = 0;
 
 #if DEBUG
     printf("Appel t_malloc(%" PRIu64 ", %s)\n", size, name);
 #endif
+
+    if (heapInfo == NULL)
+        return DHEAP_ERROR_CONNECTION;
 
     while (done <= 0){
         pthread_mutex_lock(&mainlock);
@@ -26,11 +29,11 @@ int t_malloc(uint64_t size, char *name){
         }
 
         if (done == -1){
-            msgtype = MSG_RETRY;
+            retrymsg = MSG_RETRY;
 #if DEBUG
             printf("Envoie de MSG RETRY -> %" PRIu8 "\n", heapInfo->mainId);
 #endif
-            if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+            if (write(heapInfo->sock, &retrymsg, sizeof(retrymsg)) == -1){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;
                 continue;
@@ -90,13 +93,16 @@ int t_malloc(uint64_t size, char *name){
  * @return enum errorCodes
  */
 int t_free(char *name){
-    uint8_t msgtype, namelen;
+    uint8_t msgtype, namelen, retrymsg;
     int ret;
     int done = 0;
 
 #if DEBUG
     printf("Appel t_free(%s)\n", name);
 #endif 
+
+    if (heapInfo == NULL)
+        return DHEAP_ERROR_CONNECTION;
 
     while (done <= 0){
         pthread_mutex_lock(&mainlock);
@@ -110,11 +116,11 @@ int t_free(char *name){
         }
 
         if (done == -1){
-            msgtype = MSG_RETRY;
+            retrymsg = MSG_RETRY;
 #if DEBUG
             printf("Envoie de MSG RETRY -> %" PRIu8 "\n", heapInfo->mainId);
 #endif
-            if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+            if (write(heapInfo->sock, &retrymsg, sizeof(retrymsg)) == -1){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;
                 continue;
