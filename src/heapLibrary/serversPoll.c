@@ -46,7 +46,7 @@ void buildPollList(){
             j++;
         } else if (ds->status == 2 && ds->sock != -1){
             new[j].fd = ds->sock;
-            new[j].events = POLLOUT | POLLHUP | POLLNVAL;
+            new[j].events = POLLIN | POLLHUP | POLLNVAL;
             j++;
         }
         ds = ds->next;
