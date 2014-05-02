@@ -76,6 +76,7 @@ void *data_thread(void *arg){
                         }
                     }
                     dstmp = dstmp->next;
+                    pthread_mutex_unlock(&writelock);
                     continue;
                 }
                 pthread_mutex_unlock(&writelock);
