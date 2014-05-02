@@ -62,7 +62,7 @@ void *data_thread(void *arg){
 #if DEBUG
                 printf("PING, id = %d\n", dstmp->id);
 #endif
-                if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
+                if (write(dstmp->sock, &msgtype, sizeof(msgtype)) == -1){
                     if (dstmp->id == heapInfo->mainId){
                         if (pthread_mutex_trylock(&mainlock) != 0){
                             msgtypeClient = MSG_RETRY;
