@@ -268,7 +268,7 @@ int t_release(void *p){
         /* On envoie le contenu seulement si on était en écriture */
         if (dv->rw == DHEAPVAR_WRITE){
 #if DEBUG
-            printf("Envoie du contenu (taille = )\n");
+            printf("Envoie du contenu (taille = %" PRIu64 ")\n", dv->size);
 #endif 
             if (write(heapInfo->sock, p, dv->size) == -1){
                 setDownAndSwitch(heapInfo->mainId);

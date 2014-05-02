@@ -87,7 +87,7 @@ void setServerDownInternal(uint8_t id, int doBuildPollList){
 
     msgtype = MSG_DISCONNECT;
     /* Pas de vérification d'erreur nécessaire pour le write */
-    write(tmp->sock, &msgtype, sizeof(msgtype));
+    /* write(tmp->sock, &msgtype, sizeof(msgtype)); --> Envoie un SIGPIPE */
     close(tmp->sock);
     tmp->sock = -1;
     tmp->status = 0;

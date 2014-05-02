@@ -51,6 +51,10 @@ int addserver(uint8_t id, char *address, int port){
 void reconnectServers(){
     struct dheapServer *tmp;
 
+#if DEBUG
+    printf("Appel de reconnectServers()\n");
+#endif
+
     pthread_mutex_lock(&polllock); /* TODO: peut etre que ce lock n'est pas necessaire */
     
     tmp = dheapServers;

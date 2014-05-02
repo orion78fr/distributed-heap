@@ -138,7 +138,7 @@ int close_data(){
 #endif
 
     /* Fermeture du thread client */
-    if (dheap_tid != NULL){
+    if (dheap_tid != NULL && pthread_equal(pthread_self(), *dheap_tid)){
         if (pthread_cancel(*dheap_tid) != 0){
             perror("pthread_cancel"); 
             exit(EXIT_FAILURE);

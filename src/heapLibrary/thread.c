@@ -34,6 +34,9 @@ void *data_thread(void *arg){
         while (dstmp != NULL){
             /* On vérifie s'il y a un ping en attente */
             if (dstmp->lastPing != 0 && dstmp->lastPing < (time(NULL) - (PONG_TIMEOUT*2))){
+#if DEBUG
+                printf("NO PING, id = %d\n", dstmp->id);
+#endif
                 if (dstmp->id == heapInfo->mainId){
                     if (pthread_mutex_trylock(&mainlock) != 0){
                         msgtypeClient = MSG_RETRY;
@@ -45,15 +48,20 @@ void *data_thread(void *arg){
                     } else {
                         pthread_mutex_unlock(&mainlock);
                     }
+                } else {
+                    setDownAndSwitch(dstmp->id);
                 }
                 dstmp = dstmp->next;
                 continue;
             }
 
             /* On vérifie s'il faut pinger */
-            if (dstmp->status == 1 && dstmp->lastMsgTime < (time(NULL) - TIMEOUT_BEFORE_PING)){
+            if (dstmp->status == 1 && dstmp->lastPing == 0 && dstmp->lastMsgTime < (time(NULL) - TIMEOUT_BEFORE_PING)){
                 uint8_t msgtype = MSG_PING;
                 pthread_mutex_lock(&writelock);
+#if DEBUG
+                printf("PING, id = %d\n", dstmp->id);
+#endif
                 if (write(heapInfo->sock, &msgtype, sizeof(msgtype)) == -1){
                     if (dstmp->id == heapInfo->mainId){
                         if (pthread_mutex_trylock(&mainlock) != 0){
@@ -105,8 +113,11 @@ void *data_thread(void *arg){
                             pthread_cond_wait(&readcond, &readlock);
                             pthread_mutex_unlock(&readylock);
                         } else {
+                            setDownAndSwitch(ds->id);
                             pthread_mutex_unlock(&mainlock);
                         }
+                    } else {
+                        setDownAndSwitch(ds->id);
                     }
                     break;
                 }
@@ -123,8 +134,11 @@ void *data_thread(void *arg){
                             pthread_cond_wait(&readcond, &readlock);
                             pthread_mutex_unlock(&readylock);
                         } else {
+                            setDownAndSwitch(ds->id);
                             pthread_mutex_unlock(&mainlock);
                         }
+                    } else {
+                        setDownAndSwitch(ds->id);
                     }
                     break;
                 }
@@ -161,7 +175,7 @@ void *data_thread(void *arg){
                         break;
                     } else if (msgtype == MSG_PING){
 #if DEBUG
-                        printf("PING, id = %d\n", ds->id);
+                        printf("PONG, id = %d\n", ds->id);
 #endif
                         ds->lastPing = 0;
                         continue;
