@@ -84,6 +84,10 @@ void helloNotNew(uint8_t sid){
     struct dheapServer *ds;
     int sockflags;
 
+#if DEBUG
+    printf("Appel de helloNotNew(%" PRIu8 ")\n", sid);
+#endif
+
     ds = getServerById(sid);
 
     pthread_mutex_lock(&polllock);
@@ -116,6 +120,10 @@ void helloNotNew(uint8_t sid){
     }
 
     buildPollList();
+
+#if DEBUG
+    printf("Fin de helloNotNew(%" PRIu8 ")\n", sid);
+#endif
 }
 
 /**

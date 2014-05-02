@@ -144,6 +144,9 @@ void *data_thread(void *arg){
                     break;
                 }
                 if ((poll_list[i].events&POLLOUT) == POLLOUT && (poll_list[i].revents&POLLOUT) == POLLOUT){
+#if DEBUG
+                    printf("POLLOUT, id = %d\n", ds->id);
+#endif
                     helloNotNew(ds->id); /* TODO: risque de blocage sur le read du ack */
                     setTime(ds->id);
                     break; 
