@@ -2,6 +2,7 @@
 #define HEAPSERVER_MESSAGES
 
 enum msgTypes {
+    MSG_HELLO,
     MSG_HELLO_NEW,
     MSG_HELLO_NEW_SERVER,
     MSG_HELLO_NOT_NEW,
@@ -25,7 +26,8 @@ enum msgTypes {
     MSG_PARTIAL_REPLICATION,
     MSG_DATA_REPLICATION,
     MSG_FREE_REPLICATION,
-    MSG_RELEASE_REPLICATION,
+    MSG_RELEASE_WRITE_REPLICATION,
+    MSG_RELEASE_READ_REPLICATION,
     MSG_MAJ_ACCESS_READ,
     MSG_MAJ_ACCESS_WRITE,
     MSG_MAJ_WAIT_READ,
@@ -66,7 +68,8 @@ int snd_partial_replication(struct heapData *data);
 int rcv_partial_replication(int sock);
 int snd_data_replication(struct replicationData *rep);
 int rcv_data_replication(int sock);
-int rcv_release_replication(int sock);
+int rcv_release_read_replication(int sock);
+int rcv_release_write_replication(int sock);
 int rcv_free_replication(int sock);
 int rcv_new_client(int sock);
 int rcv_rmv_client(int sock);
@@ -77,6 +80,8 @@ int rcv_maj_wait_write(int sock);
 int snd_server_to_clients(char *address, uint16_t port, uint16_t serverId);
 int snd_defrag_replication(struct replicationData *rep);
 int rcv_defrag_replication(int sock);
+int do_pong(int sock);
+
 
 
 /*

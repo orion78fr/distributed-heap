@@ -6,6 +6,7 @@
 #define HEAPSIZE 1024*1024*100
 #define MAX_CLIENTS 20
 #define HASHSIZE 257
+#define TIMEOUT 10
 
 struct parameters {
     uint16_t port;
@@ -15,6 +16,7 @@ struct parameters {
     uint8_t serverNum;
     char *mainAddress;
     uint16_t mainPort;
+    int timeOut;
 };
 
 extern struct parameters parameters;

@@ -20,13 +20,14 @@ int parse_args(int argc, char *argv[])
         {"maxClient", required_argument, 0, 'n'},
         {"heapSize", required_argument, 0, 's'},
         {"hashSize", required_argument, 0, 'h'},
+        {"timeOut", required_argument, 0, 't'},
         {"mainAddress", required_argument, 0, 'a'},
         {"mainPort", required_argument, 0, 'm'},
         {0, 0, 0, 0}
     };
 
     while ((c =
-            getopt_long(argc, argv, "p:n:s:h:a:m:", long_options,
+            getopt_long(argc, argv, "p:n:s:h:t:a:m:", long_options,
                         &option_index)) != -1) {
         switch (c) {
         case 0:
@@ -43,6 +44,9 @@ int parse_args(int argc, char *argv[])
             break;
         case 'h':
             parameters.hashSize = atoi(optarg);
+            break;
+        case 't':
+            parameters.timeOut = atoi(optarg);
             break;
         case 'a':
             parameters.mainAddress = optarg;
@@ -75,4 +79,5 @@ void set_defaults()
     parameters.serverNum = 0;
     parameters.mainAddress = "";
     parameters.mainPort = 0;
+    parameters.timeOut = TIMEOUT;
 }

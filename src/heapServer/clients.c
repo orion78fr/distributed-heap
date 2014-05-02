@@ -8,6 +8,7 @@ int clientsConnected = 0;
  */
 void *clientThread(void *arg)
 {
+    struct clientChain *client,*prev;
     pthread_mutex_t mutex = ((struct clientChain*)arg)->mutex_sock;
     int sock = ((struct clientChain*)arg)->sock;
     uint8_t msgType;
@@ -41,6 +42,11 @@ void *clientThread(void *arg)
 
         /* Switch pour les différents types de messages */
         switch (msgType) {
+        case MSG_PING:
+            if(do_pong(sock) == -1){
+                goto disconnect;
+            }
+            break;
         case MSG_ALLOC: /* Allocation d'une variable */
             if(do_alloc(sock) == -1){
                 goto disconnect;
@@ -85,10 +91,26 @@ void *clientThread(void *arg)
     }
 
 disconnect:
-
+    client = clients;
+    prev = NULL;
 #if DEBUG
     printf("[Client %d] Déconnexion\n", pthread_getspecific(id));
 #endif
+
+    while(client != NULL){
+        if(client->clientId == pthread_getspecific(id)){
+            if(prev!=NULL){
+                prev->next = client->next;
+            }
+            clients = client->next;
+            free(client);
+        }
+
+        prev=client;
+        client=client->next;
+    }
+
+
 
     /* Fermer la connexion */
     shutdown(sock, 2);

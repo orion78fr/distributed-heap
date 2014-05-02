@@ -88,6 +88,14 @@ int main(int argc, char *argv[])
         printf("socket du main sur le backup %d\n",sserver);
 #endif
 
+        if (read(sserver, &msgType, sizeof(msgType)) <= 0){
+            return ERROR_SERVER_CONNECTION;
+        }
+
+        if(msgType!=MSG_HELLO){
+            return ERROR_SERVER_CONNECTION;
+        }
+
         /* Ajout du server dans la chaîne de socket (ajout au début pour
          * éviter le parcours) */
         newServer = malloc(sizeof(struct serverChain));
@@ -232,6 +240,10 @@ int main(int argc, char *argv[])
 #if DEBUG
         printf("connection detecte...\n");
 #endif
+        msgType = MSG_HELLO;
+        if (write(sclient, &msgType, sizeof(msgType)) <= 0){
+                return EXIT_FAILURE;
+        }
 
         //address=malloc(14);
         address = inet_ntoa(addr.sin_addr); // ?? le warning
@@ -252,7 +264,7 @@ int main(int argc, char *argv[])
         }
 
 #if DEBUG
-        printf("on a de la place et on attend un msg hello new...%d\n",msgType);
+        printf("on a de la place et on attend un msg hello new...\n");
 #endif
 
 

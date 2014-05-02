@@ -90,6 +90,10 @@ int add_data(char *name, uint64_t size)
         struct heapData *newData = malloc(sizeof(struct heapData));
         newData->name = name;
         newData->size = size;
+        newData->readAccessSize = 0;
+        newData->readWaitSize = 0;
+        newData->writeAccessSize = 0;
+        newData->writeWaitSize = 0;
         newData->readAccess = NULL;
         newData->writeAccess = NULL;
         newData->readWait = NULL;
@@ -265,6 +269,7 @@ int acquire_read_lock(struct heapData *data)
     /* On se met dans la liste de read */
     me->next = data->readAccess;
     data->readAccess = me;
+    data->readAccessSize++;
 
     pthread_mutex_unlock(&(data->mutex));
 
@@ -293,6 +298,7 @@ void acquire_read_sleep(struct heapData *data, struct clientChainRead *me)
     struct clientChainRead *prevMe;
     me->next = data->readWait;
     data->readWait = me;
+    data->readWaitSize++;
 
     if(servers!=NULL && !servers->backup){
         pthread_mutex_lock(&rep->mutex_server);
@@ -324,6 +330,7 @@ void acquire_read_sleep(struct heapData *data, struct clientChainRead *me)
         }
         prevMe->next = me->next;
     }
+    data->readWaitSize--;
 }
 
 int acquire_write_lock(struct heapData *data)
@@ -348,6 +355,7 @@ int acquire_write_lock(struct heapData *data)
 
     me->next = NULL;
     data->writeAccess = me;
+    data->writeAccessSize++;
 
     pthread_mutex_unlock(&(data->mutex));
 
@@ -377,6 +385,7 @@ void acquire_write_sleep(struct heapData *data,
     struct clientChainWrite *prevMe;
     me->next = data->writeWait;
     data->writeWait = me;
+    data->writeWaitSize++;
 
     if(servers!=NULL && !servers->backup){
         pthread_mutex_lock(&rep->mutex_server);
@@ -405,6 +414,7 @@ void acquire_write_sleep(struct heapData *data,
         }
         prevMe->next = me->next;
     }
+    data->writeWaitSize--;
 }
 
 int release_read_lock(struct heapData *data)
@@ -433,10 +443,12 @@ int release_read_lock(struct heapData *data)
         free(me);
     }
 
+    data->readAccessSize--;
+
     if(servers!=NULL && !servers->backup){
         pthread_mutex_lock(&rep->mutex_server);
 
-        rep->modification = RELEASE_DATA;
+        rep->modification = RELEASE_DATA_READ;
         rep->data = data;
         rep->clientId = myId;
         pthread_mutex_unlock(&rep->mutex_server);
@@ -446,7 +458,7 @@ int release_read_lock(struct heapData *data)
         pthread_mutex_unlock(&ack->mutex_server);
 
 #if DEBUG
-    printf("RELEASE_DATA, replication done\n");
+    printf("RELEASE_DATA_READ, replication done\n");
 #endif
     }   
     /* Réveil du/des suivant(s) */
@@ -477,11 +489,12 @@ int release_write_lock(struct heapData *data)
     }
     free(data->writeAccess);
     data->writeAccess = NULL;
+    data->writeAccessSize--;
 
     if(servers!=NULL && !servers->backup){
         pthread_mutex_lock(&rep->mutex_server);
 
-        rep->modification = RELEASE_DATA;
+        rep->modification = RELEASE_DATA_WRITE;
         rep->data = data;
         rep->clientId = pthread_getspecific(id);
         pthread_mutex_unlock(&rep->mutex_server);
@@ -491,7 +504,7 @@ int release_write_lock(struct heapData *data)
         pthread_mutex_unlock(&ack->mutex_server);
 
 #if DEBUG
-    printf("RELEASE_DATA, replication done\n");
+    printf("RELEASE_DATA_WRITE, replication done\n");
 #endif
     }
     /* Réveil des suivants */

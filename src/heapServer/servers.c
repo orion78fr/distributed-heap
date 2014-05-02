@@ -42,8 +42,13 @@ void *serverThread(void *arg)
                     goto disconnect;
                 }
                 break;
-            case MSG_RELEASE_REPLICATION: /* Release d'une variable */
-                if(rcv_release_replication(sock) == -1){
+            case MSG_RELEASE_WRITE_REPLICATION: /* Release d'une variable */
+                if(rcv_release_write_replication(sock) == -1){
+                    goto disconnect;
+                }
+                break;
+            case MSG_RELEASE_READ_REPLICATION: /* Release d'une variable */
+                if(rcv_release_read_replication(sock) == -1){
                     goto disconnect;
                 }
                 break;
