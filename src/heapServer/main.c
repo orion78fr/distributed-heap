@@ -6,6 +6,7 @@ struct replicationData *rep;
 struct replicationAck *ack;
 uint16_t numClient=1;
 uint8_t numServer=1;
+struct serverChain *servers;
 
 int main(int argc, char *argv[])
 {
@@ -15,7 +16,7 @@ int main(int argc, char *argv[])
     int temp = 1;
     int sserver;                /* Socket du serveur */
     uint8_t msgType;
-    struct serverChain *servers=NULL;
+    servers=NULL;
 
     pthread_key_create(&id, NULL);
 
@@ -28,6 +29,7 @@ int main(int argc, char *argv[])
     ack = malloc(sizeof(struct replicationAck));
     pthread_mutex_init(&ack->mutex_server, NULL);
     pthread_cond_init(&ack->cond_server, NULL);
+    ack->modification=0;
 
     /* Parsing des arguments */
     if (parse_args(argc, argv)) {
@@ -35,15 +37,19 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+
+
+    if(strcmp(parameters.mainAddress,"")==0){
+        parameters.backup=0;
 #if DEBUG
     printf("Port : %d\n", parameters.port);
     printf("Max Clients : %d\n", parameters.maxClients);
     printf("Heap Size : %d\n", parameters.heapSize);
     printf("Hash Size : %d\n", parameters.hashSize);
-    printf("Address : %s\n", parameters.mainAddress);
+    printf("backup : %d\n", parameters.backup);
 #endif
-
-    init_data();
+        init_data();
+    }
 
     /* Creation de la socket */
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -52,16 +58,14 @@ int main(int argc, char *argv[])
     }
 
     memset((void *) &sin, 0, sizeof(sin));
-    //sin.sin_port = htons(parameters.port);
     sin.sin_family = AF_INET;
 
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &temp, sizeof(int));
-     /* GTU : Est-ce nécessaire? */
 
     /* Connexion au server principal */
     if(strcmp(parameters.mainAddress,"")!=0){
         struct serverChain *newServer;
-        //uint8_t msgtype = MSG_HELLO_NEW_SERVER;
+        parameters.backup=1;
 
         /* Creation de la socket */
         if ((sserver = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -79,6 +83,7 @@ int main(int argc, char *argv[])
         printf("@main: %s...\n",parameters.mainAddress);
         printf("@main port: %d...\n",parameters.mainPort);
         printf("@my port: %d...\n",parameters.port);
+        printf("backup : %d\n", parameters.backup);
 #endif
         if(connect(sserver, (struct sockaddr *)&sin, sizeof(sin)) == -1){
             return ERROR_SERVER_CONNECTION;
@@ -105,23 +110,14 @@ int main(int argc, char *argv[])
         newServer->serverAddress = malloc(strlen(parameters.mainAddress));
         strcpy(newServer->serverAddress, parameters.mainAddress);
         servers=newServer;
-/*
-        if (write(sserver, &msgtype, sizeof(msgtype)) <= 0){
-            return ERROR_SERVER_CONNECTION;
-        }
 
-#if DEBUG
-        printf("1 envoi du type MSG_HELLO_NEW_SERVER %d\n",msgtype);
-#endif
-*/
         msgType=MSG_HELLO_NEW_SERVER;
         if (write(sserver, &msgType, sizeof(msgType)) <= 0){
             return ERROR_SERVER_CONNECTION;
         }
 
 #if DEBUG
-        printf("1 envoi du type  %d\n",msgType);
-        printf("size  %d\n",sizeof(msgType));
+        printf("envoi du type  %d\n",msgType);
 #endif
 
         if (write(sserver, &parameters.port, sizeof(parameters.port)) <= 0){
@@ -129,23 +125,9 @@ int main(int argc, char *argv[])
         }
 
 #if DEBUG
-        printf("2 envoi du port %d\n",parameters.port);
-        printf("size  %d\n",sizeof(parameters.port));
+        printf("envoi du port %d\n",parameters.port);
 #endif
 
-
-
-        /* Reception du type de message (MSG_HELLO_NEW_SERVER) */
-        /*
-        if (read(sserver, &msgtype, sizeof(msgtype)) <= 0){
-            return ERROR_SERVER_CONNECTION;
-        }
-
-#if DEBUG
-        printf("1 reception du msgType %d\n",msgtype);
-        printf("sizeof msgType %d\n",sizeof(msgtype));
-#endif
-        */
 
         /* Reception du type de message (MSG_HELLO_NEW_SERVER) */
         if (read(sserver, &msgType, sizeof(msgType)) <= 0){
@@ -153,8 +135,7 @@ int main(int argc, char *argv[])
         }
 
 #if DEBUG
-        printf("1 reception du msgType %d\n",msgType);
-        printf("sizeof msgType %d\n",sizeof(msgType));
+        printf("reception du msgType %d\n",msgType);
 #endif        
 
 
@@ -170,8 +151,7 @@ int main(int argc, char *argv[])
         }
 
 #if DEBUG
-        printf("2 reception id du main %d\n",newServer->serverId);
-        printf("sizeof id du main %d\n",sizeof(newServer->serverId));
+        printf("reception id du main %d\n",newServer->serverId);
 #endif
 
 
@@ -181,16 +161,36 @@ int main(int argc, char *argv[])
         }
 
 #if DEBUG
-        printf("3 reception notre id %d\n",parameters.serverNum);
-        printf("sizeof notre id %d\n",sizeof(parameters.serverNum));
+        printf("reception notre id %d\n",parameters.serverNum);
 #endif
+
+        /* Réception de la taille de la hashSize */
+        if (read(sserver, &(parameters.hashSize), sizeof(parameters.hashSize)) <= 0){
+            return ERROR_BACKUP_INIT;
+        }
+
+#if DEBUG
+        printf("reception taille hashSize %d\n",parameters.hashSize);
+#endif
+
+        /* Réception de la taille heapSize */
+        if (read(sserver, &(parameters.heapSize), sizeof(parameters.heapSize)) <= 0){
+            return ERROR_BACKUP_INIT;
+        }
+
+#if DEBUG
+        printf("reception taille heapSize %d\n",parameters.heapSize);
+#endif
+
+        init_data();
+
         
         if(send_data(sserver, MSG_TOTAL_REPLICATION, 0)<0){
             return EXIT_FAILURE;
         }
 
 #if DEBUG
-        printf("3 demande replication totale \n");
+        printf("demande replication totale \n");
 #endif
 
         if(rcv_total_replication(sserver)<=0){
@@ -245,14 +245,12 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
-        //address=malloc(14);
         address = inet_ntoa(addr.sin_addr); // ?? le warning
-        //port = ntohs(addr.sin_port);
+
 #if DEBUG
         printf("New Client... %d\n",sclient);
         printf("@... %s\n",address);
         printf("@... %d\n",strlen(address));
-        //printf("port... %d\n",port);
 #endif
 
         if (clientsConnected > parameters.maxClients) {
@@ -274,8 +272,7 @@ int main(int argc, char *argv[])
         }
 
 #if DEBUG
-        printf("1 reception du msgType %d\n",msgType);
-        printf("size %d\n",sizeof(msgType));
+        printf("reception du msgType %d\n",msgType);
 #endif
 
         if(msgType == MSG_HELLO_NEW){
@@ -340,16 +337,13 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
             }
 #if DEBUG
-            printf("2 reception du port %d\n",newServer->serverPort);
-            printf("size %d\n",sizeof(newServer->serverPort));
-            printf("port backup %d\n",newServer->serverPort);
+            printf("reception du port %d\n",newServer->serverPort);
 #endif
             newServer->backup = 0;
             newServer->sock = sclient;
 
 #if DEBUG
-        printf("sclient %d\n",sclient);
-        printf("newServer->sock %d\n",newServer->sock);
+            printf("newServer->sock %d\n",newServer->sock);
 #endif
 
             newServer->next = servers;
@@ -360,51 +354,29 @@ int main(int argc, char *argv[])
             servers = newServer;
 
             serversConnected++;
-/*
+
 #if DEBUG
-            printf("1 envoi du msgType\n");
-            printf("2 envoi du mainId\n");
-            printf("3 envoi du backupId\n");
+            printf("envoi du msgType\n");
+            printf("envoi du mainId\n");
+            printf("envoi du backupId\n");
+            printf("envoi du hashSize\n");
+            printf("envoi du heapSize\n");
 #endif
             
-            if(send_data(newServer->sock, MSG_HELLO_NEW_SERVER, 2,
+            if(send_data(sclient, MSG_HELLO_NEW_SERVER, 4,
                             (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},
-                            (DS){sizeof(newServer->serverId), &(newServer->serverId)})<0){
-                return EXIT_FAILURE;
-            }*/
-#if DEBUG
-        printf("1 envoi du msgType %d\n",msgType);
-        printf("size %d\n",sizeof(msgType));
-#endif
-            if (write(sclient, &msgType, sizeof(msgType)) <= 0){
+                            (DS){sizeof(newServer->serverId), &(newServer->serverId)},
+                            (DS){sizeof(parameters.hashSize), &(parameters.hashSize)},
+                            (DS){sizeof(parameters.heapSize), &(parameters.heapSize)})<0){
                 return EXIT_FAILURE;
             }
-
-#if DEBUG
-        printf("2 envoi du servNum %d\n",parameters.serverNum);
-        printf("size %d\n",sizeof(parameters.serverNum));
-#endif
-            if (write(sclient, &parameters.serverNum, sizeof(parameters.serverNum)) <= 0){
-                return EXIT_FAILURE;
-            }
-
-#if DEBUG
-        printf("3 envoi du serverId %d\n",newServer->serverId);
-        printf("size %d\n",sizeof(newServer->serverId));
-#endif
-            if (write(sclient, &newServer->serverId, sizeof(newServer->serverId)) <= 0){
-                return EXIT_FAILURE;
-            }
-
-            msgType = MSG_TOTAL_REPLICATION;
-
 
             if (read(sclient,  &msgType, sizeof(msgType)) <= 0) {       
                 return EXIT_FAILURE;
             }
 
 #if DEBUG
-            printf("3 reception du msgType %d\n",msgType);
+            printf("reception du msgType %d\n",msgType);
 #endif
 
 
@@ -421,7 +393,6 @@ int main(int argc, char *argv[])
 
 #if DEBUG
     printf("[msgType: %d]\n",msgType);
-    printf("size %d\n",sizeof(msgType));
 #endif
 
             if(msgType!=MSG_ACK){
@@ -437,9 +408,6 @@ int main(int argc, char *argv[])
                         serverThread, (void *) servers);
         }
     }
-
-    /* GTU : Et comment on sort de là? Signaux puis envoi d'un END
-     * a tout les clients */
 
     while (clients != NULL) {
         pthread_join(clients->clientId, 0);

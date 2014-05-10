@@ -17,6 +17,7 @@ struct parameters {
     char *mainAddress;
     uint16_t mainPort;
     int timeOut;
+    uint8_t backup;
 };
 
 extern struct parameters parameters;
