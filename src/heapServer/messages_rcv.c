@@ -1,13 +1,7 @@
 #include "common.h"
 
 int rcv_total_replication(int sock){
-    int *servId;
-    char **servAddress;
     uint8_t taille;
-    char *nom;
-    uint64_t offset;
-    uint64_t varSize;
-    struct heapData *data;
     uint8_t msgType;
 
     /* Replication des données */
@@ -346,7 +340,6 @@ int rcv_release_write_replication(int sock){
     uint16_t id;
     char *nom;
     struct heapData *data;
-    struct clientChainRead *temp=NULL, *prev=NULL;
 
     if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
         goto disconnect;
@@ -466,7 +459,6 @@ int rcv_rmv_client(int sock){
 
 int rcv_maj_access_read(int sock){
     uint8_t taille;
-    uint16_t id;
     char *nom;
     struct heapData *data;
     struct clientChainRead *temp;
@@ -509,7 +501,6 @@ int rcv_maj_access_read(int sock){
 
 int rcv_maj_access_write(int sock){
     uint8_t taille;
-    uint16_t id;
     char *nom;
     struct heapData *data;
     struct clientChainWrite *temp;
@@ -552,7 +543,6 @@ int rcv_maj_access_write(int sock){
 
 int rcv_maj_wait_read(int sock){
     uint8_t taille;
-    uint16_t id;
     char *nom;
     struct heapData *data;
     struct clientChainRead *temp;
@@ -595,7 +585,6 @@ int rcv_maj_wait_read(int sock){
 
 int rcv_maj_wait_write(int sock){
     uint8_t taille;
-    uint16_t id;
     char *nom;
     struct heapData *data;
     struct clientChainWrite *temp;

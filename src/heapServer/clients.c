@@ -13,7 +13,9 @@ void *clientThread(void *arg)
     pthread_mutex_t mutex = ((struct clientChain*)arg)->mutex_sock;
     int sock = ((struct clientChain*)arg)->sock;
     uint8_t msgType;
-    pthread_setspecific(id, ((struct clientChain*)arg)->clientId);
+    uint16_t *ids= malloc(sizeof(uint16_t));
+    *ids=((struct clientChain*)arg)->clientId;
+    pthread_setspecific(id, ids);
     
 
 #if DEBUG

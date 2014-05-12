@@ -8,12 +8,10 @@ int serversConnected = 0;
  */
 void *serverThread(void *arg)
 {
-    struct serverChain *server;
     struct clientChain *client;
-    int backup = ((struct serverChain*)arg)->backup;
     int sock = ((struct serverChain*)arg)->sock;
     uint8_t msgType;
-    //servers = ((struct serverChain*)arg);
+
 
 #if DEBUG
     printf("[sock: %d, serverNum: %d, serverId: %d, backup: %d] Connexion\n",sock, parameters.serverNum, ((struct serverChain*)arg)->serverId, backup);
