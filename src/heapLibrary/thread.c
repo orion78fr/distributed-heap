@@ -18,12 +18,14 @@ void *data_thread(void *arg){
 
     /* Création du poll */
     buildPollList();
-    
+
     /* On bloque la lecture sur le socket (mainId) */
+    pthread_mutex_lock(&readylock);
     pthread_mutex_lock(&readlock);
     pthread_cond_signal(&readcond);
     pthread_cond_wait(&readcond, &readlock);
-    
+    pthread_mutex_unlock(&readylock);
+
     /* Boucle avec le poll */
     while (1){
         int retval, i;
@@ -102,7 +104,7 @@ void *data_thread(void *arg){
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
         if (retval < 0){
             perror("poll");
-            exit(EXIT_FAILURE); 
+            exit(EXIT_FAILURE);
         } else if (retval > 0){
             for (i=0; i < countServersOnline; i++){
                 struct dheapServer *ds;
@@ -241,7 +243,7 @@ void *data_thread(void *arg){
                 }
             }
         }
-        continue; 
+        continue;
     }
 
     pthread_mutex_unlock(&readlock);
@@ -255,7 +257,7 @@ void *data_thread(void *arg){
 void exit_data_thread(uint8_t e){
 #if DEBUG
     printf("Appel de exit_data_thread(%d)\n", e);
-#endif 
+#endif
     setError(e);
     msgtypeClient = MSG_DISCONNECT_RELEASE_ALL;
     pthread_mutex_unlock(&readlock);

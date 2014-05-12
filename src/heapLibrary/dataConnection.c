@@ -32,7 +32,7 @@ int init_data(char *address, int port){
     close_data();
 
     /* TODO: vérifier la validité du port et de l'ip */
-    
+
     heapInfo = malloc(sizeof(struct heapInfo));
     heapInfo->mainId = 0;
     dheapServers = malloc(sizeof(struct dheapServer));
@@ -56,8 +56,8 @@ int init_data(char *address, int port){
     if ((heapInfo->sock = connectToServer(address, port, 1)) == -1){
         return DHEAP_ERROR_CONNECTION;
     }
-    
-    /* Reception du type de message (MSG_HELLO) */			
+
+    /* Reception du type de message (MSG_HELLO) */
     if (read(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
@@ -75,7 +75,7 @@ int init_data(char *address, int port){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* Reception du type de message (MSG_HELLO_NEW) */			
+    /* Reception du type de message (MSG_HELLO_NEW) */
     if (read(heapInfo->sock, &msgtype, sizeof(msgtype)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
@@ -95,7 +95,7 @@ int init_data(char *address, int port){
         return DHEAP_ERROR_CONNECTION;
     }
 
-    /* Reception de la taille du tas */			
+    /* Reception de la taille du tas */
     if (read(heapInfo->sock,&(heapInfo->heapSize),sizeof(heapInfo->heapSize)) <= 0){
         return DHEAP_ERROR_CONNECTION;
     }
@@ -106,7 +106,7 @@ int init_data(char *address, int port){
 #if DEBUG
     printf("HeapSize: %" PRIu64 "\n", heapInfo->heapSize);
     printf("ClientID: %" PRIu16 "\n", heapInfo->clientId);
-#endif 
+#endif
 
     /* allocation du tas dans la mémoire */
     heapInfo->heapStart = malloc(heapInfo->heapSize);
@@ -118,20 +118,22 @@ int init_data(char *address, int port){
     init_hashtable();
 
     /* création du thread client */
+    pthread_mutex_lock(&readlock);
     dheap_tid = malloc(sizeof(pthread_t));
     if (pthread_create(dheap_tid, NULL, data_thread, NULL) == -1){
-        perror("pthread_create"); 
+        perror("pthread_create");
         exit(EXIT_FAILURE);
     }
 
-    pthread_mutex_lock(&readlock);
     pthread_cond_wait(&readcond, &readlock);
     pthread_cond_signal(&readcond);
     pthread_mutex_unlock(&readlock);
+    pthread_mutex_lock(&readylock);
+    pthread_mutex_unlock(&readylock);
 
 #if DEBUG
     printf("Succes init_data()\n");
-#endif 
+#endif
 
     return DHEAP_SUCCESS;
 }
@@ -145,7 +147,7 @@ int close_data(){
     if (heapInfo == NULL){
 #if DEBUG
     printf("Appel close_data() mais heapInfo NULL\n");
-#endif 
+#endif
         return DHEAP_SUCCESS;
     }
 
@@ -156,7 +158,7 @@ int close_data(){
     /* Fermeture du thread client */
     if (dheap_tid != NULL && !pthread_equal(pthread_self(), *dheap_tid)){
         if (pthread_cancel(*dheap_tid) != 0){
-            perror("pthread_cancel"); 
+            perror("pthread_cancel");
             exit(EXIT_FAILURE);
         }
         if (pthread_join(*dheap_tid, (void**) &threadStatus) != 0){
@@ -197,6 +199,13 @@ int close_data(){
         free(poll_list);
         poll_list = NULL;
     }
+
+    pthread_mutex_destroy(&readlock);
+    pthread_mutex_destroy(&writelock);
+    pthread_mutex_destroy(&mainlock);
+    pthread_mutex_destroy(&readylock);
+    pthread_mutex_destroy(&polllock);
+    pthread_cond_destroy(&readcond);
 
     return DHEAP_SUCCESS;
 }
