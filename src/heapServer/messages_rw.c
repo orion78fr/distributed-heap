@@ -65,6 +65,7 @@ int do_access_read_by_offset(int sock){
 }
 
 int do_access_read_common(int sock, struct heapData *data){
+    int rep;
 #if DEBUG
     printf("[Client %d] Demande d'accès en lecture de %s\n",
            pthread_getspecific(id), data->name);
@@ -72,8 +73,8 @@ int do_access_read_common(int sock, struct heapData *data){
 
     if(retry){
         struct clientChainRead *temp;
-        pthread_mutex_lock(data->mutex);
-        *temp = data->readAccess;
+        pthread_mutex_lock(&(data->mutex));
+        temp = data->readAccess;
 
         while(temp!=NULL){
             if(temp->clientId==pthread_getspecific(id)){
@@ -89,7 +90,7 @@ int do_access_read_common(int sock, struct heapData *data){
         temp = data->readWait;
         while(temp!=NULL){
             if(temp->clientId==pthread_getspecific(id)){
-                pthread_cond_wait(data->readCond);
+                pthread_cond_wait(&(data->readCond), &(data->mutex));
                 if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
                         (DS){sizeof(data->offset), &data->offset},
                         (DS){sizeof(data->size), &data->size},
@@ -99,21 +100,31 @@ int do_access_read_common(int sock, struct heapData *data){
                 return 0;
             }
         }
-        pthread_mutex_unlock(data->mutex);
+        pthread_mutex_unlock(&(data->mutex));
     }
 
-    if(acquire_read_lock(data) != 0) {
-        /* ERREUR */
+    if((rep = acquire_read_lock(data)) < 0) {
+        /* ERREUR (ne devrait pas arriver?) */
         if(send_error(sock, ERROR_VAR_DOESNT_EXIST)<0){
             goto disconnect;
         }
     } else {
         /* OK */
-        if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
-                        (DS){sizeof(data->offset), &data->offset},
-                        (DS){sizeof(data->size), &data->size},
-                        (DS){data->size, theHeap + data->offset})<0){
-            goto disconnect;
+        if(rep) {
+            /* Il y a eu des modifs */
+            if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
+                            (DS){sizeof(data->offset), &data->offset},
+                            (DS){sizeof(data->size), &data->size},
+                            (DS){data->size, theHeap + data->offset})<0){
+                goto disconnect;
+            }
+        } else {
+            /* Il n'y a pas eu de modif */
+            if(send_data(sock, MSG_ACCESS_READ, 2,
+                            (DS){sizeof(data->offset), &data->offset},
+                            (DS){sizeof(data->size), &data->size})<0){
+                goto disconnect;
+            }
         }
     }
     return 0;
@@ -186,6 +197,7 @@ int do_access_write_by_offset(int sock){
 }
 
 int do_access_write_common(int sock, struct heapData *data){
+    int rep;
 #if DEBUG
     printf("[Client %d] Demande d'accès en écriture de %s\n",
            pthread_getspecific(id), data->name);
@@ -193,8 +205,8 @@ int do_access_write_common(int sock, struct heapData *data){
 
     if(retry){
         struct clientChainWrite *temp;
-        pthread_mutex_lock(data->mutex);
-        *temp = data->writeAccess;
+        pthread_mutex_lock(&(data->mutex));
+        temp = data->writeAccess;
 
         while(temp!=NULL){
             if(temp->clientId==pthread_getspecific(id)){
@@ -210,7 +222,7 @@ int do_access_write_common(int sock, struct heapData *data){
         temp = data->writeWait;
         while(temp!=NULL){
             if(temp->clientId==pthread_getspecific(id)){
-                pthread_cond_wait(temp->cond);
+                pthread_cond_wait(&(temp->cond), &(data->mutex));
                 if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
                         (DS){sizeof(data->offset), &data->offset},
                         (DS){sizeof(data->size), &data->size},
@@ -220,21 +232,31 @@ int do_access_write_common(int sock, struct heapData *data){
                 return 0;
             }
         }
-        pthread_mutex_unlock(data->mutex);
+        pthread_mutex_unlock(&(data->mutex));
     }
 
-    if(acquire_write_lock(data) != 0) {
-        /* ERREUR */
+    if((rep = acquire_write_lock(data)) < 0) {
+        /* ERREUR (ne devrait pas arriver?) */
         if(send_error(sock, ERROR_VAR_DOESNT_EXIST)<0){
             goto disconnect;
         }
     } else {
         /* OK */
-        if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
-                        (DS){sizeof(data->offset), &data->offset},
-                        (DS){sizeof(data->size), &data->size},
-                        (DS){data->size, theHeap + data->offset})<0){
-            goto disconnect;
+        if(rep) {
+            /* Il y a eu des modifs */
+            if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
+                            (DS){sizeof(data->offset), &data->offset},
+                            (DS){sizeof(data->size), &data->size},
+                            (DS){data->size, theHeap + data->offset})<0){
+                goto disconnect;
+            }
+        } else {
+            /* Il n'y a pas eu de modif */
+            if(send_data(sock, MSG_ACCESS_WRITE, 2,
+                            (DS){sizeof(data->offset), &data->offset},
+                            (DS){sizeof(data->size), &data->size})<0){
+                goto disconnect;
+            }
         }
     }
     return 0;

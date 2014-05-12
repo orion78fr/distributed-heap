@@ -21,7 +21,7 @@ int rcv_total_replication(int sock){
     while(msgType==MSG_REP_CONTINUE){
         struct clientChainRead *prevRead;
         struct clientChainWrite *prevWrite;
-        struct heapData *newData = malloc(sizeof(struct heapData));   
+        struct heapData *newData = malloc(sizeof(struct heapData));
         int sum, offsetSum;
 
         if(read(sock, (void *) &taille, sizeof(taille)) <= 0){
@@ -50,13 +50,8 @@ int rcv_total_replication(int sock){
         newData->writeAccess = NULL;
         newData->readWait = NULL;
         newData->writeWait = NULL;
-        newData->serverReadAccess = NULL;
-        newData->serverWriteAccess = NULL;
-        newData->serverReadWait = NULL;
-        newData->serverReadWait = NULL;
         pthread_mutex_init(&(newData->mutex), NULL);
         pthread_cond_init(&(newData->readCond), NULL);
-        pthread_cond_init(&(newData->serverReadCond), NULL);
 
         if(read(sock, &newData->readAccessSize, sizeof(newData->readAccessSize)) <= 0){
                 goto disconnect;
@@ -331,7 +326,7 @@ int rcv_release_read_replication(int sock){
             if(prev!=NULL){
                 prev->next=temp->next;
             }else{
-                data->readAccess= temp->next;  
+                data->readAccess= temp->next;
             }
             free(temp);
             data->readAccessSize--;
@@ -709,7 +704,7 @@ int rcv_defrag_replication(int sock){
     pthread_mutex_unlock(&hashTableMutex);
     pthread_mutex_unlock(&(data->mutex));
     release_write_lock(data);
-    
+
     if((tempFreeList->startOffset + tempFreeList->size) == tempFreeList->next->startOffset){
         /* On fusionne */
         tempFreeList->size += tempFreeList->next->size;

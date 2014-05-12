@@ -48,17 +48,6 @@ struct clientChainWrite {
     pthread_cond_t cond;
 };
 
-struct serverChainRead {
-    uint16_t serverId;
-    struct serverChainRead *next;
-};
-
-struct serverChainWrite {
-    uint16_t serverId;
-    struct serverChainWrite *next;
-    pthread_cond_t cond;
-};
-
 struct heapData {
     pthread_mutex_t mutex;
 
@@ -66,28 +55,17 @@ struct heapData {
     uint64_t offset;
     uint64_t size;
 
-    uint8_t readAccessSize;
+    uint16_t readAccessSize;
     struct clientChainRead *readAccess;
-    uint8_t writeAccessSize;
+    uint16_t writeAccessSize;
     struct clientChainWrite *writeAccess;
-    uint8_t readWaitSize;
+    uint16_t readWaitSize;
     struct clientChainRead *readWait;
     pthread_cond_t readCond;
-
-    uint8_t writeWaitSize;
+    uint16_t writeWaitSize;
     struct clientChainWrite *writeWait;
 
-    uint8_t serverReadAccessSize;
-    struct serverChainRead *serverReadAccess;
-    uint8_t serverWriteAccessSize;
-    struct serverChainWrite *serverWriteAccess;
-    uint8_t serverReadWaitSize;
-    struct serverChainRead *serverReadWait;
-    pthread_cond_t serverReadCond;
-
-    uint8_t serverWriteWaitSize;
-    struct serverChainWrite *serverWriteWait;
-
+    struct clientChainRead *upToDate;
 
     struct heapData *next;
     struct heapData *nextOffset;
