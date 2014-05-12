@@ -707,7 +707,10 @@ int release_write_lock(struct heapData *data)
 
     /* On retire la liste des données à jour car on a fait un write */
     upToDateTemp = data->upToDate;
-    data->upToDate = NULL;
+    data->upToDate = malloc(sizeof(struct clientChainRead));
+    data->upToDate->clientId = pthread_getspecific(id);
+    data->upToDate->next = NULL;
+
     while(upToDateTemp != NULL){
         struct clientChainRead *prev = upToDateTemp;
         upToDateTemp = upToDateTemp->next;
