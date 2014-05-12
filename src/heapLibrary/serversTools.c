@@ -107,7 +107,7 @@ ssize_t readWithPoll(int fd, void *buf, size_t count){
 
     poll_list[0].fd = fd;
     poll_list[0].events = POLLIN;
-    retval = poll(poll_list, 1, PONG_TIMEOUT);
+    retval = poll(poll_list, 1, PONG_TIMEOUT*1000);
     if (retval < 0){
         exit(EXIT_FAILURE);
     } else if (retval == 0){
