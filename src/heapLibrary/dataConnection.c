@@ -6,12 +6,12 @@ pthread_t *dheap_tid;
 uint8_t msgtypeClient, *dheapErrorNumber;
 int countServersOnline;
 struct pollfd *poll_list;
-pthread_mutex_t readlock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t writelock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mainlock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t readylock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t polllock = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t readcond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t readlock;
+pthread_mutex_t writelock;
+pthread_mutex_t mainlock;
+pthread_mutex_t readylock;
+pthread_mutex_t polllock;
+pthread_cond_t readcond;
 
 /**
  * Initialise la connexion avec le serveur central
@@ -46,6 +46,12 @@ int init_data(char *address, int port){
 
     dheapErrorNumber = NULL;
 
+    pthread_mutex_init(&readlock, NULL);
+    pthread_mutex_init(&writelock, NULL);
+    pthread_mutex_init(&mainlock, NULL);
+    pthread_mutex_init(&readylock, NULL);
+    pthread_mutex_init(&polllock, NULL);
+    pthread_cond_init(&readcond, NULL);
 
     if ((heapInfo->sock = connectToServer(address, port, 1)) == -1){
         return DHEAP_ERROR_CONNECTION;
@@ -148,7 +154,7 @@ int close_data(){
 #endif
 
     /* Fermeture du thread client */
-    if (dheap_tid != NULL && pthread_equal(pthread_self(), *dheap_tid)){
+    if (dheap_tid != NULL && !pthread_equal(pthread_self(), *dheap_tid)){
         if (pthread_cancel(*dheap_tid) != 0){
             perror("pthread_cancel"); 
             exit(EXIT_FAILURE);
@@ -162,6 +168,8 @@ int close_data(){
         }
         free(dheap_tid);
     }
+
+    unlockAndSignal();
 
     /* Fermeture des connexions */
     cleanServers();

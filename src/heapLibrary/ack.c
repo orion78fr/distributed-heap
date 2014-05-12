@@ -49,6 +49,7 @@ int receiveAckPointer(uint8_t *msgtypeP){
         /* On retourne le code d'erreur */
         return msgtypeReponse;
     } else {
+
         if (msgtypeReponse != msgtype){
             if (msgtype == MSG_ACCESS_READ && msgtypeReponse == MSG_ACCESS_READ_MODIFIED){
                 *msgtypeP = MSG_ACCESS_READ_MODIFIED;

@@ -35,11 +35,7 @@ void buildPollList(){
 
     new = malloc(sizeof(struct pollfd)*countServersOnline);
     ds = dheapServers;
-    while(ds != NULL){
-        if (j > countServersOnline){
-            free(new);
-            exit(EXIT_FAILURE);
-        }
+    while(ds != NULL && j<countServersOnline){
         if (ds->status == 1 && ds->sock != -1){
             new[j].fd = ds->sock;
             new[j].events = POLLHUP | POLLIN | POLLNVAL;

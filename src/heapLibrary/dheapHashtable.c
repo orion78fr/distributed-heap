@@ -102,7 +102,10 @@ int remove_var(void *p){
         return -1;
 
     if (dvtmp == dheapHashtable[hash]){
-        dheapHashtable[hash] = NULL;
+        if (dvtmp->next != NULL)
+            dheapHashtable[hash] = dvtmp->next;
+        else
+            dheapHashtable[hash] = NULL;
     } else {
         if (dvtmp->next != NULL)
             dvtmpprev->next = dvtmp->next;

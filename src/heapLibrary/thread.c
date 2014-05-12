@@ -18,12 +18,12 @@ void *data_thread(void *arg){
 
     /* Création du poll */
     buildPollList();
-
+    
     /* On bloque la lecture sur le socket (mainId) */
     pthread_mutex_lock(&readlock);
     pthread_cond_signal(&readcond);
     pthread_cond_wait(&readcond, &readlock);
-
+    
     /* Boucle avec le poll */
     while (1){
         int retval, i;
