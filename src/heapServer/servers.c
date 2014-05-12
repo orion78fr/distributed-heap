@@ -8,31 +8,33 @@ int serversConnected = 0;
  */
 void *serverThread(void *arg)
 {
+    struct serverChain *server;
+    struct clientChain *client;
     int backup = ((struct serverChain*)arg)->backup;
     int sock = ((struct serverChain*)arg)->sock;
     uint8_t msgType;
-    servers = ((struct serverChain*)arg);
+    //servers = ((struct serverChain*)arg);
 
 #if DEBUG
     printf("[sock: %d, serverNum: %d, serverId: %d, backup: %d] Connexion\n",sock, parameters.serverNum, ((struct serverChain*)arg)->serverId, backup);
 #endif
 
-    if(backup){
+    if(parameters.backup){
 #if DEBUG
-    printf("[backup: %d]\n",backup);
+    printf("[backup: %d]\n",parameters.backup);
 #endif
         /* Boucle principale */
         for (;;) {
 
 #if DEBUG
-    printf("[attente msgMaj]\n");
+            printf("[attente msgMaj]\n");
 #endif
             if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
                 goto disconnect;
             }
 
 #if DEBUG
-    printf("[msgType: %d]\n",msgType);
+            printf("[msgType: %d]\n",msgType);
 #endif
 
             /* Switch pour les différents types de messages */
@@ -103,28 +105,27 @@ void *serverThread(void *arg)
         }
     }else{
 #if DEBUG
-    printf("[backup: %d]\n",backup);
+        printf("[backup: %d]\n",parameters.backup);
 #endif
 
         for(;;) {
             pthread_mutex_lock(&rep->mutex_server);
             if(rep->data==NULL && rep->clientId == 0){
 #if DEBUG
-    printf("[wait rep]\n");
+            printf("[wait rep]\n");
 #endif
                 pthread_cond_wait(&rep->cond_server, &rep->mutex_server);
             }
             if(rep->data!=NULL)
             {
-
 #if DEBUG
-    printf("[reveil et data !=NULL]\n");
+                printf("[reveil et data !=NULL]\n");
 #endif
                 if(snd_data_replication(rep) <=0){
                     goto disconnect;
                 }
 
-                if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+                if (read_rep(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
                     goto disconnect;
                 }
 
@@ -132,28 +133,30 @@ void *serverThread(void *arg)
                     goto disconnect;
                 }
 
-                
+                pthread_mutex_lock(&ack->mutex_server);
                 pthread_mutex_unlock(&rep->mutex_server);
                 pthread_cond_signal(&ack->cond_server);
+                pthread_mutex_unlock(&ack->mutex_server);
 
             }else if(rep->clientId!=0){
 #if DEBUG
-    printf("[reveil et clientId !=0]\n");
+                printf("[reveil et clientId !=0]\n");
 #endif
                 if(snd_maj_client(rep) <=0){
                     goto disconnect;
                 }
 
-                if (read(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
+                if (read_rep(sock, (void *) &msgType, sizeof(msgType)) <= 0) {       /* Msg type */
                     goto disconnect;
                 }
 
                 if (msgType != MSG_ACK){
                     goto disconnect;
                 }
-
+                pthread_mutex_lock(&ack->mutex_server);
                 pthread_mutex_unlock(&rep->mutex_server);
                 pthread_cond_signal(&ack->cond_server);
+                pthread_mutex_unlock(&ack->mutex_server);
             }
         }
     }
@@ -164,14 +167,25 @@ disconnect:
     printf("[Server %d] Déconnexion\n", parameters.serverNum);
 #endif
 
-
+    if(parameters.backup){
+        parameters.backup=0;
+    }
 
 
     free(servers->serverAddress);
     free(servers);
     servers=NULL;
-    pthread_mutex_unlock(&rep->mutex_server);
-    pthread_cond_signal(&ack->cond_server);
+    client=clients;
+    while(client!=NULL){
+        pthread_mutex_unlock(&rep->mutex_server);
+        client=client->next;
+    }
+
+    
+    pthread_mutex_lock(&ack->mutex_server);
+    ack->modification=1;
+    pthread_cond_broadcast(&ack->cond_server);
+    pthread_mutex_unlock(&ack->mutex_server);
 
     /* Fermer la connexion */
     shutdown(sock, 2);

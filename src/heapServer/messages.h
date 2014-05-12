@@ -5,6 +5,7 @@ enum msgTypes {
     MSG_HELLO,
     MSG_HELLO_NEW,
     MSG_HELLO_NEW_SERVER,
+    MSG_HELLO_NEW_BACKUP,
     MSG_HELLO_NOT_NEW,
     MSG_ALLOC,
     MSG_ACCESS_READ,
@@ -36,7 +37,9 @@ enum msgTypes {
     MSG_RMV_CLIENT,
     MSG_ACK,
     MSG_DEFRAG_REPLICATION,
-    MSG_TYPE_NULL /* Utilisé entre le thread de la librairie et le thread client */
+    MSG_TYPE_NULL, /* Utilisé entre le thread de la librairie et le thread client */
+    MSG_REP_CONTINUE,
+    MSG_REP_STOP
 };
 
 typedef struct dataSend{
@@ -49,24 +52,34 @@ extern struct replicationAck *ack;
 extern pthread_key_t id;
 extern struct clientChain *clients;
 
+/* messages.c */
 int send_data(int sock, uint8_t msgType, int nb, ...);
+int send_data_rep(int sock, int nb, ...);
 int send_error(int sock, uint8_t errType);
-
 int do_greetings(int sock, uint16_t clientId);
 int do_alloc(int sock);
+int do_release(int sock);
+int do_free(int sock);
+int do_pong(int sock);
+int read_rep(int sock, void *buf, size_t count);
+
+/* messages_rw.c */
 int do_access_read(int sock);
 int do_access_read_by_offset(int sock);
 int do_access_read_common(int sock, struct heapData *data);
 int do_access_write(int sock);
 int do_access_write_by_offset(int sock);
 int do_access_write_common(int sock, struct heapData *data);
-int do_release(int sock);
-int do_free(int sock);
+
+/* messages_snd.c */
 int snd_total_replication(int sock);
-int rcv_total_replication(int sock);
-int snd_partial_replication(struct heapData *data);
-int rcv_partial_replication(int sock);
+int snd_server_to_client(int sock, struct clientChain *client);
+int snd_server_to_clients(char *address, uint16_t port, uint8_t serverId);
+int snd_maj_client(struct replicationData *rep);
 int snd_data_replication(struct replicationData *rep);
+
+/* messages_rcv.c */
+int rcv_total_replication(int sock);
 int rcv_data_replication(int sock);
 int rcv_release_read_replication(int sock);
 int rcv_release_write_replication(int sock);
@@ -77,10 +90,14 @@ int rcv_maj_access_read(int sock);
 int rcv_maj_access_write(int sock);
 int rcv_maj_wait_read(int sock);
 int rcv_maj_wait_write(int sock);
-int snd_server_to_clients(char *address, uint16_t port, uint16_t serverId);
-int snd_defrag_replication(struct replicationData *rep);
 int rcv_defrag_replication(int sock);
-int do_pong(int sock);
+
+/* messages_connect.c */
+int do_greetings_backup(struct serverChain *backup, struct serverChain *server);
+int do_greetings_server(struct serverChain *server);
+int rcv_greetings_backup(struct serverChain *server);
+int rcv_greetings_server(struct serverChain *server);
+
 
 
 

@@ -55,21 +55,38 @@ uint64_t defrag_if_possible(uint64_t size){
         data->nextOffset = hashTableOffset[newOffset%parameters.hashSize];
         hashTableOffset[newOffset%parameters.hashSize] = data;
 
-        if(servers!=NULL){
-            pthread_mutex_lock(&rep->mutex_server);
-
-            rep->modification = DEFRAG;
-            rep->data = data;
-            rep->clientId = 0;
-
-            pthread_mutex_unlock(&rep->mutex_server);
-            pthread_mutex_lock(&ack->mutex_server);
-            pthread_cond_signal(&rep->cond_server);
-            pthread_cond_wait(&ack->cond_server, &ack->mutex_server);
-            pthread_mutex_unlock(&ack->mutex_server);
+        if(servers!=NULL && !parameters.backup){
 #if DEBUG
-    printf("DEFRAG_DATA, replication done");
+            printf("avant lock rep DEFRAG\n");
 #endif
+            pthread_mutex_lock(&rep->mutex_server);
+            if(servers!=NULL){
+                rep->modification = DEFRAG;
+                rep->data = data;
+                rep->clientId = 0;
+#if DEBUG
+                printf("avant lock ack RELEASE_DATA_READ\n");
+#endif
+                pthread_mutex_lock(&ack->mutex_server);
+                pthread_cond_signal(&rep->cond_server);
+                pthread_mutex_unlock(&rep->mutex_server);
+#if DEBUG
+                printf("avant cond wait RELEASE_DATA_READ\n");
+#endif
+            
+                if(ack->modification==0){
+                    pthread_cond_wait(&ack->cond_server, &ack->mutex_server);
+                }
+                pthread_mutex_unlock(&ack->mutex_server);
+#if DEBUG
+                printf("DEFRAG_DATA, replication done");
+#endif
+            }else{
+                pthread_mutex_unlock(&rep->mutex_server);
+#if DEBUG
+                printf("DEFRAG_DATA, replication abandonné\n");
+#endif
+            }   
         }
         pthread_mutex_unlock(&hashTableMutex);
         pthread_mutex_unlock(&(data->mutex));

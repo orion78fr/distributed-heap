@@ -14,6 +14,7 @@ struct serverChain {
 extern uint8_t numServer;
 extern int serversConnected;
 extern struct serverChain *servers;
+extern struct serverChain *backups;
 extern struct replicationData *rep;
 extern struct replicationAck *ack;
 extern pthread_key_t id;
