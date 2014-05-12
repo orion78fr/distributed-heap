@@ -41,7 +41,7 @@ int receiveAckPointer(uint8_t *msgtypeP){
     /* On verifie s'il y a eu une erreur ou non */
     if (msgtypeReponse == MSG_ERROR){
         /* On récupère le code d'erreur */
-        if (read(heapInfo->sock, &msgtypeReponse, sizeof(msgtypeReponse)) <= 0){
+        if (readWithPoll(heapInfo->sock, &msgtypeReponse, sizeof(msgtypeReponse)) <= 0){
             setDownAndSwitch(heapInfo->mainId);
             return DHEAP_RETRY;
         }

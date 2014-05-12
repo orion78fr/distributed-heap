@@ -95,14 +95,14 @@ int t_access_common(uint8_t msgtype, char *name, void **p, uint64_t offset){
             uint64_t offset, tailleContent;
             struct dheapVar *dv;
             /* On récupère l'offset ou est située la variable */
-            if (read(heapInfo->sock, &offset, sizeof(offset)) <= 0){
+            if (readWithPoll(heapInfo->sock, &offset, sizeof(offset)) <= 0){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;
                 continue;
             }
 
             /* On récupère la taille */
-            if (read(heapInfo->sock, &tailleContent, sizeof(tailleContent)) <= 0){
+            if (readWithPoll(heapInfo->sock, &tailleContent, sizeof(tailleContent)) <= 0){
                 setDownAndSwitch(heapInfo->mainId);
                 done = -1;
                 continue;
@@ -114,7 +114,7 @@ int t_access_common(uint8_t msgtype, char *name, void **p, uint64_t offset){
             /* Si vrai: */
             if (msgtype == MSG_ACCESS_READ_MODIFIED || msgtype == MSG_ACCESS_WRITE_MODIFIED) {
                 /* On récupère le contenu directement dans le pointeur */
-                if (read(heapInfo->sock, *p, tailleContent) <= 0){
+                if (readWithPoll(heapInfo->sock, *p, tailleContent) <= 0){
                     setDownAndSwitch(heapInfo->mainId);
                     done = -1;
                     continue;
