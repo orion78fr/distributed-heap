@@ -71,7 +71,10 @@ int do_access_read_common(int sock, struct heapData *data){
 #endif
 
     if(retry){
-        struct clientChainRead *temp = data->readAccess;
+        struct clientChainRead *temp;
+        pthread_mutex_lock(data->mutex);
+        *temp = data->readAccess;
+
         while(temp!=NULL){
             if(temp->clientId==pthread_getspecific(id)){
                 if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
@@ -86,6 +89,7 @@ int do_access_read_common(int sock, struct heapData *data){
         temp = data->readWait;
         while(temp!=NULL){
             if(temp->clientId==pthread_getspecific(id)){
+                pthread_cond_wait(data->readCond);
                 if(send_data(sock, MSG_ACCESS_READ_MODIFIED, 3,
                         (DS){sizeof(data->offset), &data->offset},
                         (DS){sizeof(data->size), &data->size},
@@ -95,6 +99,7 @@ int do_access_read_common(int sock, struct heapData *data){
                 return 0;
             }
         }
+        pthread_mutex_unlock(data->mutex);
     }
 
     if(acquire_read_lock(data) != 0) {
@@ -187,7 +192,10 @@ int do_access_write_common(int sock, struct heapData *data){
 #endif
 
     if(retry){
-        struct clientChainWrite *temp = data->writeAccess;
+        struct clientChainWrite *temp;
+        pthread_mutex_lock(data->mutex);
+        *temp = data->writeAccess;
+
         while(temp!=NULL){
             if(temp->clientId==pthread_getspecific(id)){
                 if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
@@ -202,6 +210,7 @@ int do_access_write_common(int sock, struct heapData *data){
         temp = data->writeWait;
         while(temp!=NULL){
             if(temp->clientId==pthread_getspecific(id)){
+                pthread_cond_wait(temp->cond);
                 if(send_data(sock, MSG_ACCESS_WRITE_MODIFIED, 3,
                         (DS){sizeof(data->offset), &data->offset},
                         (DS){sizeof(data->size), &data->size},
@@ -211,6 +220,7 @@ int do_access_write_common(int sock, struct heapData *data){
                 return 0;
             }
         }
+        pthread_mutex_unlock(data->mutex);
     }
 
     if(acquire_write_lock(data) != 0) {
