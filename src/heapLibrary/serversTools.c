@@ -95,3 +95,24 @@ void setTime(uint8_t sid){
     ds = getServerById(sid);
     ds->lastMsgTime = time(NULL);
 }
+
+/**
+ * Fais un poll avant un read, permettant d'avoir un timeout sur le read
+ * @param socket, buffer, taille
+ * @return taille récupéré ou erreur (voir man 2 read)
+ */
+ssize_t readWithPoll(int fd, void *buf, size_t count){
+    struct pollfd poll_list[1];
+    int retval;
+
+    poll_list[0].fd = fd;
+    poll_list[0].events = POLLIN;
+    retval = poll(poll_list, 1, PONG_TIMEOUT);
+    if (retval < 0){
+        exit(EXIT_FAILURE);
+    } else if (retval == 0){
+        return -1;
+    } else {
+        return read(fd, buf, count);
+    }
+}
