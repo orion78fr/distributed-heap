@@ -166,3 +166,4 @@ void setTime(uint8_t sid);
 uint8_t getServerIdBySock(int sock);
 struct dheapServer* getServerBySock(int sock);
 struct dheapServer* getServerById(uint8_t sid);
+ssize_t readWithPoll(int fd, void *buf, size_t count);
