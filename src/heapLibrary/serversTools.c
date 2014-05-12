@@ -104,7 +104,7 @@ void setTime(uint8_t sid){
 ssize_t readWithPoll(int fd, void *buf, size_t count){
     struct pollfd poll_list[1];
     int retval;
-return read(fd, buf, count);
+
     poll_list[0].fd = fd;
     poll_list[0].events = POLLIN;
     retval = poll(poll_list, 1, PONG_TIMEOUT*1000);
