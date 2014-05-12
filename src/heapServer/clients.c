@@ -13,13 +13,11 @@ void *clientThread(void *arg)
     pthread_mutex_t mutex = ((struct clientChain*)arg)->mutex_sock;
     int sock = ((struct clientChain*)arg)->sock;
     uint8_t msgType;
-    uint16_t *ids= malloc(sizeof(uint16_t));
-    *ids=((struct clientChain*)arg)->clientId;
-    pthread_setspecific(id, ids);
+    pthread_setspecific(id, &((struct clientChain*)arg)->clientId);
     
 
 #if DEBUG
-    printf("[Client id: %d, thread: %d] Connexion\n", pthread_getspecific(id), pthread_self());
+    printf("[Client id: %d] Connexion\n", *(uint16_t*)pthread_getspecific(id));
 #endif
 
     if(((struct clientChain*)arg)->newC){
@@ -105,11 +103,11 @@ disconnect:
     client = clients;
     prev = NULL;
 #if DEBUG
-    printf("[Client %d] Déconnexion\n", pthread_getspecific(id));
+    printf("[Client %d] Déconnexion\n", *(uint16_t*)pthread_getspecific(id));
 #endif
 
     while(client != NULL){
-        if(client->clientId == pthread_getspecific(id)){
+        if(client->clientId == *(uint16_t*)pthread_getspecific(id)){
             if(prev!=NULL){
                 prev->next = client->next;
             }

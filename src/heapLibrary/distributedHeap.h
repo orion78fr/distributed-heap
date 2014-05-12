@@ -112,7 +112,8 @@ enum msgTypes {
     MSG_PARTIAL_REPLICATION,
     MSG_DATA_REPLICATION,
     MSG_FREE_REPLICATION,
-    MSG_RELEASE_REPLICATION,
+    MSG_RELEASE_WRITE_REPLICATION,
+    MSG_RELEASE_READ_REPLICATION,
     MSG_MAJ_ACCESS_READ,
     MSG_MAJ_ACCESS_WRITE,
     MSG_MAJ_WAIT_READ,
@@ -121,7 +122,9 @@ enum msgTypes {
     MSG_RMV_CLIENT,
     MSG_ACK,
     MSG_DEFRAG_REPLICATION,
-    MSG_TYPE_NULL /* Utilisé entre le thread de la librairie et le thread client */
+    MSG_TYPE_NULL, /* Utilisé entre le thread de la librairie et le thread client */
+    MSG_REP_CONTINUE,
+    MSG_REP_STOP
 };
 
 /* dataConnection.c */

@@ -179,7 +179,7 @@ int rcv_data_replication(int sock){
 
 #if DEBUG
     printf("[Server %d] Demande creation(replication partielle) de %s\n",
-           pthread_getspecific(id), nom);
+           *(uint16_t*)pthread_getspecific(id), nom);
 #endif
         data = malloc(sizeof(struct heapData));
         data->name=nom;
@@ -253,7 +253,7 @@ int rcv_data_replication(int sock){
     } else {/* mis à jour de la var */
 #if DEBUG
     printf("[Server %d] Demande mis a jour(replication partielle) de %s\n",
-           pthread_getspecific(id), data->name);
+           *(uint16_t*)pthread_getspecific(id), data->name);
 #endif
 
         if(read(sock, &data->offset, sizeof(data->offset)) <= 0){

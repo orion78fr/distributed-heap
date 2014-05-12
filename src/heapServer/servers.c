@@ -14,7 +14,7 @@ void *serverThread(void *arg)
 
 
 #if DEBUG
-    printf("[sock: %d, serverNum: %d, serverId: %d, backup: %d] Connexion\n",sock, parameters.serverNum, ((struct serverChain*)arg)->serverId, backup);
+    printf("[sock: %d, serverNum: %d, serverId: %d, backup: %d] Connexion\n",sock, parameters.serverNum, ((struct serverChain*)arg)->serverId, parameters.backup);
 #endif
 
     if(parameters.backup){

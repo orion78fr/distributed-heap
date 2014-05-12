@@ -75,7 +75,7 @@ int do_alloc(int sock){
 
 #if DEBUG
     printf("[Client %d] demande Allocation\n",
-           pthread_getspecific(id));
+           *(uint16_t*)pthread_getspecific(id));
 #endif
 
     if (read(sock, (void *) &taille, sizeof(taille)) <= 0) { /* Name size */
@@ -133,7 +133,7 @@ int do_alloc(int sock){
 
 #if DEBUG
     printf("[Client %d] Allocation réussi de %s de taille %d\n",
-           pthread_getspecific(id), nom, varSize);
+           *(uint16_t*)pthread_getspecific(id), nom, varSize);
 #endif
 
         /* OK */
@@ -165,14 +165,14 @@ int do_release(int sock){
     }
 
 #if DEBUG
-        printf("[Client %d] Libération de %s\n", pthread_getspecific(id),
+        printf("[Client %d] Libération de %s\n", *(uint16_t*)pthread_getspecific(id),
            data->name);
 #endif
 
     if(retry){
         int testRead=0, testWrite=0;
         struct clientChainRead *temp = data->readAccess;
-        while(temp != NULL && (pthread_getspecific(id) != temp->clientId)){
+        while(temp != NULL && (*(uint16_t*)pthread_getspecific(id) != temp->clientId)){
             temp = temp->next;
         }
         if(temp == NULL){
@@ -180,7 +180,7 @@ int do_release(int sock){
         }
         if(data->writeAccess == NULL){
             testWrite = 1;
-        }else if(data->writeAccess->clientId != pthread_getspecific(id)){
+        }else if(data->writeAccess->clientId != *(uint16_t*)pthread_getspecific(id)){
             testWrite = 1;
         }
 
@@ -192,7 +192,7 @@ int do_release(int sock){
         }
     }
 
-    if((data->writeAccess != NULL) && (data->writeAccess->clientId == pthread_getspecific(id))){
+    if((data->writeAccess != NULL) && (data->writeAccess->clientId == *(uint16_t*)pthread_getspecific(id))){
         /* Lock en write */
         if (read(sock, theHeap+offset, data->size) <= 0) {        /* Contenu */
             goto disconnect;
@@ -233,7 +233,7 @@ int do_release(int sock){
         release_write_lock(data);
     } else {
         struct clientChainRead *temp = data->readAccess;
-        while(temp != NULL && (pthread_getspecific(id) != temp->clientId)){
+        while(temp != NULL && (*(uint16_t*)pthread_getspecific(id) != temp->clientId)){
             temp = temp->next;
         }
         if(temp == NULL){
@@ -274,7 +274,7 @@ int do_free(int sock){
     }
 
 #if DEBUG
-    printf("[Client %d] Désallocation de %s\n", pthread_getspecific(id),
+    printf("[Client %d] Désallocation de %s\n", *(uint16_t*)pthread_getspecific(id),
            nom);
 #endif
 

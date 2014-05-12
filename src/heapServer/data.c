@@ -280,7 +280,7 @@ int acquire_read_lock(struct heapData *data)
     pthread_mutex_lock(&(data->mutex));
 
     me = malloc(sizeof(struct clientChainRead));
-    me->clientId = pthread_getspecific(id);
+    me->clientId = *(uint16_t*)pthread_getspecific(id);
 
     if (data->readAccess != NULL) {
         /* On est en mode read... */
@@ -314,13 +314,13 @@ int acquire_read_lock(struct heapData *data)
 
     /* Si on est dans le cache, inutile de renvoyer */
     me = data->upToDate;
-    while(me != NULL && me->clientId != pthread_getspecific(id)){
+    while(me != NULL && me->clientId != *(uint16_t*)pthread_getspecific(id)){
         me = me->next;
     }
     if(me == NULL){
         /* On s'ajoute dans la liste, vu qu'on va renvoyer les données */
         me = malloc(sizeof(struct clientChainRead));
-        me->clientId = pthread_getspecific(id);
+        me->clientId = *(uint16_t*)pthread_getspecific(id);
         me->next = data->upToDate;
         data->upToDate = me;
         returnValue = 1; /* On dois envoyer les données */
@@ -428,12 +428,13 @@ void acquire_read_sleep(struct heapData *data, struct clientChainRead *me)
 int acquire_write_lock(struct heapData *data)
 {
     struct clientChainWrite *me;
+    struct clientChainRead *me2;
     int returnValue;
 
     pthread_mutex_lock(&(data->mutex));
 
     me = malloc(sizeof(struct clientChainWrite));
-    me->clientId = pthread_getspecific(id);
+    me->clientId = *(uint16_t*)pthread_getspecific(id);
     pthread_cond_init(&(me->cond), NULL);
 
     if (data->readAccess != NULL || data->writeAccess != NULL) {
@@ -455,16 +456,16 @@ int acquire_write_lock(struct heapData *data)
     data->writeAccessSize++;
 
     /* Si on est dans le cache, inutile de renvoyer */
-    me = data->upToDate;
-    while(me != NULL && me->clientId != pthread_getspecific(id)){
-        me = me->next;
+    me2 = data->upToDate;
+    while(me2 != NULL && me2->clientId != *(uint16_t*)pthread_getspecific(id)){
+        me2 = me2->next;
     }
-    if(me == NULL){
+    if(me2 == NULL){
         /* On s'ajoute dans la liste, vu qu'on va renvoyer les données */
-        me = malloc(sizeof(struct clientChainRead));
-        me->clientId = pthread_getspecific(id);
-        me->next = data->upToDate;
-        data->upToDate = me;
+        me2 = malloc(sizeof(struct clientChainRead));
+        me2->clientId = *(uint16_t*)pthread_getspecific(id);
+        me2->next = data->upToDate;
+        data->upToDate = me2;
         returnValue = 1; /* On dois envoyer les données */
     } else {
         returnValue = 0;
@@ -574,7 +575,7 @@ int release_read_lock(struct heapData *data)
     if ((prevMe = data->readAccess) == NULL) {
         return -2;
     }
-    myId = pthread_getspecific(id);
+    myId = *(uint16_t*)pthread_getspecific(id);
     if (prevMe->clientId == myId) {
         data->readAccess = prevMe->next;
         free(prevMe);
@@ -650,7 +651,7 @@ int release_write_lock(struct heapData *data)
     pthread_mutex_lock(&(data->mutex));
 
     if (data->writeAccess == NULL
-        || data->writeAccess->clientId != pthread_getspecific(id)) {
+        || data->writeAccess->clientId != *(uint16_t*)pthread_getspecific(id)) {
         return -2;
     }
     free(data->writeAccess);
@@ -665,7 +666,7 @@ int release_write_lock(struct heapData *data)
         if(servers!=NULL){
             rep->modification = RELEASE_DATA_WRITE;
             rep->data = data;
-            rep->clientId = pthread_getspecific(id);
+            rep->clientId = *(uint16_t*)pthread_getspecific(id);
 #if DEBUG
             printf("avant lock ack RELEASE_DATA_READ\n");
 #endif
@@ -708,7 +709,7 @@ int release_write_lock(struct heapData *data)
     /* On retire la liste des données à jour car on a fait un write */
     upToDateTemp = data->upToDate;
     data->upToDate = malloc(sizeof(struct clientChainRead));
-    data->upToDate->clientId = pthread_getspecific(id);
+    data->upToDate->clientId = *(uint16_t*)pthread_getspecific(id);
     data->upToDate->next = NULL;
 
     while(upToDateTemp != NULL){
