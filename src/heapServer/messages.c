@@ -55,8 +55,6 @@ int send_error(int sock, uint8_t errType){
 
 /* TODO ajouter l'envoi des @ des autres serveurs et leurs id */
 int do_greetings(int sock, uint16_t clientId){
-    uint8_t msgType;
-
 
     if(send_data(sock, MSG_HELLO_NEW, 3,
                 (DS){sizeof(parameters.serverNum), &(parameters.serverNum)},

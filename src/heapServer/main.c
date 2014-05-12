@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
         char *address;
         struct sockaddr_in addr;
         socklen_t len = sizeof(struct sockaddr_in);
-        uint16_t port;
+
 
 #if DEBUG
         printf("Waiting for clients...\n");
