@@ -98,6 +98,7 @@ int add_data(char *name, uint64_t size)
         newData->writeAccess = NULL;
         newData->readWait = NULL;
         newData->writeWait = NULL;
+        newData->upToDate = NULL;
         pthread_mutex_init(&(newData->mutex), NULL);
         pthread_cond_init(&(newData->readCond), NULL);
 
